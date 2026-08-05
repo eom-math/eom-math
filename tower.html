@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>개념의 탑 — 엄형국 수학</title>
+<meta name="description" content="15초 개념 퀴즈로 오르는 개념의 탑. 시즌1 실시간 순위표.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&family=EB+Garamond:ital,wght@1,500;1,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAFAF8; --bg2:#F1F0EC; --ink:#111114; --dim:#63636B;
+    --line:rgba(17,17,20,.14); --red:#D6301F; --gold:#C79A3D;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{background:#FAFAF8;}
+  body{
+    background:#FAFAF8; color:var(--ink);
+    font-family:'Pretendard','Noto Sans KR',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:560px;margin:0 auto;padding:0 24px 80px;}
+  [hidden]{ display:none !important; }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:24px 0; border-bottom:1px solid var(--line); margin-bottom:36px;
+  }
+  .topbar a.back{ font-size:13px; color:var(--dim); font-weight:600; }
+  .topbar .brand{ font-weight:800; font-size:14px; }
+  .topbar .brand span{ color:var(--red); }
+
+  .hero{ text-align:center; margin-bottom:32px; }
+  .hero .badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:11px; font-weight:700; color:var(--red);
+    border:1px solid rgba(214,48,31,.35); background:rgba(214,48,31,.06);
+    padding:5px 10px; border-radius:999px; margin-bottom:16px;
+  }
+  .hero h1{
+    font-size:clamp(30px,7vw,42px); font-weight:900; letter-spacing:-.02em; margin-bottom:10px;
+  }
+  .hero p{ font-size:14.5px; color:var(--dim); }
+
+  .tabs{
+    display:flex; gap:8px; justify-content:center; margin-bottom:32px;
+  }
+  .tab-btn{
+    font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+    background:none; border:1px solid var(--line); padding:9px 16px; border-radius:999px;
+    color:var(--dim);
+  }
+  .tab-btn.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  /* tower visual */
+  .tower-vis{
+    display:flex; flex-direction:column-reverse; gap:3px;
+    max-width:120px; margin:0 auto 26px;
+  }
+  .tower-vis .floor{
+    height:7px; background:var(--bg2); border:1px solid var(--line);
+  }
+  .tower-vis .floor.lit{ background:var(--red); border-color:var(--red); }
+
+  /* start card */
+  .card{
+    border:1px solid var(--line); background:#fff;
+    padding:32px 26px; text-align:center;
+  }
+  .card input[type="text"]{
+    width:100%; padding:13px 14px; font-size:15px; font-family:inherit;
+    border:1px solid var(--line); background:var(--bg); margin:18px 0 14px;
+    text-align:center;
+  }
+  .btn{
+    display:inline-block; width:100%; padding:14px; font-size:14.5px; font-weight:800;
+    background:var(--red); color:#fff; border:none; cursor:pointer; font-family:inherit;
+    letter-spacing:.01em;
+  }
+  .btn:hover{ background:#b8291b; }
+  .btn.ghost{ background:none; color:var(--ink); border:1px solid var(--line); margin-top:10px; }
+  .btn.ghost:hover{ border-color:var(--red); color:var(--red); }
+  .card .note{ font-size:12px; color:var(--dim); margin-top:14px; }
+
+  /* quiz screen */
+  .quiz-head{
+    display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px;
+  }
+  .quiz-head .floor-no{ font-size:13px; font-weight:800; color:var(--red); letter-spacing:.06em; text-transform:uppercase; }
+  .quiz-head .timer-n{ font-family:'EB Garamond',serif; font-style:italic; font-size:28px; font-weight:600; }
+  .timer-bar{ height:4px; background:var(--line); margin-bottom:28px; overflow:hidden; }
+  .timer-bar-fill{ height:100%; background:var(--red); width:100%; }
+
+  .question{
+    font-size:clamp(19px,4.4vw,24px); font-weight:800; line-height:1.45; margin-bottom:26px;
+  }
+  .choices{ display:flex; flex-direction:column; gap:10px; }
+  .choice{
+    text-align:left; padding:15px 16px; border:1px solid var(--line); background:#fff;
+    font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; color:var(--ink);
+    display:flex; align-items:center; gap:12px;
+  }
+  .choice:hover{ border-color:var(--red); }
+  .choice .idx{
+    width:22px; height:22px; border-radius:50%; border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;
+    color:var(--dim); flex-shrink:0;
+  }
+  .choice.correct{ background:rgba(60,150,90,.08); border-color:#3c965a; }
+  .choice.correct .idx{ background:#3c965a; border-color:#3c965a; color:#fff; }
+  .choice.wrong{ background:rgba(214,48,31,.08); border-color:var(--red); }
+  .choice.wrong .idx{ background:var(--red); border-color:var(--red); color:#fff; }
+  .choice[disabled]{ cursor:default; }
+
+  /* result */
+  .result-floor{
+    font-family:'EB Garamond',serif; font-style:italic; font-weight:600;
+    font-size:64px; line-height:1; margin:6px 0 4px; color:var(--red);
+  }
+  .result-label{ font-size:13px; color:var(--dim); font-weight:600; margin-bottom:24px; }
+  .save-msg{ font-size:13px; color:var(--dim); margin-top:14px; min-height:16px; }
+
+  /* leaderboard */
+  .lb-row{
+    display:flex; align-items:center; gap:14px;
+    padding:14px 4px; border-bottom:1px solid var(--line);
+  }
+  .lb-rank{
+    width:28px; font-family:'EB Garamond',serif; font-style:italic; font-weight:600;
+    font-size:17px; color:var(--dim); flex-shrink:0;
+  }
+  .lb-row:nth-child(1) .lb-rank, .lb-row:nth-child(2) .lb-rank, .lb-row:nth-child(3) .lb-rank{ color:var(--red); }
+  .lb-name{ flex:1; font-weight:700; font-size:14.5px; }
+  .lb-floor{ font-size:13px; font-weight:700; color:var(--red); }
+  .lb-time{ font-size:11.5px; color:var(--dim); }
+  .lb-empty{ text-align:center; color:var(--dim); font-size:13px; padding:30px 0; }
+
+  /* admin */
+  .admin-box{ border:1px solid var(--line); padding:22px; margin-bottom:20px; }
+  .admin-box h3{ font-size:14px; margin-bottom:14px; }
+  .admin-box input, .admin-box textarea{
+    width:100%; padding:10px 12px; font-size:13.5px; font-family:inherit;
+    border:1px solid var(--line); background:var(--bg); margin-bottom:8px;
+  }
+  .admin-choice-row{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .admin-choice-row input[type="radio"]{ width:auto; margin:0; }
+  .admin-choice-row input[type="text"]{ margin-bottom:0; }
+  .q-list{ list-style:none; }
+  .q-list li{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:10px 0; border-bottom:1px dashed var(--line); font-size:13px;
+  }
+  .q-list button{
+    background:none; border:none; color:var(--red); font-size:12px; font-weight:700;
+    cursor:pointer; font-family:inherit;
+  }
+
+  .admin-link{
+    display:block; text-align:center; margin-top:40px; font-size:12px; color:var(--dim);
+    background:none; border:none; cursor:pointer; font-family:inherit; text-decoration:underline;
+    width:100%;
+  }
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(17,17,20,.55);
+    display:flex; align-items:center; justify-content:center; padding:24px; z-index:50;
+  }
+  .modal-box{ background:#fff; max-width:340px; width:100%; padding:28px; border:1px solid var(--line); }
+  .modal-box h3{ font-size:16px; margin-bottom:16px; }
+  .modal-box input{
+    width:100%; padding:10px 12px; margin-bottom:10px; border:1px solid var(--line);
+    font-size:14px; font-family:inherit; background:var(--bg);
+  }
+  .modal-actions{ display:flex; gap:8px; margin-top:6px; }
+  .modal-actions button{ flex:1; padding:10px 12px; font-size:13px; font-weight:700; border:none; cursor:pointer; font-family:inherit; }
+  .modal-submit{ background:var(--red); color:#fff; }
+  .modal-cancel{ background:var(--bg2); color:var(--ink); }
+  .modal-msg{ font-size:12px; color:var(--red); margin-top:8px; min-height:14px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="topbar">
+    <a class="back" href="index.html">← 엄형국 수학</a>
+    <div class="brand">개념의 <span>탑</span></div>
+  </div>
+
+  <div class="hero">
+    <span class="badge">NEW · 시즌1 진행중</span>
+    <h1>개념의 탑</h1>
+    <p>15초 안에 개념 퀴즈를 풀고 한 층씩 올라가보세요.</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabChallenge" type="button">도전하기</button>
+    <button class="tab-btn" id="tabBoard" type="button">순위표</button>
+  </div>
+
+  <!-- START -->
+  <section id="screenStart">
+    <div class="card">
+      <div style="font-size:13px;color:var(--dim);font-weight:600;">이름을 입력하고 도전을 시작하세요</div>
+      <input type="text" id="playerName" placeholder="이름 (예: 3학년 김민준)" maxlength="16">
+      <button class="btn" id="startBtn" type="button">도전 시작 →</button>
+      <div class="note">등록된 문제가 없으면 관리자가 먼저 문제를 등록해야 해요.</div>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="screenQuiz" hidden>
+    <div class="tower-vis" id="towerVis"></div>
+    <div class="quiz-head">
+      <div class="floor-no" id="floorNo">FLOOR 01</div>
+      <div class="timer-n" id="timerNum">10</div>
+    </div>
+    <div class="timer-bar"><div class="timer-bar-fill" id="timerFill"></div></div>
+    <div class="question" id="questionText"></div>
+    <div class="choices" id="choicesBox"></div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="screenResult" hidden>
+    <div class="card">
+      <div style="font-size:13px;color:var(--dim);font-weight:700;">도전 종료</div>
+      <div class="result-floor" id="resultFloor">0층</div>
+      <div class="result-label">에서 멈췄어요</div>
+      <button class="btn" id="retryBtn" type="button">다시 도전하기</button>
+      <button class="btn ghost" id="toBoardBtn" type="button">순위표 보기</button>
+      <div class="save-msg" id="saveMsg">순위표에 기록을 등록하는 중...</div>
+    </div>
+  </section>
+
+  <!-- LEADERBOARD -->
+  <section id="screenBoard" hidden>
+    <div id="lbList"><div class="lb-empty">불러오는 중...</div></div>
+  </section>
+
+  <button class="admin-link" id="adminBtn" type="button">관리자</button>
+
+  <!-- ADMIN -->
+  <section id="screenAdmin" hidden style="margin-top:24px;">
+    <div class="admin-box">
+      <h3>문제 일괄 등록</h3>
+      <textarea id="bulkJson" rows="6" placeholder='[{"floor":1,"text":"문제","choices":["보기1","보기2","보기3","보기4"],"answer":0}, ...]'></textarea>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">JSON 형식으로 붙여넣으면 한 번에 여러 문제가 등록됩니다.</div>
+      <button class="btn" id="bulkAddBtn" type="button">일괄 등록</button>
+      <div class="save-msg" id="bulkMsg"></div>
+    </div>
+    <div class="admin-box">
+      <h3>문제 추가</h3>
+      <input type="number" id="qFloor" placeholder="층 번호 (예: 1)">
+      <textarea id="qText" placeholder="문제 내용" rows="2"></textarea>
+      <div class="admin-choice-row"><input type="radio" name="qCorrect" value="0" checked><input type="text" id="qC0" placeholder="보기 1"></div>
+      <div class="admin-choice-row"><input type="radio" name="qCorrect" value="1"><input type="text" id="qC1" placeholder="보기 2"></div>
+      <div class="admin-choice-row"><input type="radio" name="qCorrect" value="2"><input type="text" id="qC2" placeholder="보기 3"></div>
+      <div class="admin-choice-row"><input type="radio" name="qCorrect" value="3"><input type="text" id="qC3" placeholder="보기 4"></div>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">라디오 버튼으로 정답 보기를 선택하세요</div>
+      <button class="btn" id="addQBtn" type="button">문제 등록</button>
+      <div class="save-msg" id="qMsg"></div>
+    </div>
+    <div class="admin-box">
+      <h3>등록된 문제</h3>
+      <ul class="q-list" id="qList"><li>불러오는 중...</li></ul>
+    </div>
+  </section>
+
+
+</div>
+
+<div class="modal-overlay" id="loginModal" hidden>
+  <div class="modal-box">
+    <h3>관리자 로그인</h3>
+    <input type="email" id="loginEmail" placeholder="이메일" autocomplete="username">
+    <input type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
+    <div class="modal-actions">
+      <button class="modal-submit" id="loginSubmit" type="button">로그인</button>
+      <button class="modal-cancel" id="loginCancel" type="button">취소</button>
+    </div>
+    <div class="modal-msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAj29XZzqdgGbvIMPm_JaEJwakvflXbrYM",
+    authDomain: "eom-math.firebaseapp.com",
+    projectId: "eom-math",
+    storageBucket: "eom-math.firebasestorage.app",
+    messagingSenderId: "849635933461",
+    appId: "1:849635933461:web:d24910ea586db9467a3d1c"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // ---------- elements ----------
+  const screens = {
+    start: document.getElementById('screenStart'),
+    quiz: document.getElementById('screenQuiz'),
+    result: document.getElementById('screenResult'),
+    board: document.getElementById('screenBoard'),
+    admin: document.getElementById('screenAdmin'),
+  };
+  const tabChallenge = document.getElementById('tabChallenge');
+  const tabBoard = document.getElementById('tabBoard');
+
+  function showChallengeFlow(sub){
+    tabChallenge.classList.add('active'); tabBoard.classList.remove('active');
+    screens.board.hidden = true; screens.admin.hidden = true;
+    screens.start.hidden = sub !== 'start';
+    screens.quiz.hidden = sub !== 'quiz';
+    screens.result.hidden = sub !== 'result';
+  }
+  tabChallenge.addEventListener('click', () => showChallengeFlow('start'));
+  tabBoard.addEventListener('click', () => {
+    tabBoard.classList.add('active'); tabChallenge.classList.remove('active');
+    screens.start.hidden = screens.quiz.hidden = screens.result.hidden = screens.admin.hidden = true;
+    screens.board.hidden = false;
+    loadLeaderboard();
+  });
+  document.getElementById('toBoardBtn').addEventListener('click', () => tabBoard.click());
+
+  // ---------- quiz engine ----------
+  let questions = [];
+  let qIndex = 0;
+  let playerName = '';
+  let quizStartTime = 0;
+  let timerInterval = null;
+  const TIME_LIMIT = 15000;
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i = a.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  async function loadQuestions(){
+    const snap = await db.collection('towerQuestions').get();
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const basic = shuffle(all.filter(q => q.floor <= 50));
+    const advanced = shuffle(all.filter(q => q.floor > 50));
+    questions = basic.concat(advanced);
+  }
+
+  document.getElementById('startBtn').addEventListener('click', async () => {
+    const nameInput = document.getElementById('playerName');
+    if(!nameInput.value.trim()){ nameInput.focus(); return; }
+    playerName = nameInput.value.trim();
+    document.getElementById('startBtn').textContent = '불러오는 중...';
+    await loadQuestions();
+    document.getElementById('startBtn').textContent = '도전 시작 →';
+    if(questions.length === 0){
+      alert('아직 등록된 문제가 없어요. 선생님께 문의해주세요.');
+      return;
+    }
+    qIndex = 0;
+    quizStartTime = Date.now();
+    showChallengeFlow('quiz');
+    renderQuestion();
+  });
+
+  function renderTower(){
+    const vis = document.getElementById('towerVis');
+    const total = Math.min(questions.length, 20);
+    vis.innerHTML = '';
+    for(let i = 0; i < total; i++){
+      const div = document.createElement('div');
+      div.className = 'floor' + (i < qIndex ? ' lit' : '');
+      vis.appendChild(div);
+    }
+  }
+
+  function renderQuestion(){
+    renderTower();
+    const q = questions[qIndex];
+    document.getElementById('floorNo').textContent = 'FLOOR ' + String(qIndex + 1).padStart(2, '0');
+    document.getElementById('questionText').textContent = q.text;
+    const box = document.getElementById('choicesBox');
+    box.innerHTML = '';
+    q.choices.forEach((c, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice'; btn.type = 'button';
+      btn.innerHTML = '<span class="idx">' + (i+1) + '</span><span>' + c + '</span>';
+      btn.addEventListener('click', () => onAnswer(i));
+      box.appendChild(btn);
+    });
+    startTimer();
+  }
+
+  function startTimer(){
+    let remaining = TIME_LIMIT;
+    const fill = document.getElementById('timerFill');
+    const num = document.getElementById('timerNum');
+    fill.style.transition = 'none'; fill.style.width = '100%';
+    num.textContent = '15';
+    clearInterval(timerInterval);
+    const tickStart = Date.now();
+    timerInterval = setInterval(() => {
+      remaining = TIME_LIMIT - (Date.now() - tickStart);
+      if(remaining <= 0){
+        clearInterval(timerInterval);
+        onAnswer(-1);
+        return;
+      }
+      fill.style.width = (remaining / TIME_LIMIT * 100) + '%';
+      num.textContent = Math.ceil(remaining / 1000);
+    }, 100);
+  }
+
+  function onAnswer(choiceIdx){
+    clearInterval(timerInterval);
+    const q = questions[qIndex];
+    const buttons = document.querySelectorAll('#choicesBox .choice');
+    buttons.forEach((b, i) => {
+      b.disabled = true;
+      if(i === q.answer) b.classList.add('correct');
+      else if(i === choiceIdx) b.classList.add('wrong');
+    });
+    const isCorrect = choiceIdx === q.answer;
+    setTimeout(() => {
+      if(isCorrect && qIndex < questions.length - 1){
+        qIndex++;
+        renderQuestion();
+      }else{
+        endQuiz(isCorrect);
+      }
+    }, 700);
+  }
+
+  function endQuiz(lastCorrect){
+    const floorReached = lastCorrect ? (qIndex + 1) : qIndex;
+    const timeMs = Date.now() - quizStartTime;
+    document.getElementById('resultFloor').textContent = floorReached + '층';
+    showChallengeFlow('result');
+    saveScore(floorReached, timeMs);
+  }
+
+  function saveScore(floor, timeMs){
+    const msg = document.getElementById('saveMsg');
+    db.collection('towerScores').add({
+      name: playerName, floor, timeMs,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => { msg.textContent = '순위표에 기록됐어요!'; })
+      .catch(err => { msg.textContent = '기록 저장 실패: ' + err.message; });
+  }
+
+  document.getElementById('retryBtn').addEventListener('click', () => showChallengeFlow('start'));
+
+  // ---------- leaderboard ----------
+  let lbUnsub = null;
+  function loadLeaderboard(){
+    const list = document.getElementById('lbList');
+    if(lbUnsub) lbUnsub();
+    lbUnsub = db.collection('towerScores')
+      .orderBy('floor', 'desc').orderBy('timeMs', 'asc').limit(20)
+      .onSnapshot(snap => {
+        if(snap.empty){ list.innerHTML = '<div class="lb-empty">아직 기록이 없어요. 첫 도전자가 되어보세요!</div>'; return; }
+        list.innerHTML = '';
+        let rank = 1;
+        snap.forEach(doc => {
+          const d = doc.data();
+          const row = document.createElement('div');
+          row.className = 'lb-row';
+          row.innerHTML =
+            '<div class="lb-rank">' + rank + '</div>' +
+            '<div class="lb-name">' + escapeHtml(d.name || '익명') + '</div>' +
+            '<div style="text-align:right;"><div class="lb-floor">' + d.floor + '층</div>' +
+            '<div class="lb-time">' + (d.timeMs ? (d.timeMs/1000).toFixed(1) + '초' : '') + '</div></div>';
+          list.appendChild(row);
+          rank++;
+        });
+      }, err => { list.innerHTML = '<div class="lb-empty">순위표를 불러오지 못했어요.</div>'; });
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- admin ----------
+  const adminBtn = document.getElementById('adminBtn');
+  const loginModal = document.getElementById('loginModal');
+  const loginSubmit = document.getElementById('loginSubmit');
+  const loginCancel = document.getElementById('loginCancel');
+  const loginMsg = document.getElementById('loginMsg');
+
+  adminBtn.addEventListener('click', () => {
+    if(adminBtn.textContent === '관리자 모드 (로그아웃)'){
+      auth.signOut();
+      return;
+    }
+    loginModal.hidden = false; loginMsg.textContent = '';
+  });
+  loginCancel.addEventListener('click', () => { loginModal.hidden = true; });
+  loginSubmit.addEventListener('click', () => {
+    const email = document.getElementById('loginEmail').value;
+    const pw = document.getElementById('loginPw').value;
+    loginMsg.textContent = '로그인 중...';
+    auth.signInWithEmailAndPassword(email, pw).then(() => { loginModal.hidden = true; })
+      .catch(() => { loginMsg.textContent = '로그인 실패: 이메일 또는 비밀번호를 확인해주세요.'; });
+  });
+
+  auth.onAuthStateChanged(user => {
+    if(user){
+      adminBtn.textContent = '관리자 모드 (로그아웃)';
+      tabChallenge.classList.remove('active'); tabBoard.classList.remove('active');
+      screens.start.hidden = screens.quiz.hidden = screens.result.hidden = screens.board.hidden = true;
+      screens.admin.hidden = false;
+      loadAdminQuestions();
+    }else{
+      adminBtn.textContent = '관리자';
+      if(!screens.admin.hidden){ showChallengeFlow('start'); }
+    }
+  });
+
+  document.getElementById('bulkAddBtn').addEventListener('click', () => {
+    const msg = document.getElementById('bulkMsg');
+    let arr;
+    try{
+      arr = JSON.parse(document.getElementById('bulkJson').value);
+      if(!Array.isArray(arr)) throw new Error('배열 형식이 아닙니다.');
+    }catch(e){
+      msg.textContent = 'JSON 형식 오류: ' + e.message;
+      return;
+    }
+    msg.textContent = arr.length + '개 등록 중...';
+    const batch = db.batch();
+    arr.forEach(q => {
+      const ref = db.collection('towerQuestions').doc();
+      batch.set(ref, {
+        floor: q.floor, text: q.text, choices: q.choices, answer: q.answer,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+    batch.commit().then(() => {
+      msg.textContent = arr.length + '개 문제가 등록됐어요!';
+      document.getElementById('bulkJson').value = '';
+      loadAdminQuestions();
+    }).catch(err => { msg.textContent = '등록 실패: ' + err.message; });
+  });
+
+  document.getElementById('addQBtn').addEventListener('click', () => {
+    const floor = parseInt(document.getElementById('qFloor').value, 10);
+    const text = document.getElementById('qText').value.trim();
+    const choices = [
+      document.getElementById('qC0').value.trim(),
+      document.getElementById('qC1').value.trim(),
+      document.getElementById('qC2').value.trim(),
+      document.getElementById('qC3').value.trim(),
+    ];
+    const answer = parseInt(document.querySelector('input[name="qCorrect"]:checked').value, 10);
+    const msg = document.getElementById('qMsg');
+    if(!floor || !text || choices.some(c => !c)){
+      msg.textContent = '층 번호, 문제, 보기 4개를 모두 입력해주세요.';
+      return;
+    }
+    msg.textContent = '등록 중...';
+    db.collection('towerQuestions').add({ floor, text, choices, answer,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      msg.textContent = '등록 완료!';
+      document.getElementById('qFloor').value = '';
+      document.getElementById('qText').value = '';
+      document.getElementById('qC0').value = '';
+      document.getElementById('qC1').value = '';
+      document.getElementById('qC2').value = '';
+      document.getElementById('qC3').value = '';
+      loadAdminQuestions();
+    }).catch(err => { msg.textContent = '등록 실패: ' + err.message; });
+  });
+
+  function loadAdminQuestions(){
+    const list = document.getElementById('qList');
+    db.collection('towerQuestions').orderBy('floor', 'asc').get().then(snap => {
+      if(snap.empty){ list.innerHTML = '<li>등록된 문제가 없습니다.</li>'; return; }
+      list.innerHTML = '';
+      snap.forEach(doc => {
+        const d = doc.data();
+        const li = document.createElement('li');
+        li.innerHTML = '<span>' + String(d.floor).padStart(2,'0') + '층 · ' + escapeHtml(d.text.slice(0,20)) + '</span>';
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '삭제';
+        delBtn.addEventListener('click', () => {
+          db.collection('towerQuestions').doc(doc.id).delete().then(loadAdminQuestions);
+        });
+        li.appendChild(delBtn);
+        list.appendChild(li);
+      });
+    });
+  }
+</script>
+</body>
+</html>
