@@ -72,13 +72,22 @@
 
   .statement{
     margin-top:34px;
-    font-family:'EB Garamond',serif; font-style:italic;
-    font-size:clamp(19px,3.6vw,26px);
-    color:var(--ink);
     border-left:2px solid var(--red);
     padding-left:18px;
   }
-  .statement .n{ color:var(--red); font-weight:600; }
+  .statement-main{
+    font-weight:800; font-style:normal;
+    font-size:clamp(19px,3.6vw,25px);
+    color:var(--ink);
+    line-height:1.4;
+    margin-bottom:10px;
+  }
+  .statement-sub{
+    font-family:'EB Garamond',serif; font-style:italic;
+    font-size:clamp(14px,2.6vw,17px);
+    color:var(--dim);
+    line-height:1.5;
+  }
 
   /* ---------- photo block ---------- */
   .photo-block{
@@ -173,6 +182,22 @@
   .upload-btn:hover{ background:var(--red); color:#fff; }
 
   /* ---------- curriculum ---------- */
+  /* ---------- tower cta ---------- */
+  .tower-cta{
+    display:flex; align-items:center; gap:14px;
+    margin-top:24px;
+    padding:20px 20px;
+    background:var(--ink); color:#fff;
+    transition:transform .2s ease;
+  }
+  .tower-cta:hover{ transform:translateY(-2px); }
+  .tower-cta-badge{
+    background:var(--red); color:#fff; font-size:11px; font-weight:800;
+    padding:5px 9px; letter-spacing:.04em; flex-shrink:0;
+  }
+  .tower-cta-title{ display:block; font-size:17px; font-weight:800; margin-bottom:3px; }
+  .tower-cta-sub{ display:block; font-size:12.5px; color:rgba(255,255,255,.65); }
+
   section.curriculum{ padding:64px 0 0; }
   .curri-list{ border-top:1px solid var(--line); }
   .curri-item{ border-bottom:1px solid var(--line); }
@@ -280,7 +305,10 @@
     <p class="kicker">고등수학 · 내신 · 수능</p>
     <h1 class="headline">엄형국<br>수학<span class="accent">.</span></h1>
     <p class="role-line">메가스터디학원 · 메가스터디 러셀 · 대치 상상학원 · 대치 SNT학원 출신</p>
-    <p class="statement">성적 향상 <span class="n">=</span> ( 이해 + 반복 )<span class="n">²</span> — 내신성공의 방정식</p>
+    <div class="statement">
+      <p class="statement-sub">내신에는 맞춤 해법을, 수능에는 흔들리지 않는 본질을.</p>
+      <p class="statement-main">조건에 강한 내신성공의 방정식,<br>변수에 흔들리지 않는 수능성공의 항등식</p>
+    </div>
   </header>
 
   <div class="photo-block">
@@ -346,6 +374,14 @@
     </div>
   </div>
 
+  <a class="tower-cta" href="tower.html">
+    <span class="tower-cta-badge">NEW</span>
+    <span class="tower-cta-body">
+      <span class="tower-cta-title">개념의 탑</span>
+      <span class="tower-cta-sub">15초 개념 퀴즈 →</span>
+    </span>
+  </a>
+
   <section class="curriculum">
     <div class="section-head"><h2>Curriculum</h2><span>03</span></div>
     <div class="curri-list">
@@ -371,7 +407,7 @@
         <button class="curri-head" type="button">
           <div class="lt">
             <div class="k">Step 02 · 심화개념</div>
-            <div class="t">미장센</div>
+            <div class="t">심화 미장센</div>
           </div>
           <div class="rt">↓</div>
         </button>
@@ -388,7 +424,7 @@
         <button class="curri-head" type="button">
           <div class="lt">
             <div class="k">Step 03 · 기출분석</div>
-            <div class="t">기출오마주</div>
+            <div class="t">기출 오마주</div>
           </div>
           <div class="rt">↓</div>
         </button>
@@ -405,7 +441,7 @@
         <button class="curri-head" type="button">
           <div class="lt">
             <div class="k">Step 04 · 실전모의고사</div>
-            <div class="t">파이널컷</div>
+            <div class="t">파이널 컷</div>
           </div>
           <div class="rt">↓</div>
         </button>
