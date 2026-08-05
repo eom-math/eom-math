@@ -47,6 +47,14 @@
   }
   .hero p{ font-size:14.5px; color:var(--dim); }
 
+  .conn-status{
+    text-align:center; font-size:11.5px; font-weight:700;
+    padding:7px 10px; margin-bottom:20px; color:var(--dim);
+    background:var(--bg2); border:1px solid var(--line);
+  }
+  .conn-status.ok{ color:#2f7a4c; background:rgba(60,150,90,.08); border-color:rgba(60,150,90,.3); }
+  .conn-status.fail{ color:var(--red); background:rgba(214,48,31,.06); border-color:rgba(214,48,31,.3); cursor:pointer; }
+
   .tabs{
     display:flex; gap:8px; justify-content:center; margin-bottom:32px;
   }
@@ -197,6 +205,8 @@
     <p>15초 안에 개념 퀴즈를 풀고 한 층씩 올라가보세요.</p>
   </div>
 
+  <div class="conn-status" id="connStatus">서버 연결 확인 중...</div>
+
   <div class="tabs">
     <button class="tab-btn active" id="tabChallenge" type="button">도전하기</button>
     <button class="tab-btn" id="tabBoard" type="button">순위표</button>
@@ -331,6 +341,31 @@
   });
   document.getElementById('toBoardBtn').addEventListener('click', () => tabBoard.click());
 
+  // ---------- network helper ----------
+  function withTimeout(promise, ms, message){
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error(message || ('응답 시간 초과 (' + (ms/1000) + '초)'))), ms));
+    return Promise.race([promise, timeout]);
+  }
+
+  // ---------- connection check ----------
+  const connStatus = document.getElementById('connStatus');
+  function checkConnection(){
+    connStatus.className = 'conn-status';
+    connStatus.textContent = '서버 연결 확인 중...';
+    withTimeout(db.collection('towerQuestions').limit(1).get(), 8000, '연결 시간 초과')
+      .then(() => {
+        connStatus.className = 'conn-status ok';
+        connStatus.textContent = '서버 연결 정상';
+        setTimeout(() => { connStatus.style.display = 'none'; }, 2000);
+      })
+      .catch(err => {
+        connStatus.className = 'conn-status fail';
+        connStatus.textContent = '서버 연결 실패 (' + err.message + ') · 눌러서 다시 시도';
+        connStatus.onclick = checkConnection;
+      });
+  }
+  checkConnection();
+
   // ---------- quiz engine ----------
   let questions = [];
   let qIndex = 0;
@@ -351,12 +386,13 @@
   let rawQuestionsPromise = null;
   function fetchRawQuestions(){
     if(!rawQuestionsPromise){
-      rawQuestionsPromise = db.collection('towerQuestions').get()
-        .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      rawQuestionsPromise = withTimeout(db.collection('towerQuestions').get(), 12000, '문제를 불러오지 못했어요 (시간 초과)')
+        .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        .catch(err => { rawQuestionsPromise = null; throw err; }); // 실패하면 캐시를 비워서 재시도 가능하게
     }
     return rawQuestionsPromise;
   }
-  fetchRawQuestions(); // 페이지 로드 시점에 미리 불러오기 시작 (이름 입력하는 동안 백그라운드에서 로딩)
+  fetchRawQuestions().catch(() => {}); // 페이지 로드 시점에 미리 불러오기 시작 (실패해도 여기선 조용히 무시, 버튼 클릭 시 재시도됨)
 
   async function loadQuestions(){
     const all = await fetchRawQuestions();
@@ -369,9 +405,19 @@
     const nameInput = document.getElementById('playerName');
     if(!nameInput.value.trim()){ nameInput.focus(); return; }
     playerName = nameInput.value.trim();
-    document.getElementById('startBtn').textContent = '불러오는 중...';
-    await loadQuestions();
-    document.getElementById('startBtn').textContent = '도전 시작 →';
+    const startBtn = document.getElementById('startBtn');
+    startBtn.textContent = '불러오는 중...';
+    startBtn.disabled = true;
+    try{
+      await loadQuestions();
+    }catch(err){
+      startBtn.textContent = '도전 시작 →';
+      startBtn.disabled = false;
+      alert('문제를 불러오지 못했어요: ' + err.message + '\n다시 시도해주세요.');
+      return;
+    }
+    startBtn.textContent = '도전 시작 →';
+    startBtn.disabled = false;
     if(questions.length === 0){
       alert('아직 등록된 문제가 없어요. 선생님께 문의해주세요.');
       return;
@@ -473,10 +519,16 @@
   let lbUnsub = null;
   function loadLeaderboard(){
     const list = document.getElementById('lbList');
+    list.innerHTML = '<div class="lb-empty">불러오는 중...</div>';
     if(lbUnsub) lbUnsub();
+    let gotData = false;
+    setTimeout(() => {
+      if(!gotData) list.innerHTML = '<div class="lb-empty">서버 응답이 없어요. <button onclick="loadLeaderboard()" style="border:none;background:none;color:var(--red);font-weight:700;text-decoration:underline;cursor:pointer;">재시도</button></div>';
+    }, 10000);
     lbUnsub = db.collection('towerScores')
       .orderBy('floor', 'desc').orderBy('timeMs', 'asc').limit(20)
       .onSnapshot(snap => {
+        gotData = true;
         if(snap.empty){ list.innerHTML = '<div class="lb-empty">아직 기록이 없어요. 첫 도전자가 되어보세요!</div>'; return; }
         list.innerHTML = '';
         let rank = 1;
@@ -492,7 +544,7 @@
           list.appendChild(row);
           rank++;
         });
-      }, err => { list.innerHTML = '<div class="lb-empty">순위표를 불러오지 못했어요.</div>'; });
+      }, err => { gotData = true; list.innerHTML = '<div class="lb-empty">순위표를 불러오지 못했어요: ' + escapeHtml(err.message) + '</div>'; });
   }
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -554,8 +606,7 @@
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       });
-      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('응답 시간 초과 (10초). 네트워크 상태를 확인하고 다시 시도해주세요.')), 10000));
-      Promise.race([batch.commit(), timeout]).then(() => {
+      withTimeout(batch.commit(), 15000, '응답 시간 초과 (15초). 네트워크 상태를 확인하고 다시 시도해주세요.').then(() => {
         msg.textContent = arr.length + '개 문제가 등록됐어요!';
         document.getElementById('bulkJson').value = '';
         loadAdminQuestions();
@@ -581,9 +632,9 @@
       return;
     }
     msg.textContent = '등록 중...';
-    db.collection('towerQuestions').add({ floor, text, choices, answer,
+    withTimeout(db.collection('towerQuestions').add({ floor, text, choices, answer,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
+    }), 10000, '응답 시간 초과').then(() => {
       msg.textContent = '등록 완료!';
       document.getElementById('qFloor').value = '';
       document.getElementById('qText').value = '';
@@ -598,8 +649,7 @@
   function loadAdminQuestions(){
     const list = document.getElementById('qList');
     list.innerHTML = '<li>불러오는 중...</li>';
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('응답 시간 초과 (10초)')), 10000));
-    Promise.race([db.collection('towerQuestions').orderBy('floor', 'asc').get(), timeout]).then(snap => {
+    withTimeout(db.collection('towerQuestions').orderBy('floor', 'asc').get(), 10000, '응답 시간 초과').then(snap => {
       if(snap.empty){ list.innerHTML = '<li>등록된 문제가 없습니다.</li>'; return; }
       list.innerHTML = '';
       snap.forEach(doc => {
@@ -609,14 +659,15 @@
         const delBtn = document.createElement('button');
         delBtn.textContent = '삭제';
         delBtn.addEventListener('click', () => {
-          db.collection('towerQuestions').doc(doc.id).delete().then(loadAdminQuestions)
+          withTimeout(db.collection('towerQuestions').doc(doc.id).delete(), 10000, '응답 시간 초과')
+            .then(loadAdminQuestions)
             .catch(err => alert('삭제 실패: ' + err.message));
         });
         li.appendChild(delBtn);
         list.appendChild(li);
       });
     }).catch(err => {
-      list.innerHTML = '<li>목록을 불러오지 못했어요: ' + escapeHtml(err.message) + '</li>';
+      list.innerHTML = '<li>목록을 불러오지 못했어요: ' + escapeHtml(err.message) + ' <button onclick="loadAdminQuestions()">재시도</button></li>';
     });
   }
 </script>
