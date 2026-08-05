@@ -7,6 +7,9 @@
 <meta name="description" content="15초 개념 퀴즈로 오르는 개념의 탑. 시즌1 실시간 순위표.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&family=EB+Garamond:ital,wght@1,500;1,600&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -298,6 +301,7 @@
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
+  // (오프라인 캐시 기능은 일부 브라우저/웹뷰에서 요청이 멈추는 문제를 일으켜 제거했습니다)
 
   // ---------- elements ----------
   const screens = {
@@ -343,9 +347,18 @@
     return a;
   }
 
+  let rawQuestionsPromise = null;
+  function fetchRawQuestions(){
+    if(!rawQuestionsPromise){
+      rawQuestionsPromise = db.collection('towerQuestions').get()
+        .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }
+    return rawQuestionsPromise;
+  }
+  fetchRawQuestions(); // 페이지 로드 시점에 미리 불러오기 시작 (이름 입력하는 동안 백그라운드에서 로딩)
+
   async function loadQuestions(){
-    const snap = await db.collection('towerQuestions').get();
-    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const all = await fetchRawQuestions();
     const basic = shuffle(all.filter(q => q.floor <= 50));
     const advanced = shuffle(all.filter(q => q.floor > 50));
     questions = basic.concat(advanced);
@@ -531,19 +544,23 @@
       return;
     }
     msg.textContent = arr.length + '개 등록 중...';
-    const batch = db.batch();
-    arr.forEach(q => {
-      const ref = db.collection('towerQuestions').doc();
-      batch.set(ref, {
-        floor: q.floor, text: q.text, choices: q.choices, answer: q.answer,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    try{
+      const batch = db.batch();
+      arr.forEach(q => {
+        const ref = db.collection('towerQuestions').doc();
+        batch.set(ref, {
+          floor: q.floor, text: q.text, choices: q.choices, answer: q.answer,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
       });
-    });
-    batch.commit().then(() => {
-      msg.textContent = arr.length + '개 문제가 등록됐어요!';
-      document.getElementById('bulkJson').value = '';
-      loadAdminQuestions();
-    }).catch(err => { msg.textContent = '등록 실패: ' + err.message; });
+      batch.commit().then(() => {
+        msg.textContent = arr.length + '개 문제가 등록됐어요!';
+        document.getElementById('bulkJson').value = '';
+        loadAdminQuestions();
+      }).catch(err => { msg.textContent = '등록 실패: ' + err.message; });
+    }catch(err){
+      msg.textContent = '등록 중 오류가 발생했어요: ' + err.message;
+    }
   });
 
   document.getElementById('addQBtn').addEventListener('click', () => {
@@ -578,6 +595,7 @@
 
   function loadAdminQuestions(){
     const list = document.getElementById('qList');
+    list.innerHTML = '<li>불러오는 중...</li>';
     db.collection('towerQuestions').orderBy('floor', 'asc').get().then(snap => {
       if(snap.empty){ list.innerHTML = '<li>등록된 문제가 없습니다.</li>'; return; }
       list.innerHTML = '';
@@ -588,11 +606,14 @@
         const delBtn = document.createElement('button');
         delBtn.textContent = '삭제';
         delBtn.addEventListener('click', () => {
-          db.collection('towerQuestions').doc(doc.id).delete().then(loadAdminQuestions);
+          db.collection('towerQuestions').doc(doc.id).delete().then(loadAdminQuestions)
+            .catch(err => alert('삭제 실패: ' + err.message));
         });
         li.appendChild(delBtn);
         list.appendChild(li);
       });
+    }).catch(err => {
+      list.innerHTML = '<li>목록을 불러오지 못했어요: ' + escapeHtml(err.message) + '</li>';
     });
   }
 </script>
