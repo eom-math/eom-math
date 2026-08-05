@@ -301,6 +301,7 @@
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
+  db.settings({ experimentalForceLongPolling: true, merge: true });
   // (오프라인 캐시 기능은 일부 브라우저/웹뷰에서 요청이 멈추는 문제를 일으켜 제거했습니다)
 
   // ---------- elements ----------
@@ -553,7 +554,8 @@
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       });
-      batch.commit().then(() => {
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('응답 시간 초과 (10초). 네트워크 상태를 확인하고 다시 시도해주세요.')), 10000));
+      Promise.race([batch.commit(), timeout]).then(() => {
         msg.textContent = arr.length + '개 문제가 등록됐어요!';
         document.getElementById('bulkJson').value = '';
         loadAdminQuestions();
@@ -596,7 +598,8 @@
   function loadAdminQuestions(){
     const list = document.getElementById('qList');
     list.innerHTML = '<li>불러오는 중...</li>';
-    db.collection('towerQuestions').orderBy('floor', 'asc').get().then(snap => {
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('응답 시간 초과 (10초)')), 10000));
+    Promise.race([db.collection('towerQuestions').orderBy('floor', 'asc').get(), timeout]).then(snap => {
       if(snap.empty){ list.innerHTML = '<li>등록된 문제가 없습니다.</li>'; return; }
       list.innerHTML = '';
       snap.forEach(doc => {
