@@ -296,9 +296,20 @@
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  window.onerror = function(msg, url, line){
+    const el = document.getElementById('connStatus');
+    if(el){
+      el.className = 'conn-status fail';
+      el.textContent = '스크립트 오류: ' + msg + ' (줄 ' + line + ') · 새로고침 해보세요';
+      el.style.display = '';
+    }
+    return false;
+  };
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" onerror="document.getElementById('connStatus').className='conn-status fail'; document.getElementById('connStatus').textContent='Firebase 스크립트 로딩 실패 (네트워크 차단 가능성) · 새로고침';"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" onerror="document.getElementById('connStatus').className='conn-status fail'; document.getElementById('connStatus').textContent='Firebase Auth 스크립트 로딩 실패 · 새로고침';"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" onerror="document.getElementById('connStatus').className='conn-status fail'; document.getElementById('connStatus').textContent='Firestore 스크립트 로딩 실패 · 새로고침';"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyAj29XZzqdgGbvIMPm_JaEJwakvflXbrYM",
@@ -308,10 +319,17 @@
     messagingSenderId: "849635933461",
     appId: "1:849635933461:web:d24910ea586db9467a3d1c"
   };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-  db.settings({ experimentalForceLongPolling: true, merge: true });
+  let auth, db;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    db.settings({ experimentalForceLongPolling: true, merge: true });
+  }catch(err){
+    const el = document.getElementById('connStatus');
+    el.className = 'conn-status fail';
+    el.textContent = 'Firebase 초기화 실패: ' + err.message;
+  }
   // (오프라인 캐시 기능은 일부 브라우저/웹뷰에서 요청이 멈추는 문제를 일으켜 제거했습니다)
 
   // ---------- elements ----------
@@ -350,6 +368,11 @@
   // ---------- connection check ----------
   const connStatus = document.getElementById('connStatus');
   function checkConnection(){
+    if(!db){
+      connStatus.className = 'conn-status fail';
+      connStatus.textContent = 'Firebase가 초기화되지 않았어요 · 새로고침 해보세요';
+      return;
+    }
     connStatus.className = 'conn-status';
     connStatus.textContent = '서버 연결 확인 중...';
     withTimeout(db.collection('towerQuestions').limit(1).get(), 8000, '연결 시간 초과')
@@ -385,6 +408,7 @@
 
   let rawQuestionsPromise = null;
   function fetchRawQuestions(){
+    if(!db) return Promise.reject(new Error('Firebase가 초기화되지 않았어요. 새로고침 해주세요.'));
     if(!rawQuestionsPromise){
       rawQuestionsPromise = withTimeout(db.collection('towerQuestions').get(), 12000, '문제를 불러오지 못했어요 (시간 초과)')
         .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })))
