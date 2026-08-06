@@ -70,15 +70,31 @@
   }
   .tab-btn.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
 
-  /* tower visual */
+  /* tower climb visual (배틀 씬 좌측 세로 진행바) */
   .tower-vis{
-    display:flex; flex-direction:column-reverse; gap:3px;
-    max-width:120px; margin:0 auto 26px;
+    position:absolute; left:10px; top:14px; bottom:14px; width:20px;
+    display:flex; flex-direction:column; align-items:center;
+    z-index:3;
   }
-  .tower-vis .floor{
-    height:7px; background:var(--bg2); border:1px solid var(--line);
+  .tower-flag{ font-size:13px; line-height:1; margin-bottom:4px; }
+  .tower-track{
+    flex:1; width:6px; background:rgba(0,0,0,.35);
+    border:1px solid rgba(255,255,255,.15);
+    display:flex; flex-direction:column-reverse; gap:2px;
+    padding:2px; overflow:hidden;
   }
-  .tower-vis .floor.lit{ background:var(--red); border-color:var(--red); }
+  .tower-track .floor{
+    width:100%; height:5%; min-height:2px; background:rgba(255,255,255,.12);
+    transition:background .25s ease;
+  }
+  .tower-track .floor.lit{ background:#ffcf6b; box-shadow:0 0 4px rgba(255,207,107,.8); }
+  .climber-mark{
+    display:flex; align-items:center; justify-content:center;
+    height:14px !important; font-size:11px; line-height:1;
+    background:none !important; box-shadow:none !important;
+    animation:climberBob 1s ease-in-out infinite;
+  }
+  @keyframes climberBob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-2px); } }
 
   /* start card */
   .card{
@@ -135,7 +151,7 @@
     100%{ transform:translateY(-160px) translateX(10px); opacity:0; }
   }
   .foe-panel{
-    position:absolute; top:14px; left:14px;
+    position:absolute; top:14px; left:42px;
     background:linear-gradient(160deg,#8a7a68,#5e5040);
     border:2px solid #2c2418;
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.12), 0 4px 10px rgba(0,0,0,.4);
@@ -178,6 +194,38 @@
   }
   .mon{ width:100%; height:100%; filter:drop-shadow(0 6px 4px rgba(0,0,0,.25)); }
   .foe-mon{ filter:drop-shadow(0 6px 4px rgba(0,0,0,.3)) drop-shadow(0 0 8px rgba(164,128,216,.5)); }
+
+  /* ---------- 개념의 탑 모드: 몬스터 배틀 요소를 숨기고 조용한 등반 화면으로 ---------- */
+  .mode-tower .battle-scene{
+    background:linear-gradient(180deg,#1b2340 0%,#2c3868 45%,#3d4d8a 70%,#232c4d 100%);
+  }
+  .mode-tower .ember,
+  .mode-tower .foe-sprite,
+  .mode-tower .player-sprite{ display:none; }
+  .mode-tower .foe-panel{ left:50%; transform:translateX(-50%); top:14px; }
+  .mode-tower .player-panel{ left:50%; right:auto; transform:translateX(-50%); bottom:14px; }
+  .mode-tower .tower-vis{
+    left:50%; transform:translateX(-50%); width:26px; top:64px; bottom:64px;
+  }
+  .mode-tower .foe-panel, .mode-tower .player-panel{
+    background:linear-gradient(165deg,#f2efe8,#d8d2c4);
+    border-color:#8a8272;
+  }
+  .mode-tower .panel-name{ color:#2c2820; text-shadow:none; }
+  .mode-tower .hp-label{ color:#b8860f; }
+  .mode-tower .hp-timer{ color:#8a1f1f; text-shadow:none; }
+  .mode-tower .hpbar{ background:#e4ddc8; border-color:#a89f8a; }
+  .mode-tower .dialogue-box{
+    background:linear-gradient(165deg,#f2efe8,#d8d2c4); border-color:#8a8272;
+  }
+  .mode-tower .dialogue-box p{ color:#2c2820; }
+  .mode-tower .battle-menu{ background:#e4ddc8; border-top-color:#8a8272; }
+  .mode-tower .choice{ background:#f4ead8; color:#2c2820; border-bottom-color:rgba(44,40,32,.12); }
+  .mode-tower .choice:nth-child(odd){ border-right-color:rgba(44,40,32,.12); }
+  .mode-tower .choice:hover{ background:#e8dfc8; }
+  .mode-tower .choice::before{ color:#8a1f1f; }
+  .mode-tower .choice.correct{ background:#c8e8c8; }
+  .mode-tower .choice.wrong{ background:#f0c8c0; }
   @keyframes floatY{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
 
   .foe-sprite.hit .mon, .player-sprite.hurt .mon{
@@ -259,7 +307,7 @@
   /* legacy elements kept for JS compatibility, hidden visually */
   .quiz-head{ display:none; }
   .timer-bar{ display:none; }
-  section#screenQuiz .tower-vis{ display:none; }
+  /* tower-vis는 이제 배틀 씬 안에서 항상 표시됩니다 */
 
 
   /* result */
@@ -329,6 +377,7 @@
 </style>
 </head>
 <body>
+<script>document.body.className = (new URLSearchParams(location.search).get('mode')==='monster') ? 'mode-monster' : 'mode-tower';</script>
 
 <div class="wrap">
   <div class="topbar">
@@ -373,8 +422,13 @@
         <div class="ember" style="left:80%; animation-delay:2.8s;"></div>
         <div class="ember" style="left:92%; animation-delay:1.7s;"></div>
 
+        <div class="tower-vis" id="towerVis">
+          <div class="tower-flag">🚩</div>
+          <div class="tower-track" id="towerTrack"></div>
+        </div>
+
         <div class="foe-panel">
-          <div class="panel-name">MATH MONSTER</div>
+          <div class="panel-name" id="foePanelName">MATH MONSTER</div>
           <div class="hp-row"><span class="hp-label">HP</span><div class="hpbar"><div class="hpbar-fill" id="foeHpFill"></div></div></div>
         </div>
         <div class="foe-sprite" id="foeSprite">
@@ -440,7 +494,6 @@
 
     </div>
     <div class="timer-bar" hidden><div class="timer-bar-fill" id="timerFill"></div></div>
-    <div class="tower-vis" id="towerVis" hidden></div>
   </section>
 
   <!-- RESULT -->
@@ -610,6 +663,8 @@
     GAME_MODE === 'monster' ? '⚔ 수학몬스터 모드 · 10초' : '🗼 개념의 탑 모드 · 15초';
   document.getElementById('lbModeTag').textContent =
     GAME_MODE === 'monster' ? '⚔ 수학몬스터 순위표' : '🗼 개념의 탑 순위표';
+  document.getElementById('foePanelName').textContent =
+    GAME_MODE === 'monster' ? 'MATH MONSTER' : 'TOWER PROGRESS';
 
   // ---------- quiz engine ----------
   let questions = [];
@@ -676,13 +731,25 @@
   });
 
   function renderTower(){
-    const vis = document.getElementById('towerVis');
+    const track = document.getElementById('towerTrack');
     const total = Math.min(questions.length, 20);
-    vis.innerHTML = '';
+    track.innerHTML = '';
     for(let i = 0; i < total; i++){
+      if(i === qIndex){
+        const marker = document.createElement('div');
+        marker.className = 'floor climber-mark';
+        marker.textContent = '⛰';
+        track.appendChild(marker);
+      }
       const div = document.createElement('div');
       div.className = 'floor' + (i < qIndex ? ' lit' : '');
-      vis.appendChild(div);
+      track.appendChild(div);
+    }
+    if(qIndex >= total){
+      const marker = document.createElement('div');
+      marker.className = 'floor climber-mark';
+      marker.textContent = '⛰';
+      track.appendChild(marker);
     }
     const foeFill = document.getElementById('foeHpFill');
     const remainPct = Math.max(0, 100 - (qIndex / Math.max(questions.length,1)) * 100);
