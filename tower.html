@@ -77,8 +77,10 @@
     z-index:3;
   }
   .tower-flag{ font-size:13px; line-height:1; margin-bottom:4px; }
+  .tower-track-wrap{ position:relative; flex:1; width:100%; }
   .tower-track{
-    flex:1; width:6px; background:rgba(0,0,0,.35);
+    position:absolute; inset:0; width:6px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,.35);
     border:1px solid rgba(255,255,255,.15);
     display:flex; flex-direction:column-reverse; gap:2px;
     padding:2px; overflow:hidden;
@@ -88,13 +90,15 @@
     transition:background .25s ease;
   }
   .tower-track .floor.lit{ background:#ffcf6b; box-shadow:0 0 4px rgba(255,207,107,.8); }
-  .climber-mark{
-    display:flex; align-items:center; justify-content:center;
-    height:14px !important; font-size:11px; line-height:1;
-    background:none !important; box-shadow:none !important;
+  .tower-climber{
+    position:absolute; left:50%; bottom:0%;
+    font-size:15px; line-height:1;
+    transform:translate(-50%,50%);
+    transition:bottom .5s cubic-bezier(.3,1.2,.5,1);
     animation:climberBob 1s ease-in-out infinite;
   }
-  @keyframes climberBob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-2px); } }
+  @keyframes climberBob{ 0%,100%{ transform:translate(-50%,50%) rotate(-6deg); } 50%{ transform:translate(-50%,50%) rotate(6deg); } }
+
 
   /* start card */
   .card{
@@ -201,20 +205,19 @@
   }
   .mode-tower .ember,
   .mode-tower .foe-sprite,
-  .mode-tower .player-sprite{ display:none; }
-  .mode-tower .foe-panel{ left:50%; transform:translateX(-50%); top:14px; }
+  .mode-tower .player-sprite,
+  .mode-tower .foe-panel{ display:none; }
   .mode-tower .player-panel{ left:50%; right:auto; transform:translateX(-50%); bottom:14px; }
   .mode-tower .tower-vis{
-    left:50%; transform:translateX(-50%); width:26px; top:64px; bottom:64px;
+    left:50%; transform:translateX(-50%); width:26px; top:20px; bottom:64px;
   }
-  .mode-tower .foe-panel, .mode-tower .player-panel{
+  .mode-tower .player-panel{
     background:linear-gradient(165deg,#f2efe8,#d8d2c4);
     border-color:#8a8272;
   }
   .mode-tower .panel-name{ color:#2c2820; text-shadow:none; }
-  .mode-tower .hp-label{ color:#b8860f; }
-  .mode-tower .hp-timer{ color:#8a1f1f; text-shadow:none; }
-  .mode-tower .hpbar{ background:#e4ddc8; border-color:#a89f8a; }
+  .mode-tower .hp-row{ display:none; }
+  .mode-tower .hp-timer{ color:#8a1f1f; font-size:20px; margin-top:0; }
   .mode-tower .dialogue-box{
     background:linear-gradient(165deg,#f2efe8,#d8d2c4); border-color:#8a8272;
   }
@@ -424,7 +427,10 @@
 
         <div class="tower-vis" id="towerVis">
           <div class="tower-flag">🚩</div>
-          <div class="tower-track" id="towerTrack"></div>
+          <div class="tower-track-wrap">
+            <div class="tower-track" id="towerTrack"></div>
+            <div class="tower-climber" id="towerClimber">🧗</div>
+          </div>
         </div>
 
         <div class="foe-panel">
@@ -735,22 +741,13 @@
     const total = Math.min(questions.length, 20);
     track.innerHTML = '';
     for(let i = 0; i < total; i++){
-      if(i === qIndex){
-        const marker = document.createElement('div');
-        marker.className = 'floor climber-mark';
-        marker.textContent = '⛰';
-        track.appendChild(marker);
-      }
       const div = document.createElement('div');
       div.className = 'floor' + (i < qIndex ? ' lit' : '');
       track.appendChild(div);
     }
-    if(qIndex >= total){
-      const marker = document.createElement('div');
-      marker.className = 'floor climber-mark';
-      marker.textContent = '⛰';
-      track.appendChild(marker);
-    }
+    const climber = document.getElementById('towerClimber');
+    const climbPct = Math.min(100, (qIndex / Math.max(total, 1)) * 100);
+    climber.style.bottom = climbPct + '%';
     const foeFill = document.getElementById('foeHpFill');
     const remainPct = Math.max(0, 100 - (qIndex / Math.max(questions.length,1)) * 100);
     foeFill.style.width = remainPct + '%';
