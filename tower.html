@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>개념의 탑 — 엄형국 수학</title>
-<meta name="description" content="15초 개념 퀴즈로 오르는 개념의 탑. 시즌1 실시간 순위표.">
+<meta name="description" content="10초 개념 퀴즈로 오르는 개념의 탑. 시즌1 실시간 순위표.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.gstatic.com">
 <link rel="preconnect" href="https://firestore.googleapis.com">
 <link rel="preconnect" href="https://identitytoolkit.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&family=EB+Garamond:ital,wght@1,500;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&family=EB+Garamond:ital,wght@1,500;1,600&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#FAFAF8; --bg2:#F1F0EC; --ink:#111114; --dim:#63636B;
@@ -46,6 +46,11 @@
     font-size:clamp(30px,7vw,42px); font-weight:900; letter-spacing:-.02em; margin-bottom:10px;
   }
   .hero p{ font-size:14.5px; color:var(--dim); }
+  .battle-mode-tag{
+    display:inline-block; margin-top:10px; font-size:12.5px; font-weight:800;
+    color:#c98a3b; background:rgba(201,138,59,.1); border:1px solid rgba(201,138,59,.3);
+    padding:5px 12px; border-radius:999px;
+  }
 
   .conn-status{
     text-align:center; font-size:11.5px; font-weight:700;
@@ -95,35 +100,167 @@
   .btn.ghost:hover{ border-color:var(--red); color:var(--red); }
   .card .note{ font-size:12px; color:var(--dim); margin-top:14px; }
 
-  /* quiz screen */
-  .quiz-head{
-    display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px;
+  /* ---------- battle screen (레트로 RPG 대결 화면) ---------- */
+  .battle-frame{
+    border:4px solid #1a1010;
+    box-shadow:0 0 0 2px #6a4a3e, inset 0 0 0 2px #1a1010;
+    background:#2a1410;
+    overflow:hidden;
   }
-  .quiz-head .floor-no{ font-size:13px; font-weight:800; color:var(--red); letter-spacing:.06em; text-transform:uppercase; }
-  .quiz-head .timer-n{ font-family:'EB Garamond',serif; font-style:italic; font-size:28px; font-weight:600; }
-  .timer-bar{ height:4px; background:var(--line); margin-bottom:28px; overflow:hidden; }
-  .timer-bar-fill{ height:100%; background:var(--red); width:100%; }
+  .battle-scene{
+    position:relative;
+    height:260px;
+    background:linear-gradient(180deg,#2b1c3d 0%,#6b3a3a 35%,#c4602f 58%,#e08a2e 68%,#3a1810 100%);
+    overflow:hidden;
+  }
+  .battle-scene::before{
+    content:"";
+    position:absolute; left:0; right:0; bottom:0; height:22%;
+    background:linear-gradient(0deg, rgba(255,140,40,.28), transparent);
+    pointer-events:none;
+  }
+  .lava-crack{
+    position:absolute; bottom:6%; height:3px; background:#ff9a3c;
+    box-shadow:0 0 8px 2px rgba(255,140,40,.9);
+    opacity:.85; animation:emberGlow 2.4s ease-in-out infinite;
+  }
+  @keyframes emberGlow{ 0%,100%{ opacity:.5; } 50%{ opacity:1; } }
+  .ember{
+    position:absolute; bottom:10%; width:3px; height:3px; border-radius:50%;
+    background:#ffb35c; opacity:0; animation:emberRise 4s linear infinite;
+  }
+  @keyframes emberRise{
+    0%{ transform:translateY(0); opacity:0; }
+    10%{ opacity:.9; }
+    100%{ transform:translateY(-160px) translateX(10px); opacity:0; }
+  }
+  .foe-panel{
+    position:absolute; top:14px; left:14px;
+    background:linear-gradient(160deg,#8a7a68,#5e5040);
+    border:2px solid #2c2418;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.12), 0 4px 10px rgba(0,0,0,.4);
+    padding:9px 13px; min-width:150px;
+    clip-path:polygon(0 6px,6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%);
+  }
+  .player-panel{
+    position:absolute; bottom:14px; right:14px;
+    background:linear-gradient(160deg,#8a7a68,#5e5040);
+    border:2px solid #2c2418;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.12), 0 4px 10px rgba(0,0,0,.4);
+    padding:9px 13px; min-width:150px;
+    clip-path:polygon(6px 0,100% 0,100% 100%,calc(100% - 6px) 100%,0 calc(100% - 6px),0 6px);
+  }
+  .panel-name{
+    font-family:'Press Start 2P',monospace; font-size:9.5px; color:#f4ead8;
+    text-shadow:0 1px 2px rgba(0,0,0,.6); margin-bottom:7px; letter-spacing:.02em;
+  }
+  .hp-row{ display:flex; align-items:center; gap:6px; }
+  .hp-label{ font-family:'Press Start 2P',monospace; font-size:8px; color:#ffcf6b; text-shadow:0 1px 1px rgba(0,0,0,.5); }
+  .hpbar{ flex:1; height:8px; background:#221a12; padding:1px; border:1px solid #3a2e1e; }
+  .hpbar-fill{
+    height:100%; width:100%; background:#4caf50;
+    transition:width .3s ease, background .3s ease;
+  }
+  .hp-timer{
+    font-family:'Press Start 2P',monospace; font-size:14px; color:#f4ead8;
+    text-shadow:0 1px 2px rgba(0,0,0,.6);
+    text-align:right; margin-top:6px;
+  }
+  .foe-sprite{
+    position:absolute; top:56px; right:12%;
+    width:88px; height:88px;
+    animation:floatY 2.6s ease-in-out infinite;
+  }
+  .player-sprite{
+    position:absolute; bottom:62px; left:10%;
+    width:104px; height:104px;
+    animation:floatY 2.6s ease-in-out infinite .3s;
+  }
+  .mon{ width:100%; height:100%; filter:drop-shadow(0 6px 4px rgba(0,0,0,.25)); }
+  .foe-mon{ filter:drop-shadow(0 6px 4px rgba(0,0,0,.3)) drop-shadow(0 0 8px rgba(164,128,216,.5)); }
+  @keyframes floatY{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
 
-  .question{
-    font-size:clamp(19px,4.4vw,24px); font-weight:800; line-height:1.45; margin-bottom:26px;
+  .foe-sprite.hit .mon, .player-sprite.hurt .mon{
+    animation:shakeHit .45s ease;
   }
-  .choices{ display:flex; flex-direction:column; gap:10px; }
+  @keyframes shakeHit{
+    0%{ filter:drop-shadow(0 6px 4px rgba(0,0,0,.25)) brightness(1); }
+    15%{ transform:translateX(-6px); filter:brightness(2.4) saturate(0); }
+    30%{ transform:translateX(6px); }
+    45%{ transform:translateX(-4px); filter:brightness(1); }
+    60%{ transform:translateX(4px); }
+    100%{ transform:translateX(0); }
+  }
+  .foe-sprite.faint .mon{
+    animation:faintDown .6s ease forwards;
+  }
+  @keyframes faintDown{
+    0%{ transform:translateY(0) rotate(0); opacity:1; }
+    100%{ transform:translateY(40px) rotate(80deg); opacity:0; }
+  }
+  .player-sprite.down .mon{
+    animation:faintDown .6s ease forwards;
+  }
+  .flash-overlay{
+    position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none;
+    z-index:5;
+  }
+  .flash-overlay.hit{ animation:flashWhite .2s ease; }
+  .flash-overlay.hurt{ animation:flashRed .3s ease; }
+  @keyframes flashWhite{ 0%{opacity:0;} 30%{opacity:.85;} 100%{opacity:0;} }
+  @keyframes flashRed{ 0%{opacity:0; background:#e05c4c;} 30%{opacity:.55; background:#e05c4c;} 100%{opacity:0;} }
+  .battle-scene.shake{ animation:sceneShake .4s ease; }
+  @keyframes sceneShake{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-4px); } 40%{ transform:translateX(4px); }
+    60%{ transform:translateX(-3px); } 80%{ transform:translateX(3px); }
+  }
+
+  .battle-menu{
+    background:#2c2418; border-top:4px solid #1a1010;
+    display:grid; grid-template-columns:1.1fr 1fr;
+  }
+  @media (max-width:560px){ .battle-menu{ grid-template-columns:1fr; } }
+  .dialogue-box{
+    padding:18px 18px; border-right:3px solid #3a2e1e;
+    display:flex; align-items:center;
+    background:#332918;
+  }
+  @media (max-width:560px){ .dialogue-box{ border-right:none; border-bottom:3px solid #3a2e1e; } }
+  .dialogue-box p{
+    font-size:15px; font-weight:700; line-height:1.55; color:#f4ead8;
+  }
+  .choices{
+    display:grid; grid-template-columns:1fr 1fr; gap:0;
+  }
   .choice{
-    text-align:left; padding:15px 16px; border:1px solid var(--line); background:#fff;
-    font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; color:var(--ink);
-    display:flex; align-items:center; gap:12px;
+    text-align:left; padding:14px 14px 14px 26px; border:none;
+    border-bottom:2px solid rgba(244,234,216,.1);
+    background:#2c2418;
+    font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; color:#f4ead8;
+    display:flex; align-items:center; gap:8px;
+    position:relative;
   }
-  .choice:hover{ border-color:var(--red); }
-  .choice .idx{
-    width:22px; height:22px; border-radius:50%; border:1px solid var(--line);
-    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;
-    color:var(--dim); flex-shrink:0;
+  .choice:nth-child(odd){ border-right:2px solid rgba(244,234,216,.1); }
+  .choice::before{
+    content:"▶"; position:absolute; left:8px; font-size:11px; color:#ffcf6b; opacity:0;
+    transition:opacity .15s ease;
   }
-  .choice.correct{ background:rgba(60,150,90,.08); border-color:#3c965a; }
-  .choice.correct .idx{ background:#3c965a; border-color:#3c965a; color:#fff; }
-  .choice.wrong{ background:rgba(214,48,31,.08); border-color:var(--red); }
-  .choice.wrong .idx{ background:var(--red); border-color:var(--red); color:#fff; }
+  .choice:hover::before{ opacity:1; }
+  .choice:hover{ background:#3c3120; }
+  .choice .idx{ display:none; }
+  .choice.correct{ background:#2a4a2e; }
+  .choice.correct::before{ content:"⭘"; opacity:1; color:#7fd88f; }
+  .choice.wrong{ background:#4a2a2a; }
+  .choice.wrong::before{ content:"✕"; opacity:1; color:#e8817a; }
   .choice[disabled]{ cursor:default; }
+
+
+  /* legacy elements kept for JS compatibility, hidden visually */
+  .quiz-head{ display:none; }
+  .timer-bar{ display:none; }
+  section#screenQuiz .tower-vis{ display:none; }
+
 
   /* result */
   .result-floor{
@@ -196,13 +333,14 @@
 <div class="wrap">
   <div class="topbar">
     <a class="back" href="index.html">← 엄형국 수학</a>
-    <div class="brand">개념의 <span>탑</span></div>
+    <div class="brand" id="topBrand">개념의 <span>탑</span></div>
   </div>
 
   <div class="hero">
     <span class="badge">NEW · 시즌1 진행중</span>
-    <h1>개념의 탑</h1>
-    <p>15초 안에 개념 퀴즈를 풀고 한 층씩 올라가보세요.</p>
+    <h1 id="heroTitle">개념의 탑</h1>
+    <p class="battle-mode-tag">⚔ 수학몬스터 배틀 모드</p>
+    <p id="heroIntro">10초 안에 개념 퀴즈를 풀고 한 층씩 올라가보세요.</p>
   </div>
 
   <div class="conn-status" id="connStatus">서버 연결 확인 중...</div>
@@ -222,16 +360,87 @@
     </div>
   </section>
 
-  <!-- QUIZ -->
+  <!-- QUIZ (battle screen) -->
   <section id="screenQuiz" hidden>
-    <div class="tower-vis" id="towerVis"></div>
-    <div class="quiz-head">
-      <div class="floor-no" id="floorNo">FLOOR 01</div>
-      <div class="timer-n" id="timerNum">10</div>
+    <div class="battle-frame">
+
+      <div class="battle-scene" id="battleScene">
+        <div class="flash-overlay" id="flashOverlay"></div>
+        <div class="ember" style="left:12%; animation-delay:0s;"></div>
+        <div class="ember" style="left:28%; animation-delay:1.2s;"></div>
+        <div class="ember" style="left:47%; animation-delay:2.1s;"></div>
+        <div class="ember" style="left:65%; animation-delay:.6s;"></div>
+        <div class="ember" style="left:80%; animation-delay:2.8s;"></div>
+        <div class="ember" style="left:92%; animation-delay:1.7s;"></div>
+
+        <div class="foe-panel">
+          <div class="panel-name">MATH MONSTER</div>
+          <div class="hp-row"><span class="hp-label">HP</span><div class="hpbar"><div class="hpbar-fill" id="foeHpFill"></div></div></div>
+        </div>
+        <div class="foe-sprite" id="foeSprite">
+          <svg viewBox="0 0 64 64" class="mon foe-mon">
+            <path d="M6 42 Q2 22 12 10 Q10 18 16 20 Q18 8 26 6 Q24 14 30 16 Q34 4 42 6 Q38 14 44 18 Q52 12 58 22 Q50 22 48 28 Q60 30 58 44 Z" fill="#A480D8"/>
+            <ellipse cx="32" cy="40" rx="26" ry="20" fill="#A480D8"/>
+            <circle cx="23" cy="38" r="7" fill="#fff"/>
+            <circle cx="41" cy="38" r="7" fill="#fff"/>
+            <circle cx="24" cy="39" r="3.4" fill="#3A2860"/>
+            <circle cx="42" cy="39" r="3.4" fill="#3A2860"/>
+            <path d="M22 50 Q32 58 42 50" stroke="#3A2860" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <circle cx="14" cy="48" r="3" fill="#F0A8C0" opacity=".8"/>
+            <circle cx="50" cy="48" r="3" fill="#F0A8C0" opacity=".8"/>
+          </svg>
+        </div>
+
+        <div class="player-sprite" id="playerSprite">
+          <svg viewBox="-100 -140 200 250" class="mon player-mon">
+            <path d="M-50 -60 Q-70 20 -55 110 Q-30 100 -20 100 Q-40 20 -22 -50 Z" fill="#4a2e28"/>
+            <path d="M50 -60 Q70 20 55 110 Q30 100 20 100 Q40 20 22 -50 Z" fill="#3a2420"/>
+            <path d="M-16 -108 Q0 -118 16 -108 L20 -92 Q0 -84 -20 -92 Z" fill="#7d838d"/>
+            <path d="M-20 -92 Q0 -80 20 -92 L22 -74 Q0 -66 -22 -74 Z" fill="#666c74"/>
+            <rect x="-14" y="-96" width="7" height="14" rx="2" fill="#2a2c30"/>
+            <rect x="7" y="-96" width="7" height="14" rx="2" fill="#2a2c30"/>
+            <path d="M-4 -118 L4 -118 L5 -128 L-5 -128 Z" fill="#8a2e2e"/>
+            <path d="M-24 -72 Q0 -84 24 -72 L30 -30 Q0 -18 -30 -30 Z" fill="#8a909a"/>
+            <path d="M-24 -72 Q0 -84 24 -72 L26 -60 Q0 -70 -26 -60 Z" fill="#a8aeb6"/>
+            <rect x="-6" y="-60" width="12" height="48" fill="#666c74"/>
+            <circle cx="-14" cy="-40" r="2" fill="#3a3c40"/>
+            <circle cx="14" cy="-40" r="2" fill="#3a3c40"/>
+            <circle cx="-14" cy="-20" r="2" fill="#3a3c40"/>
+            <circle cx="14" cy="-20" r="2" fill="#3a3c40"/>
+            <path d="M-30 -66 Q-46 -60 -42 -34 Q-30 -38 -24 -44 Z" fill="#8a909a"/>
+            <path d="M30 -66 Q46 -60 42 -34 Q30 -38 24 -44 Z" fill="#7d838d"/>
+            <rect x="-46" y="-32" width="14" height="34" rx="4" fill="#666c74"/>
+            <rect x="32" y="-32" width="14" height="34" rx="4" fill="#5c6169"/>
+            <path d="M-46 2 L-40 14 L-32 10 L-36 -2 Z" fill="#d8b98a"/>
+            <path d="M46 2 L40 14 L32 10 L36 -2 Z" fill="#c9a877"/>
+            <path d="M-30 -28 Q0 -18 30 -28 L34 26 Q0 40 -34 26 Z" fill="#7d838d"/>
+            <path d="M-6 -20 L6 -20 L6 30 L-6 30 Z" fill="#5c6169"/>
+            <circle cx="0" cy="-8" r="3" fill="#f2c14e"/>
+            <rect x="-24" y="34" width="18" height="52" fill="#4a4e54"/>
+            <rect x="6" y="34" width="18" height="52" fill="#3e4247"/>
+            <rect x="-28" y="80" width="24" height="14" rx="3" fill="#2a2c30"/>
+            <rect x="4" y="80" width="24" height="14" rx="3" fill="#232527"/>
+            <rect x="38" y="-70" width="4" height="60" fill="#c9ced6" transform="rotate(24 40 -40)"/>
+            <path d="M60 -46 L68 -30 L60 -14 L52 -30 Z" fill="#b8bec6" transform="rotate(24 60 -30)"/>
+          </svg>
+        </div>
+        <div class="player-panel">
+          <div class="panel-name" id="battlePlayerName">PLAYER</div>
+          <div class="hp-row"><span class="hp-label">HP</span><div class="hpbar"><div class="hpbar-fill" id="playerHpFill"></div></div></div>
+          <div class="hp-timer" id="timerNum">15</div>
+        </div>
+      </div>
+
+      <div class="battle-menu">
+        <div class="dialogue-box">
+          <p id="questionText"></p>
+        </div>
+        <div class="choices" id="choicesBox"></div>
+      </div>
+
     </div>
-    <div class="timer-bar"><div class="timer-bar-fill" id="timerFill"></div></div>
-    <div class="question" id="questionText"></div>
-    <div class="choices" id="choicesBox"></div>
+    <div class="timer-bar" hidden><div class="timer-bar-fill" id="timerFill"></div></div>
+    <div class="tower-vis" id="towerVis" hidden></div>
   </section>
 
   <!-- RESULT -->
@@ -248,6 +457,7 @@
 
   <!-- LEADERBOARD -->
   <section id="screenBoard" hidden>
+    <div class="battle-mode-tag" id="lbModeTag" style="display:block;text-align:center;margin-bottom:16px;"></div>
     <div id="lbList"><div class="lb-empty">불러오는 중...</div></div>
   </section>
 
@@ -320,6 +530,7 @@
     appId: "1:849635933461:web:d24910ea586db9467a3d1c"
   };
   let auth, db;
+  const GAME_MODE = new URLSearchParams(location.search).get('mode') === 'monster' ? 'monster' : 'tower';
   try{
     firebase.initializeApp(firebaseConfig);
     auth = firebase.auth();
@@ -388,6 +599,17 @@
       });
   }
   checkConnection();
+  const introSeconds = GAME_MODE === 'monster' ? 10 : 15;
+  const modeName = GAME_MODE === 'monster' ? '수학몬스터' : '개념의 탑';
+  document.title = modeName + ' — 엄형국 수학';
+  document.getElementById('topBrand').textContent = modeName;
+  document.getElementById('heroTitle').textContent = modeName;
+  document.getElementById('heroIntro').textContent =
+    introSeconds + '초 안에 개념 퀴즈를 풀고 한 층씩 올라가보세요.';
+  document.querySelector('.battle-mode-tag:not(#lbModeTag)').textContent =
+    GAME_MODE === 'monster' ? '⚔ 수학몬스터 모드 · 10초' : '🗼 개념의 탑 모드 · 15초';
+  document.getElementById('lbModeTag').textContent =
+    GAME_MODE === 'monster' ? '⚔ 수학몬스터 순위표' : '🗼 개념의 탑 순위표';
 
   // ---------- quiz engine ----------
   let questions = [];
@@ -395,7 +617,7 @@
   let playerName = '';
   let quizStartTime = 0;
   let timerInterval = null;
-  const TIME_LIMIT = 15000;
+  const TIME_LIMIT = GAME_MODE === 'monster' ? 10000 : 15000;
 
   function shuffle(arr){
     const a = arr.slice();
@@ -448,6 +670,7 @@
     }
     qIndex = 0;
     quizStartTime = Date.now();
+    document.getElementById('battlePlayerName').textContent = playerName.toUpperCase();
     showChallengeFlow('quiz');
     renderQuestion();
   });
@@ -461,19 +684,25 @@
       div.className = 'floor' + (i < qIndex ? ' lit' : '');
       vis.appendChild(div);
     }
+    const foeFill = document.getElementById('foeHpFill');
+    const remainPct = Math.max(0, 100 - (qIndex / Math.max(questions.length,1)) * 100);
+    foeFill.style.width = remainPct + '%';
+    foeFill.style.background = remainPct > 50 ? '#4caf50' : remainPct > 20 ? '#e8a33d' : '#e05c4c';
   }
 
   function renderQuestion(){
     renderTower();
+    document.getElementById('foeSprite').className = 'foe-sprite';
+    document.getElementById('playerSprite').className = 'player-sprite';
     const q = questions[qIndex];
-    document.getElementById('floorNo').textContent = 'FLOOR ' + String(qIndex + 1).padStart(2, '0');
+    // (층 표시는 UI에서 제거했지만 진행도는 적 HP바로 계속 표시됩니다)
     document.getElementById('questionText').textContent = q.text;
     const box = document.getElementById('choicesBox');
     box.innerHTML = '';
     q.choices.forEach((c, i) => {
       const btn = document.createElement('button');
       btn.className = 'choice'; btn.type = 'button';
-      btn.innerHTML = '<span class="idx">' + (i+1) + '</span><span>' + c + '</span>';
+      btn.innerHTML = '<span>' + c + '</span>';
       btn.addEventListener('click', () => onAnswer(i));
       box.appendChild(btn);
     });
@@ -484,18 +713,24 @@
     let remaining = TIME_LIMIT;
     const fill = document.getElementById('timerFill');
     const num = document.getElementById('timerNum');
+    const playerFill = document.getElementById('playerHpFill');
     fill.style.transition = 'none'; fill.style.width = '100%';
-    num.textContent = '15';
+    playerFill.style.width = '100%'; playerFill.style.background = '#4caf50';
+    num.textContent = String(TIME_LIMIT / 1000);
     clearInterval(timerInterval);
     const tickStart = Date.now();
     timerInterval = setInterval(() => {
       remaining = TIME_LIMIT - (Date.now() - tickStart);
       if(remaining <= 0){
         clearInterval(timerInterval);
+        playerFill.style.width = '0%';
         onAnswer(-1);
         return;
       }
-      fill.style.width = (remaining / TIME_LIMIT * 100) + '%';
+      const pct = remaining / TIME_LIMIT * 100;
+      fill.style.width = pct + '%';
+      playerFill.style.width = pct + '%';
+      playerFill.style.background = pct > 50 ? '#4caf50' : pct > 20 ? '#e8a33d' : '#e05c4c';
       num.textContent = Math.ceil(remaining / 1000);
     }, 100);
   }
@@ -510,14 +745,34 @@
       else if(i === choiceIdx) b.classList.add('wrong');
     });
     const isCorrect = choiceIdx === q.answer;
+    const foeSprite = document.getElementById('foeSprite');
+    const playerSprite = document.getElementById('playerSprite');
+    const flash = document.getElementById('flashOverlay');
+    const scene = document.getElementById('battleScene');
+
+    if(isCorrect){
+      flash.className = 'flash-overlay hit';
+      scene.classList.add('shake');
+      foeSprite.classList.add('hit');
+      setTimeout(() => { foeSprite.classList.remove('hit'); foeSprite.classList.add('faint'); }, 300);
+    }else{
+      flash.className = 'flash-overlay hurt';
+      scene.classList.add('shake');
+      playerSprite.classList.add('hurt');
+      setTimeout(() => { playerSprite.classList.remove('hurt'); playerSprite.classList.add('down'); }, 300);
+    }
+    setTimeout(() => { scene.classList.remove('shake'); flash.className = 'flash-overlay'; }, 500);
+
     setTimeout(() => {
+      foeSprite.classList.remove('faint');
+      playerSprite.classList.remove('down');
       if(isCorrect && qIndex < questions.length - 1){
         qIndex++;
         renderQuestion();
       }else{
         endQuiz(isCorrect);
       }
-    }, 700);
+    }, 950);
   }
 
   function endQuiz(lastCorrect){
@@ -531,7 +786,7 @@
   function saveScore(floor, timeMs){
     const msg = document.getElementById('saveMsg');
     db.collection('towerScores').add({
-      name: playerName, floor, timeMs,
+      name: playerName, floor, timeMs, mode: GAME_MODE,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).then(() => { msg.textContent = '순위표에 기록됐어요!'; })
       .catch(err => { msg.textContent = '기록 저장 실패: ' + err.message; });
@@ -550,6 +805,7 @@
       if(!gotData) list.innerHTML = '<div class="lb-empty">서버 응답이 없어요. <button onclick="loadLeaderboard()" style="border:none;background:none;color:var(--red);font-weight:700;text-decoration:underline;cursor:pointer;">재시도</button></div>';
     }, 10000);
     lbUnsub = db.collection('towerScores')
+      .where('mode', '==', GAME_MODE)
       .orderBy('floor', 'desc').orderBy('timeMs', 'asc').limit(20)
       .onSnapshot(snap => {
         gotData = true;
@@ -568,7 +824,17 @@
           list.appendChild(row);
           rank++;
         });
-      }, err => { gotData = true; list.innerHTML = '<div class="lb-empty">순위표를 불러오지 못했어요: ' + escapeHtml(err.message) + '</div>'; });
+      }, err => {
+        gotData = true;
+        const urlMatch = err.message.match(/https?:\/\/\S+/);
+        if(urlMatch){
+          const before = escapeHtml(err.message.slice(0, urlMatch.index));
+          list.innerHTML = '<div class="lb-empty" style="word-break:break-all;">' + before +
+            '<a href="' + urlMatch[0] + '" target="_blank" rel="noopener" style="color:var(--red);font-weight:700;">색인 만들러 가기 →</a></div>';
+        }else{
+          list.innerHTML = '<div class="lb-empty">순위표를 불러오지 못했어요: ' + escapeHtml(err.message) + '</div>';
+        }
+      });
   }
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
