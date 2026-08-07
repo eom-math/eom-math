@@ -381,7 +381,7 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
   @keyframes trackScroll{ 0%{ background-position:0 0; } 100%{ background-position:0 40px; } }
 
   .mode-penguin .penguin-hud{
-    display:flex; justify-content:space-between; position:absolute; top:8px; left:8px; right:8px; z-index:5;
+    display:flex; justify-content:space-between; position:absolute; top:11px; left:10px; right:10px; z-index:5;
     font-family:'Press Start 2P',monospace; font-size:9px; color:#2c5a7a;
   }
   .ph-score, .ph-coin{
@@ -410,8 +410,9 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
   }
   .pg-img{ width:100%; height:100%; display:block; image-rendering:pixelated; position:relative; z-index:2; }
   .pg-shadow{
-    position:absolute; left:50%; bottom:-4px; transform:translateX(-50%);
-    width:70%; height:14%; background:radial-gradient(ellipse at center, rgba(20,40,50,.35), transparent 75%);
+    position:absolute; left:50%; bottom:-6px; transform:translateX(-50%);
+    width:65%; height:10px;
+    background:radial-gradient(ellipse at center, rgba(10,25,35,.5) 0%, rgba(10,25,35,.25) 55%, transparent 80%);
     z-index:1; border-radius:50%;
   }
   @keyframes penguinWaddle{
@@ -432,8 +433,8 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
     100%{ transform:translateX(-50%) rotate(70deg) translateY(10px); opacity:.4; }
   }
   .mode-penguin .classic-player-panel{ display:none !important; }
-  .mode-penguin .top-timer-bar{ top:26px; height:12px; }
-  .mode-penguin .floor-pendant{ z-index:6; top:42px; }
+  .mode-penguin .top-timer-bar{ top:40px; height:12px; }
+  .mode-penguin .floor-pendant{ z-index:6; top:57px; }
   .mode-penguin .pendant-badge{
     font-family:'Pretendard',sans-serif !important; font-weight:800 !important;
     background:#1B6FA8 !important; color:#fff !important;
@@ -833,13 +834,25 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
   <section id="screenAdmin" hidden style="margin-top:24px;">
     <div class="admin-box">
       <h3>문제 일괄 등록</h3>
+      <select id="bulkMode" style="margin-bottom:8px;">
+        <option value="">공통 (모든 모드에서 출제)</option>
+        <option value="tower">개념의 탑 전용</option>
+        <option value="monster">수학몬스터 전용</option>
+        <option value="penguin">수학 펭귄 전용</option>
+      </select>
       <textarea id="bulkJson" rows="6" placeholder='[{"floor":1,"text":"문제","choices":["보기1","보기2","보기3","보기4"],"answer":0}, ...]'></textarea>
-      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">JSON 형식으로 붙여넣으면 한 번에 여러 문제가 등록됩니다.</div>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">JSON 형식으로 붙여넣으면 한 번에 여러 문제가 등록됩니다. 위에서 고른 모드로 전부 등록돼요.</div>
       <button class="btn" id="bulkAddBtn" type="button">일괄 등록</button>
       <div class="save-msg" id="bulkMsg"></div>
     </div>
     <div class="admin-box">
       <h3>문제 추가</h3>
+      <select id="qMode" style="margin-bottom:8px;">
+        <option value="">공통 (모든 모드에서 출제)</option>
+        <option value="tower">개념의 탑 전용</option>
+        <option value="monster">수학몬스터 전용</option>
+        <option value="penguin">수학 펭귄 전용</option>
+      </select>
       <input type="number" id="qFloor" placeholder="층 번호 (예: 1)">
       <textarea id="qText" placeholder="문제 내용" rows="2"></textarea>
       <div class="admin-choice-row"><input type="radio" name="qCorrect" value="0" checked><input type="text" id="qC0" placeholder="보기 1"></div>
@@ -1058,8 +1071,9 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
 
   async function loadQuestions(){
     const all = await fetchRawQuestions();
-    const basic = shuffle(all.filter(q => q.floor <= 50));
-    const advanced = shuffle(all.filter(q => q.floor > 50));
+    const forThisMode = all.filter(q => !q.gameMode || q.gameMode === GAME_MODE);
+    const basic = shuffle(forThisMode.filter(q => q.floor <= 50));
+    const advanced = shuffle(forThisMode.filter(q => q.floor > 50));
     questions = basic.concat(advanced);
   }
 
@@ -1464,12 +1478,14 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
       return;
     }
     msg.textContent = arr.length + '개 등록 중...';
+    const bulkMode = document.getElementById('bulkMode').value;
     try{
       const batch = db.batch();
       arr.forEach(q => {
         const ref = db.collection('towerQuestions').doc();
         batch.set(ref, {
           floor: q.floor, text: q.text, choices: q.choices, answer: q.answer,
+          gameMode: bulkMode || null,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       });
@@ -1499,7 +1515,9 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
       return;
     }
     msg.textContent = '등록 중...';
+    const qMode = document.getElementById('qMode').value;
     withTimeout(db.collection('towerQuestions').add({ floor, text, choices, answer,
+      gameMode: qMode || null,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }), 10000, '응답 시간 초과').then(() => {
       msg.textContent = '등록 완료!';
@@ -1522,7 +1540,8 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
       snap.forEach(doc => {
         const d = doc.data();
         const li = document.createElement('li');
-        li.innerHTML = '<span>' + String(d.floor).padStart(2,'0') + '층 · ' + escapeHtml(d.text.slice(0,20)) + '</span>';
+        const modeLabel = { tower: '🗼탑', monster: '⚔몬', penguin: '🐧펭' }[d.gameMode] || '공통';
+        li.innerHTML = '<span>[' + modeLabel + '] ' + String(d.floor).padStart(2,'0') + '층 · ' + escapeHtml(d.text.slice(0,20)) + '</span>';
         const delBtn = document.createElement('button');
         delBtn.textContent = '삭제';
         delBtn.addEventListener('click', () => {
