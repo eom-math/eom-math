@@ -328,6 +328,13 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
   }
   /* 모바일 화면에서도 안 겹치도록 STAGE/FLOOR 뱃지를 작게 */
   .pendant-badge{ font-size:9px !important; padding:4px 9px !important; }
+  .mode-monster .floor-pendant{
+    top:50%; transform:translate(-50%,-50%);
+  }
+  .mode-monster .pendant-badge{
+    font-size:7px !important; padding:3px 7px !important;
+    opacity:.85;
+  }
 
   .foe-sprite.hit .mon, .player-sprite.hurt .mon{
     animation:shakeHit .45s ease;
