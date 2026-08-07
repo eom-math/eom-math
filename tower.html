@@ -319,8 +319,9 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
     clip-path:polygon(6px 0,100% 0,100% 100%,calc(100% - 6px) 100%,0 calc(100% - 6px),0 6px);
   }
   .cpp-floor{
-    font-family:'Press Start 2P',monospace; font-size:13px; color:#5ff0e0;
+    font-family:'Press Start 2P',monospace; font-size:10px; color:#5ff0e0;
     text-shadow:0 0 6px rgba(95,240,224,.6); margin-bottom:6px; text-align:right;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px;
   }
   .cpp-sec{
     font-family:'Press Start 2P',monospace; font-size:12px; color:#5ff0e0;
@@ -391,12 +392,15 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
   .mode-penguin .penguin-obstacle{
     display:block; position:absolute; top:38px; left:50%;
     width:52px; height:52px; z-index:2;
-    animation:obstacleApproach 2.6s linear infinite;
+    animation:obstacleApproach 15s linear 1 both;
   }
   @keyframes obstacleApproach{
     0%{ transform:translateX(-50%) translateY(0) scale(.15); opacity:0; }
-    12%{ opacity:1; }
+    8%{ opacity:1; }
     100%{ transform:translateX(-50%) translateY(150px) scale(1.35); opacity:1; }
+  }
+  .mode-penguin .penguin-obstacle.crashed{
+    animation-play-state:paused;
   }
   .mode-penguin .penguin-sprite{
     display:block; position:absolute; bottom:16px; left:50%; transform:translateX(-50%);
@@ -963,7 +967,7 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
   checkConnection();
   const MODE_INFO = {
     monster: { name: '수학몬스터', seconds: 10, tag: '⚔ 수학몬스터 모드 · 10초', lbTag: '⚔ 수학몬스터 순위표', panel: 'MATH MONSTER', pendant: 'STAGE' },
-    penguin: { name: '수학 펭귄', seconds: 8, tag: '🐧 수학 펭귄 모드 · 8초', lbTag: '🐧 수학 펭귄 순위표', panel: 'DISTANCE', pendant: 'FLOOR' },
+    penguin: { name: '수학 펭귄', seconds: 15, tag: '🐧 수학 펭귄 모드 · 15초', lbTag: '🐧 수학 펭귄 순위표', panel: 'DISTANCE', pendant: 'STAGE' },
     tower:   { name: '개념의 탑', seconds: 15, tag: '🗼 개념의 탑 모드 · 15초', lbTag: '🗼 개념의 탑 순위표', panel: 'TOWER PROGRESS', pendant: 'FLOOR' },
   };
   const modeInfo = MODE_INFO[GAME_MODE];
@@ -1171,7 +1175,14 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
     num.textContent = String(TIME_LIMIT / 1000);
     classicFill.style.transition = 'none'; classicFill.style.width = '100%'; classicFill.style.background = '#4caf50';
     classicNum.textContent = String(TIME_LIMIT / 1000);
-    cppFloor.textContent = floorNumber;
+    cppFloor.textContent = playerName ? playerName.toUpperCase() : '';
+    if(GAME_MODE === 'penguin'){
+      const obstacle = document.getElementById('penguinObstacle');
+      obstacle.classList.remove('crashed');
+      obstacle.style.animation = 'none';
+      void obstacle.offsetWidth; // 리플로우로 애니메이션 재시작
+      obstacle.style.animation = `obstacleApproach ${TIME_LIMIT/1000}s linear 1 both`;
+    }
     clearInterval(timerInterval);
     const tickStart = Date.now();
     timerInterval = setInterval(() => {
@@ -1203,6 +1214,9 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
       else if(i === choiceIdx) b.classList.add('wrong');
     });
     const isCorrect = choiceIdx === q.answer;
+    if(GAME_MODE === 'penguin'){
+      document.getElementById('penguinObstacle').classList.add('crashed');
+    }
     let shieldSaved = false;
     const foeSprite = document.getElementById('foeSprite');
     const playerSprite = document.getElementById('playerSprite');
