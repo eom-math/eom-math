@@ -288,7 +288,8 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
   .mode-monster .torch-prop,
   .mode-monster .tower-vis,
   .mode-monster .foe-sprite,
-  .mode-monster .player-sprite{ display:none; }
+  .mode-monster .player-sprite,
+  .mode-monster .top-timer-bar{ display:none; }
   .mode-monster .classic-foe-sprite{
     display:block; position:absolute; top:22px; right:14%;
     width:80px; height:80px; z-index:2;
@@ -307,6 +308,26 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
   @keyframes hitFlash{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(2.4); } }
   @keyframes faintDown{ to{ transform:translateY(30px); opacity:0; } }
   @keyframes floatY{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
+
+  .classic-player-panel{ display:none; }
+  .mode-monster .classic-player-panel{
+    display:block; position:absolute; bottom:14px; right:14px; z-index:3;
+    background:rgba(6,20,28,.85);
+    border:2px solid #2fd8c8;
+    box-shadow:0 0 10px rgba(47,216,200,.35), inset 0 0 8px rgba(47,216,200,.15);
+    padding:8px 12px; min-width:120px;
+    clip-path:polygon(6px 0,100% 0,100% 100%,calc(100% - 6px) 100%,0 calc(100% - 6px),0 6px);
+  }
+  .cpp-floor{
+    font-family:'Press Start 2P',monospace; font-size:13px; color:#5ff0e0;
+    text-shadow:0 0 6px rgba(95,240,224,.6); margin-bottom:6px; text-align:right;
+  }
+  .cpp-sec{
+    font-family:'Press Start 2P',monospace; font-size:12px; color:#5ff0e0;
+    text-shadow:0 0 6px rgba(95,240,224,.6); text-align:right; margin-top:4px;
+  }
+  /* 모바일 화면에서도 안 겹치도록 STAGE/FLOOR 뱃지를 작게 */
+  .pendant-badge{ font-size:9px !important; padding:4px 9px !important; }
 
   .foe-sprite.hit .mon, .player-sprite.hurt .mon{
     animation:shakeHit .45s ease;
@@ -394,6 +415,7 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
     flex:1; display:grid; grid-template-columns:1fr 1fr; gap:8px;
   }
   .item-col{ display:flex; flex-direction:column; gap:8px; width:58px; flex-shrink:0; }
+  .mode-monster .item-col{ display:none; }
   .item-btn{
     flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
     background:#0e1f14; border:2px solid #3a9a5c; border-radius:4px;
@@ -548,7 +570,7 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
 
         <div class="floor-pendant" id="floorPendant">
           <img src="" id="pendantEye" class="pendant-eye" alt="">
-          <div class="pendant-badge">FLOOR <span id="pendantFloorNum">1</span></div>
+          <div class="pendant-badge"><span id="pendantLabel">FLOOR</span> <span id="pendantFloorNum">1</span></div>
         </div>
 
         <div class="combo-pop" id="comboPop"></div>
@@ -627,6 +649,11 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
         <div class="top-timer-bar">
           <div class="top-timer-fill" id="timerFill"></div>
           <span class="top-timer-num" id="timerNum">15</span>
+        </div>
+        <div class="classic-player-panel" id="classicPlayerPanel">
+          <div class="cpp-floor" id="cppFloor">1</div>
+          <div class="hp-row"><span class="hp-label">HP</span><div class="hpbar"><div class="hpbar-fill" id="classicTimerFill"></div></div></div>
+          <div class="cpp-sec" id="classicTimerNum">15</div>
         </div>
       </div>
 
@@ -820,6 +847,8 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
     GAME_MODE === 'monster' ? '⚔ 수학몬스터 순위표' : '🗼 개념의 탑 순위표';
   document.getElementById('foePanelName').textContent =
     GAME_MODE === 'monster' ? 'MATH MONSTER' : 'TOWER PROGRESS';
+  document.getElementById('pendantLabel').textContent =
+    GAME_MODE === 'monster' ? 'STAGE' : 'FLOOR';
 
   // ---------- quiz engine ----------
   let questions = [];
@@ -997,8 +1026,14 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
     let remaining = TIME_LIMIT;
     const fill = document.getElementById('timerFill');
     const num = document.getElementById('timerNum');
+    const classicFill = document.getElementById('classicTimerFill');
+    const classicNum = document.getElementById('classicTimerNum');
+    const cppFloor = document.getElementById('cppFloor');
     fill.style.transition = 'none'; fill.style.width = '100%'; fill.style.background = '#4caf50';
     num.textContent = String(TIME_LIMIT / 1000);
+    classicFill.style.transition = 'none'; classicFill.style.width = '100%'; classicFill.style.background = '#4caf50';
+    classicNum.textContent = String(TIME_LIMIT / 1000);
+    cppFloor.textContent = floorNumber;
     clearInterval(timerInterval);
     const tickStart = Date.now();
     timerInterval = setInterval(() => {
@@ -1006,13 +1041,17 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
       if(remaining <= 0){
         clearInterval(timerInterval);
         fill.style.width = '0%';
+        classicFill.style.width = '0%';
         onAnswer(-1);
         return;
       }
       const pct = remaining / TIME_LIMIT * 100;
       fill.style.width = pct + '%';
       fill.style.background = pct > 50 ? '#4caf50' : pct > 20 ? '#e8a33d' : '#e05c4c';
+      classicFill.style.width = pct + '%';
+      classicFill.style.background = pct > 50 ? '#4caf50' : pct > 20 ? '#e8a33d' : '#e05c4c';
       num.textContent = Math.ceil(remaining / 1000);
+      classicNum.textContent = Math.ceil(remaining / 1000);
     }, 100);
   }
 
