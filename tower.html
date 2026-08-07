@@ -258,6 +258,11 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
     background:rgba(20,20,20,.55); border:1px solid rgba(232,216,176,.35);
     padding:2px 5px; border-radius:2px;
   }
+
+  /* ---------- 클래식 배틀(수학몬스터) 요소는 기본적으로 숨김 ---------- */
+  .classic-bg, .classic-foe-sprite, .classic-player-sprite{ display:none; }
+
+  /* ---------- 개념의 탑 모드: 던전/사다리 화면, 몬스터 배틀 요소 숨김 ---------- */
   .mode-tower .ember,
   .mode-tower .foe-sprite,
   .mode-tower .foe-panel{ display:none; }
@@ -272,6 +277,35 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
   .mode-tower .choice::before{ color:#8a1f1f; }
   .mode-tower .choice.correct{ background:#c8e8c8; border-color:#2f7a4c; color:#0f3a20; box-shadow:none; }
   .mode-tower .choice.wrong{ background:#f0c8c0; border-color:#8a2a20; color:#3a0f0a; box-shadow:none; }
+
+  /* ---------- 수학몬스터 모드: 클래식 용암 배틀 화면 ---------- */
+  .mode-monster .battle-scene{ background-image:none; background-color:#3a1810; }
+  .mode-monster .classic-bg{
+    display:block; position:absolute; inset:0; z-index:0;
+    background:linear-gradient(180deg,#2b1c3d 0%,#6b3a3a 35%,#c4602f 58%,#e08a2e 68%,#3a1810 100%);
+  }
+  .mode-monster .boss-gate-frame,
+  .mode-monster .torch-prop,
+  .mode-monster .tower-vis,
+  .mode-monster .foe-sprite,
+  .mode-monster .player-sprite{ display:none; }
+  .mode-monster .classic-foe-sprite{
+    display:block; position:absolute; top:22px; right:14%;
+    width:80px; height:80px; z-index:2;
+    animation:floatY 2.6s ease-in-out infinite;
+    filter:drop-shadow(0 6px 4px rgba(0,0,0,.3));
+  }
+  .mode-monster .classic-player-sprite{
+    display:block; position:absolute; bottom:14px; left:8%;
+    width:92px; z-index:2;
+    filter:drop-shadow(0 4px 4px rgba(0,0,0,.4));
+  }
+  .mode-monster .classic-player-sprite.hurt{ animation:hurtShake .3s ease; }
+  .mode-monster .classic-foe-sprite.hit{ animation:hitFlash .3s ease; }
+  .mode-monster .classic-foe-sprite.faint{ animation:faintDown .5s ease forwards; }
+  @keyframes hurtShake{ 0%,100%{ transform:translateX(0); } 25%{ transform:translateX(-6px); } 75%{ transform:translateX(6px); } }
+  @keyframes hitFlash{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(2.4); } }
+  @keyframes faintDown{ to{ transform:translateY(30px); opacity:0; } }
   @keyframes floatY{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
 
   .foe-sprite.hit .mon, .player-sprite.hurt .mon{
@@ -503,6 +537,7 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
     <div class="battle-frame">
 
       <div class="battle-scene" id="battleScene">
+        <div class="classic-bg"></div>
         <div class="flash-overlay" id="flashOverlay"></div>
         <div class="ember" style="left:12%; animation-delay:0s;"></div>
         <div class="ember" style="left:28%; animation-delay:1.2s;"></div>
@@ -516,14 +551,10 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
           <div class="pendant-badge">FLOOR <span id="pendantFloorNum">1</span></div>
         </div>
 
-        
-        
-
         <div class="combo-pop" id="comboPop"></div>
         <div class="boss-banner" id="bossBanner" hidden></div>
 
         <div class="tower-vis" id="towerVis">
-          
           <div class="tower-track-wrap">
             <div class="tower-track" id="towerTrack"></div>
             <div class="tower-climber" id="towerClimber"><img id="climberImg" src="" alt="등반 캐릭터"></div>
@@ -544,6 +575,56 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
         <div class="player-sprite" id="playerSprite">
           <img id="playerClimbImg" class="mon player-mon" src="" alt="사다리를 오르는 캐릭터">
         </div>
+
+        <div class="classic-foe-sprite" id="classicFoeSprite">
+          <svg viewBox="0 0 64 64" class="mon">
+            <path d="M-10 -20 Q-70 -50 -130 -30 Q-115 -10 -95 0 Q-118 14 -138 40 Q-100 30 -75 16 Q-88 34 -92 56 Q-60 34 -40 8 Z" fill="#4f9c4f" transform="translate(64,10) scale(.42)"/>
+            <path d="M10 -20 Q70 -50 130 -30 Q115 -10 95 0 Q118 14 138 40 Q100 30 75 16 Q88 34 92 56 Q60 34 40 8 Z" fill="#4f9c4f" transform="translate(0,10) scale(.42)"/>
+            <ellipse cx="32" cy="38" rx="18" ry="17" fill="#3a7d3e"/>
+            <path d="M17 30 Q32 40 47 30 L44 46 Q32 52 20 46 Z" fill="#e8d7a0"/>
+            <path d="M22 16 Q16 4 24 0 Q26 8 30 10 Z" fill="#2a5e2c"/>
+            <path d="M42 16 Q48 4 40 0 Q38 8 34 10 Z" fill="#2a5e2c"/>
+            <ellipse cx="25" cy="34" rx="3.4" ry="4" fill="#ffe14c"/>
+            <ellipse cx="39" cy="34" rx="3.4" ry="4" fill="#ffe14c"/>
+            <ellipse cx="25" cy="35" rx="1.1" ry="2.6" fill="#1a1002"/>
+            <ellipse cx="39" cy="35" rx="1.1" ry="2.6" fill="#1a1002"/>
+            <path d="M24 44 Q32 50 40 44" stroke="#1a1002" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="classic-player-sprite" id="classicPlayerSprite">
+          <svg viewBox="-100 -140 200 250" class="mon">
+            <path d="M-50 -60 Q-70 20 -55 110 Q-30 100 -20 100 Q-40 20 -22 -50 Z" fill="#4a2e28"/>
+            <path d="M50 -60 Q70 20 55 110 Q30 100 20 100 Q40 20 22 -50 Z" fill="#3a2420"/>
+            <path d="M-16 -108 Q0 -118 16 -108 L20 -92 Q0 -84 -20 -92 Z" fill="#7d838d"/>
+            <path d="M-20 -92 Q0 -80 20 -92 L22 -74 Q0 -66 -22 -74 Z" fill="#666c74"/>
+            <rect x="-14" y="-96" width="7" height="14" rx="2" fill="#2a2c30"/>
+            <rect x="7" y="-96" width="7" height="14" rx="2" fill="#2a2c30"/>
+            <path d="M-4 -118 L4 -118 L5 -128 L-5 -128 Z" fill="#8a2e2e"/>
+            <path d="M-24 -72 Q0 -84 24 -72 L30 -30 Q0 -18 -30 -30 Z" fill="#8a909a"/>
+            <path d="M-24 -72 Q0 -84 24 -72 L26 -60 Q0 -70 -26 -60 Z" fill="#a8aeb6"/>
+            <rect x="-6" y="-60" width="12" height="48" fill="#666c74"/>
+            <circle cx="-14" cy="-40" r="2" fill="#3a3c40"/>
+            <circle cx="14" cy="-40" r="2" fill="#3a3c40"/>
+            <circle cx="-14" cy="-20" r="2" fill="#3a3c40"/>
+            <circle cx="14" cy="-20" r="2" fill="#3a3c40"/>
+            <path d="M-30 -66 Q-46 -60 -42 -34 Q-30 -38 -24 -44 Z" fill="#8a909a"/>
+            <path d="M30 -66 Q46 -60 42 -34 Q30 -38 24 -44 Z" fill="#7d838d"/>
+            <rect x="-46" y="-32" width="14" height="34" rx="4" fill="#666c74"/>
+            <rect x="32" y="-32" width="14" height="34" rx="4" fill="#5c6169"/>
+            <path d="M-46 2 L-40 14 L-32 10 L-36 -2 Z" fill="#d8b98a"/>
+            <path d="M46 2 L40 14 L32 10 L36 -2 Z" fill="#c9a877"/>
+            <path d="M-30 -28 Q0 -18 30 -28 L34 26 Q0 40 -34 26 Z" fill="#7d838d"/>
+            <path d="M-6 -20 L6 -20 L6 30 L-6 30 Z" fill="#5c6169"/>
+            <circle cx="0" cy="-8" r="3" fill="#f2c14e"/>
+            <rect x="-24" y="34" width="18" height="52" fill="#4a4e54"/>
+            <rect x="6" y="34" width="18" height="52" fill="#3e4247"/>
+            <rect x="-28" y="80" width="24" height="14" rx="3" fill="#2a2c30"/>
+            <rect x="4" y="80" width="24" height="14" rx="3" fill="#232527"/>
+            <rect x="38" y="-70" width="4" height="60" fill="#c9ced6" transform="rotate(24 40 -40)"/>
+            <path d="M60 -46 L68 -30 L60 -14 L52 -30 Z" fill="#b8bec6" transform="rotate(24 60 -30)"/>
+          </svg>
+        </div>
+
         <span id="battlePlayerName" hidden></span>
         <div class="top-timer-bar">
           <div class="top-timer-fill" id="timerFill"></div>
@@ -875,6 +956,8 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
     }
     renderTower();
     document.getElementById('foeSprite').className = 'foe-sprite';
+    document.getElementById('classicFoeSprite').className = 'classic-foe-sprite';
+    document.getElementById('classicPlayerSprite').className = 'classic-player-sprite';
     const foeImgReset = document.getElementById('foeMonImg');
     if(foeImgReset && typeof GK_IDLE !== 'undefined') foeImgReset.src = GK_IDLE;
     document.getElementById('pendantFloorNum').textContent = floorNumber;
@@ -948,6 +1031,8 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
     let shieldSaved = false;
     const foeSprite = document.getElementById('foeSprite');
     const playerSprite = document.getElementById('playerSprite');
+    const classicFoe = document.getElementById('classicFoeSprite');
+    const classicPlayer = document.getElementById('classicPlayerSprite');
     const flash = document.getElementById('flashOverlay');
     const scene = document.getElementById('battleScene');
 
@@ -956,6 +1041,7 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
       flash.className = 'flash-overlay hit';
       scene.classList.add('shake');
       foeSprite.classList.add('hit');
+      classicFoe.classList.add('hit');
       const foeImg = document.getElementById('foeMonImg');
       if(foeImg && GK_ATTACK){
         foeImg.src = GK_ATTACK;
@@ -969,10 +1055,10 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
         if(bossHitsLanded < bossTotalHits){
           // 보스가 아직 안 죽었으면 기절 애니메이션은 생략(계속 등장)
         }else{
-          setTimeout(() => { foeSprite.classList.remove('hit'); foeSprite.classList.add('faint'); }, 300);
+          setTimeout(() => { foeSprite.classList.remove('hit'); foeSprite.classList.add('faint'); classicFoe.classList.remove('hit'); classicFoe.classList.add('faint'); }, 300);
         }
       }else{
-        setTimeout(() => { foeSprite.classList.remove('hit'); foeSprite.classList.add('faint'); }, 300);
+        setTimeout(() => { foeSprite.classList.remove('hit'); foeSprite.classList.add('faint'); classicFoe.classList.remove('hit'); classicFoe.classList.add('faint'); }, 300);
       }
       if(comboCount >= 2){
         const combo = document.getElementById('comboPop');
@@ -1000,7 +1086,8 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
         flash.className = 'flash-overlay hurt';
         scene.classList.add('shake');
         playerSprite.classList.add('hurt');
-        setTimeout(() => { playerSprite.classList.remove('hurt'); playerSprite.classList.add('down'); }, 300);
+        classicPlayer.classList.add('hurt');
+        setTimeout(() => { playerSprite.classList.remove('hurt'); playerSprite.classList.add('down'); classicPlayer.classList.remove('hurt'); }, 300);
       }
     }
     setTimeout(() => { scene.classList.remove('shake'); flash.className = 'flash-overlay'; }, 500);
@@ -1008,6 +1095,7 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
     setTimeout(() => {
       foeSprite.classList.remove('faint');
       playerSprite.classList.remove('down');
+      classicFoe.classList.remove('faint');
       if(isCorrect){
         if(inBoss){
           if(bossHitsLanded >= bossTotalHits){ inBoss = false; floorNumber++; }
