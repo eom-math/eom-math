@@ -603,13 +603,15 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
   .admin-choice-row input[type="text"]{ margin-bottom:0; }
   .q-list{ list-style:none; }
   .q-list li{
-    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    display:flex; flex-wrap:wrap; justify-content:flex-start; align-items:center; gap:8px;
     padding:10px 0; border-bottom:1px dashed var(--line); font-size:13px;
   }
+  .q-list li span{ flex:1; min-width:140px; }
   .q-list button{
     background:none; border:none; color:var(--red); font-size:12px; font-weight:700;
-    cursor:pointer; font-family:inherit;
+    cursor:pointer; font-family:inherit; padding:4px 8px; border-radius:4px; white-space:nowrap;
   }
+  .q-list button[style*="c0392b"]{ color:#fff; }
 
   .admin-link{
     display:block; text-align:center; margin-top:40px; font-size:12px; color:var(--dim);
@@ -846,7 +848,7 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
       <div class="save-msg" id="bulkMsg"></div>
     </div>
     <div class="admin-box">
-      <h3>문제 추가</h3>
+      <h3 id="qFormTitle">문제 추가</h3>
       <select id="qMode" style="margin-bottom:8px;">
         <option value="">공통 (모든 모드에서 출제)</option>
         <option value="tower">개념의 탑 전용</option>
@@ -860,11 +862,20 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
       <div class="admin-choice-row"><input type="radio" name="qCorrect" value="2"><input type="text" id="qC2" placeholder="보기 3"></div>
       <div class="admin-choice-row"><input type="radio" name="qCorrect" value="3"><input type="text" id="qC3" placeholder="보기 4"></div>
       <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">라디오 버튼으로 정답 보기를 선택하세요</div>
-      <button class="btn" id="addQBtn" type="button">문제 등록</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn" id="addQBtn" type="button" style="flex:1;">문제 등록</button>
+        <button class="btn" id="cancelEditBtn" type="button" style="flex:0 0 auto; background:var(--bg2); color:var(--ink); display:none;">수정 취소</button>
+      </div>
       <div class="save-msg" id="qMsg"></div>
     </div>
     <div class="admin-box">
-      <h3>등록된 문제</h3>
+      <h3>등록된 문제 (이 모드 기준)</h3>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <label style="display:flex; align-items:center; gap:4px; font-size:12.5px;">
+          <input type="checkbox" id="qSelectAll"> 전체 선택
+        </label>
+        <button class="btn" id="qBulkDeleteBtn" type="button" style="background:#c0392b; margin-left:auto;">선택 삭제</button>
+      </div>
       <ul class="q-list" id="qList"><li>불러오는 중...</li></ul>
     </div>
   </section>
@@ -1519,8 +1530,32 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
       msg.textContent = '층 번호, 문제, 보기 4개를 모두 입력해주세요.';
       return;
     }
-    msg.textContent = '등록 중...';
     const qMode = document.getElementById('qMode').value;
+
+    if(editingDocId){
+      msg.textContent = '수정 중...';
+      withTimeout(
+        db.collection('towerQuestions').doc(editingDocId).update({ floor, text, choices, answer, gameMode: qMode || null }),
+        10000, '응답 시간 초과'
+      ).then(() => {
+        msg.textContent = '수정 완료!';
+        editingDocId = null;
+        document.getElementById('qFormTitle').textContent = '문제 추가';
+        document.getElementById('qFloor').value = '';
+        document.getElementById('qText').value = '';
+        document.getElementById('qC0').value = '';
+        document.getElementById('qC1').value = '';
+        document.getElementById('qC2').value = '';
+        document.getElementById('qC3').value = '';
+        document.getElementById('addQBtn').textContent = '문제 등록';
+        document.getElementById('cancelEditBtn').style.display = 'none';
+        rawQuestionsPromise = null;
+        loadAdminQuestions();
+      }).catch(err => { msg.textContent = '수정 실패: ' + err.message; });
+      return;
+    }
+
+    msg.textContent = '등록 중...';
     withTimeout(db.collection('towerQuestions').add({ floor, text, choices, answer,
       gameMode: qMode || null,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1537,19 +1572,54 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
     }).catch(err => { msg.textContent = '등록 실패: ' + err.message; });
   });
 
+  let editingDocId = null;
+
   function loadAdminQuestions(){
     const list = document.getElementById('qList');
     list.innerHTML = '<li>불러오는 중...</li>';
     withTimeout(db.collection('towerQuestions').orderBy('floor', 'asc').get(), 10000, '응답 시간 초과').then(snap => {
-      if(snap.empty){ list.innerHTML = '<li>등록된 문제가 없습니다.</li>'; return; }
+      // 이 모드에서 실제로 출제되는 문제만 표시 (게임과 동일한 필터 기준)
+      const visibleDocs = snap.docs.filter(doc => {
+        const d = doc.data();
+        const excluded = d.excludedModes || [];
+        if(excluded.includes(GAME_MODE)) return false;
+        return !d.gameMode || d.gameMode === GAME_MODE;
+      });
+      if(visibleDocs.length === 0){ list.innerHTML = '<li>이 모드에 등록된 문제가 없습니다.</li>'; return; }
       list.innerHTML = '';
-      snap.forEach(doc => {
+      visibleDocs.forEach(doc => {
         const d = doc.data();
         const li = document.createElement('li');
         const excluded = d.excludedModes || [];
         const baseLabel = { tower: '🗼탑', monster: '⚔몬', penguin: '🐧펭' }[d.gameMode] || '공통';
         const modeLabel = baseLabel + (excluded.length ? ' · 제외: ' + excluded.map(m => ({tower:'탑',monster:'몬',penguin:'펭'}[m]||m)).join(',') : '');
-        li.innerHTML = '<span>[' + modeLabel + '] ' + String(d.floor).padStart(2,'0') + '층 · ' + escapeHtml(d.text.slice(0,20)) + '</span>';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'q-select';
+        checkbox.dataset.id = doc.id;
+        checkbox.style.marginRight = '6px';
+
+        const span = document.createElement('span');
+        span.textContent = '[' + modeLabel + '] ' + String(d.floor).padStart(2,'0') + '층 · ' + d.text.slice(0, 20);
+
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '수정';
+        editBtn.addEventListener('click', () => {
+          editingDocId = doc.id;
+          document.getElementById('qFormTitle').textContent = '문제 수정 중 (' + String(d.floor).padStart(2,'0') + '층)';
+          document.getElementById('qMode').value = d.gameMode || '';
+          document.getElementById('qFloor').value = d.floor;
+          document.getElementById('qText').value = d.text;
+          document.getElementById('qC0').value = d.choices[0] || '';
+          document.getElementById('qC1').value = d.choices[1] || '';
+          document.getElementById('qC2').value = d.choices[2] || '';
+          document.getElementById('qC3').value = d.choices[3] || '';
+          document.querySelectorAll('input[name="qCorrect"]').forEach(r => { r.checked = (Number(r.value) === d.answer); });
+          document.getElementById('addQBtn').textContent = '수정 저장';
+          document.getElementById('cancelEditBtn').style.display = '';
+          document.getElementById('qFloor').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
 
         const excludeBtn = document.createElement('button');
         excludeBtn.textContent = '이 모드에서만 제외';
@@ -1573,14 +1643,47 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
             .catch(err => alert('삭제 실패: ' + err.message));
         });
 
+        li.appendChild(checkbox);
+        li.appendChild(span);
+        li.appendChild(editBtn);
         li.appendChild(excludeBtn);
         li.appendChild(delBtn);
         list.appendChild(li);
       });
+      document.getElementById('qSelectAll').checked = false;
     }).catch(err => {
       list.innerHTML = '<li>목록을 불러오지 못했어요: ' + escapeHtml(err.message) + ' <button onclick="loadAdminQuestions()">재시도</button></li>';
     });
   }
+
+  document.getElementById('qSelectAll').addEventListener('change', (e) => {
+    document.querySelectorAll('.q-select').forEach(cb => { cb.checked = e.target.checked; });
+  });
+
+  document.getElementById('qBulkDeleteBtn').addEventListener('click', () => {
+    const ids = Array.from(document.querySelectorAll('.q-select:checked')).map(cb => cb.dataset.id);
+    if(ids.length === 0){ alert('선택된 문제가 없어요.'); return; }
+    if(!confirm(ids.length + '개 문제를 완전히 삭제할까요? 되돌릴 수 없어요.')) return;
+    const batch = db.batch();
+    ids.forEach(id => batch.delete(db.collection('towerQuestions').doc(id)));
+    withTimeout(batch.commit(), 15000, '응답 시간 초과').then(() => {
+      rawQuestionsPromise = null;
+      loadAdminQuestions();
+    }).catch(err => alert('삭제 실패: ' + err.message));
+  });
+
+  document.getElementById('cancelEditBtn').addEventListener('click', () => {
+    editingDocId = null;
+    document.getElementById('qFormTitle').textContent = '문제 추가';
+    document.getElementById('qFloor').value = '';
+    document.getElementById('qText').value = '';
+    document.getElementById('qC0').value = '';
+    document.getElementById('qC1').value = '';
+    document.getElementById('qC2').value = '';
+    document.getElementById('qC3').value = '';
+    document.getElementById('addQBtn').textContent = '문제 등록';
+    document.getElementById('cancelEditBtn').style.display = 'none';
+  });
 </script>
 </body>
 </html>
