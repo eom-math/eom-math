@@ -1545,34 +1545,33 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
         const d = doc.data();
         const li = document.createElement('li');
         const excluded = d.excludedModes || [];
-        const modeLabel = { tower: '🗼탑', monster: '⚔몬', penguin: '🐧펭' }[d.gameMode] ||
-          ('공통' + (excluded.length ? ' · 제외: ' + excluded.map(m => ({tower:'탑',monster:'몬',penguin:'펭'}[m]||m)).join(',') : ''));
+        const baseLabel = { tower: '🗼탑', monster: '⚔몬', penguin: '🐧펭' }[d.gameMode] || '공통';
+        const modeLabel = baseLabel + (excluded.length ? ' · 제외: ' + excluded.map(m => ({tower:'탑',monster:'몬',penguin:'펭'}[m]||m)).join(',') : '');
         li.innerHTML = '<span>[' + modeLabel + '] ' + String(d.floor).padStart(2,'0') + '층 · ' + escapeHtml(d.text.slice(0,20)) + '</span>';
+
+        const excludeBtn = document.createElement('button');
+        excludeBtn.textContent = '이 모드에서만 제외';
+        excludeBtn.addEventListener('click', () => {
+          // 태그가 무엇이든 상관없이, 항상 "이 모드"만 안 보이게 처리 (다른 모드는 절대 건드리지 않음)
+          const newExcluded = Array.from(new Set([...excluded, GAME_MODE]));
+          withTimeout(
+            db.collection('towerQuestions').doc(doc.id).update({ excludedModes: newExcluded }),
+            10000, '응답 시간 초과'
+          ).then(loadAdminQuestions)
+           .catch(err => alert('처리 실패: ' + err.message));
+        });
+
         const delBtn = document.createElement('button');
-        delBtn.textContent = '이 모드에서 삭제';
+        delBtn.textContent = '완전 삭제';
+        delBtn.style.background = '#c0392b';
         delBtn.addEventListener('click', () => {
-          const ALL_MODES = ['tower', 'monster', 'penguin'];
-          let action;
-          if(d.gameMode && d.gameMode !== GAME_MODE){
-            // 다른 모드 전용 문제 → 이 모드와는 무관하므로 그대로 완전 삭제
-            action = db.collection('towerQuestions').doc(doc.id).delete();
-          }else if(d.gameMode === GAME_MODE){
-            // 이 모드 전용 문제 → 다른 모드에 영향 없으니 완전 삭제
-            action = db.collection('towerQuestions').doc(doc.id).delete();
-          }else{
-            // 공통 문제 → 이 모드만 제외 목록에 추가
-            const newExcluded = Array.from(new Set([...excluded, GAME_MODE]));
-            if(ALL_MODES.every(m => newExcluded.includes(m))){
-              // 모든 모드에서 제외됐으면 더 이상 쓸모없으니 완전 삭제
-              action = db.collection('towerQuestions').doc(doc.id).delete();
-            }else{
-              action = db.collection('towerQuestions').doc(doc.id).update({ excludedModes: newExcluded });
-            }
-          }
-          withTimeout(action, 10000, '응답 시간 초과')
+          if(!confirm('이 문제를 모든 모드에서 완전히 삭제할까요? 되돌릴 수 없어요.')) return;
+          withTimeout(db.collection('towerQuestions').doc(doc.id).delete(), 10000, '응답 시간 초과')
             .then(loadAdminQuestions)
             .catch(err => alert('삭제 실패: ' + err.message));
         });
+
+        li.appendChild(excludeBtn);
         li.appendChild(delBtn);
         list.appendChild(li);
       });
