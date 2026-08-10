@@ -1496,6 +1496,7 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
       withTimeout(batch.commit(), 15000, '응답 시간 초과 (15초). 네트워크 상태를 확인하고 다시 시도해주세요.').then(() => {
         msg.textContent = arr.length + '개 문제가 등록됐어요!';
         document.getElementById('bulkJson').value = '';
+        rawQuestionsPromise = null;
         loadAdminQuestions();
       }).catch(err => { msg.textContent = '등록 실패: ' + err.message; });
     }catch(err){
@@ -1531,6 +1532,7 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
       document.getElementById('qC1').value = '';
       document.getElementById('qC2').value = '';
       document.getElementById('qC3').value = '';
+      rawQuestionsPromise = null;
       loadAdminQuestions();
     }).catch(err => { msg.textContent = '등록 실패: ' + err.message; });
   });
@@ -1557,7 +1559,7 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
           withTimeout(
             db.collection('towerQuestions').doc(doc.id).update({ excludedModes: newExcluded }),
             10000, '응답 시간 초과'
-          ).then(loadAdminQuestions)
+          ).then(() => { rawQuestionsPromise = null; loadAdminQuestions(); })
            .catch(err => alert('처리 실패: ' + err.message));
         });
 
@@ -1567,7 +1569,7 @@ background-image:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQ
         delBtn.addEventListener('click', () => {
           if(!confirm('이 문제를 모든 모드에서 완전히 삭제할까요? 되돌릴 수 없어요.')) return;
           withTimeout(db.collection('towerQuestions').doc(doc.id).delete(), 10000, '응답 시간 초과')
-            .then(loadAdminQuestions)
+            .then(() => { rawQuestionsPromise = null; loadAdminQuestions(); })
             .catch(err => alert('삭제 실패: ' + err.message));
         });
 
