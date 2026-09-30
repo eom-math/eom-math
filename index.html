@@ -314,6 +314,54 @@
   section.group .omr-cta{ margin-top:0; }
   #materials .stats{ border-top:1px solid var(--line); }
 
+
+  /* ---------- hub (category buttons) ---------- */
+  .hub{ padding:64px 0 8px; }
+  .hub-head{ margin-bottom:18px; }
+  .hub-kicker{ display:flex; align-items:center; gap:10px; font-size:12px; font-weight:700;
+    letter-spacing:.16em; color:var(--red); text-transform:uppercase; margin-bottom:10px; }
+  .hub-kicker::before{ content:""; width:22px; height:2px; background:var(--red); }
+  .hub-title{ font-size:clamp(24px,4.6vw,32px); font-weight:900; letter-spacing:-.02em; }
+  .hub-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  @media (max-width:640px){ .hub-grid{ grid-template-columns:repeat(2,1fr); } }
+  .hub-card{ position:relative; display:flex; flex-direction:column; align-items:flex-start; text-align:left;
+    min-height:168px; padding:16px 16px 14px; border:1px solid var(--line); background:#fff;
+    font:inherit; color:var(--ink); cursor:pointer; overflow:hidden;
+    transition:transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s, background .25s, color .25s, border-color .25s; }
+  .hub-card::after{ content:""; position:absolute; left:0; right:0; bottom:0; height:3px; background:var(--red);
+    transform:scaleX(0); transform-origin:left; transition:transform .35s cubic-bezier(.2,.8,.2,1); }
+  .hub-card:hover{ transform:translateY(-3px); box-shadow:0 12px 28px rgba(17,17,20,.08); border-color:rgba(17,17,20,.3); }
+  .hub-card:hover::after{ transform:scaleX(1); }
+  .hub-top{ display:flex; width:100%; justify-content:space-between; align-items:flex-start; margin-bottom:auto; }
+  .hub-no{ font-size:11px; font-weight:800; color:var(--dim); font-variant-numeric:tabular-nums; letter-spacing:.06em; }
+  .hub-ic{ width:40px; height:40px; border-radius:50%; background:var(--bg2); display:grid; place-items:center;
+    transition:background .25s; }
+  .hub-ic svg{ width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .hub-ic svg .f{ fill:currentColor; stroke:none; }
+  .hub-en{ margin-top:22px; font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--red); }
+  .hub-t{ margin-top:4px; font-size:18px; font-weight:800; letter-spacing:-.01em; line-height:1.25; }
+  .hub-m{ margin-top:10px; display:flex; width:100%; justify-content:space-between; align-items:center; gap:8px;
+    font-size:11.5px; font-weight:600; color:var(--dim); }
+  .hub-arrow{ font-style:normal; font-size:14px; transition:transform .3s; }
+  .hub-card[aria-selected="true"]{ background:var(--ink); color:#fff; border-color:var(--ink); transform:none; box-shadow:0 14px 30px rgba(17,17,20,.18); }
+  .hub-card[aria-selected="true"]::after{ transform:scaleX(1); }
+  .hub-card[aria-selected="true"] .hub-no,
+  .hub-card[aria-selected="true"] .hub-m{ color:rgba(255,255,255,.62); }
+  .hub-card[aria-selected="true"] .hub-ic{ background:var(--red); color:#fff; }
+  .hub-card[aria-selected="true"] .hub-en{ color:#ff7a6c; }
+  .hub-card[aria-selected="true"] .hub-arrow{ transform:rotate(180deg); color:#fff; }
+  .hub-panels{ position:relative; }
+  .hub-panel{ padding:26px 0 0 !important; }
+  .hub-panel[hidden]{ display:none; }
+  .hub-panel.show{ animation:hubIn .45s cubic-bezier(.2,.8,.2,1); }
+  @keyframes hubIn{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
+  .hub-panel .section-head{ margin-bottom:16px; }
+  .hub-close{ display:flex; margin:22px auto 0; align-items:center; gap:6px; padding:9px 16px;
+    border:1px solid var(--line); border-radius:999px; background:none; font:inherit; font-size:12.5px;
+    font-weight:700; color:var(--dim); cursor:pointer; transition:color .2s, border-color .2s; }
+  .hub-close:hover{ color:var(--ink); border-color:var(--ink); }
+  .hub + footer{ margin-top:48px; }
+
   /* ---------- hero slider ---------- */
   .hero-slider{ position:relative; }
   .slides{ display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth;
@@ -452,7 +500,39 @@
       <a class="cta" href="https://open.kakao.com/o/gvaZ3mHi" target="_blank" rel="noopener">상담 신청 →</a>
     </div>
   </div>
-  <section class="group" id="games">
+  <section class="hub" id="hub" aria-label="바로가기">
+    <div class="hub-head">
+      <p class="hub-kicker">Menu</p>
+      <h2 class="hub-title">무엇을 찾으세요?</h2>
+    </div>
+    <div class="hub-grid" role="tablist" aria-label="메뉴">
+      <button class="hub-card" id="tab-games" type="button" role="tab" aria-selected="false" aria-controls="games" data-hub="games">
+        <span class="hub-top"><span class="hub-no">01</span><span class="hub-ic"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.3" r=".9" class="f"/><circle cx="17.8" cy="13.7" r=".9" class="f"/></svg></span></span>
+        <span class="hub-en">Game</span>
+        <span class="hub-t">개념 퀴즈 게임</span>
+        <span class="hub-m"><span>게임 3종</span><i class="hub-arrow">↓</i></span>
+      </button>
+      <button class="hub-card" id="tab-omr" type="button" role="tab" aria-selected="false" aria-controls="omr" data-hub="omr">
+        <span class="hub-top"><span class="hub-no">02</span><span class="hub-ic"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17.5" rx="2"/><path d="M9 3.5h6v2.5H9z"/><path d="M8.5 13l2.3 2.3 4.7-4.8"/></svg></span></span>
+        <span class="hub-en">Test</span>
+        <span class="hub-t">시험 · 성적</span>
+        <span class="hub-m"><span>모바일 OMR</span><i class="hub-arrow">↓</i></span>
+      </button>
+      <button class="hub-card" id="tab-materials" type="button" role="tab" aria-selected="false" aria-controls="materials" data-hub="materials">
+        <span class="hub-top"><span class="hub-no">03</span><span class="hub-ic"><svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"/><path d="M6.5 8h2M15.5 8h2M15.5 11h2"/></svg></span></span>
+        <span class="hub-en">Library</span>
+        <span class="hub-t">자료실</span>
+        <span class="hub-m"><span>커리큘럼 · 학원 자료</span><i class="hub-arrow">↓</i></span>
+      </button>
+      <button class="hub-card" id="tab-channel" type="button" role="tab" aria-selected="false" aria-controls="channel" data-hub="channel">
+        <span class="hub-top"><span class="hub-no">04</span><span class="hub-ic"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z"/><path d="M8 9h8M8 12h5"/></svg></span></span>
+        <span class="hub-en">Channel</span>
+        <span class="hub-t">소식 · 상담</span>
+        <span class="hub-m"><span>인스타 · 카톡 · 블로그</span><i class="hub-arrow">↓</i></span>
+      </button>
+    </div>
+    <div class="hub-panels">
+  <section class="group hub-panel" id="games" role="tabpanel" aria-labelledby="tab-games" hidden>
     <div class="section-head"><h2>Game <em>개념 퀴즈 게임</em></h2><span>01</span></div>
     <div class="game-grid">
     <a class="tower-cta" href="tower.html?mode=tower">
@@ -480,9 +560,10 @@
     </a>
 
     </div>
+    <button class="hub-close" type="button" data-hub-close>접기 ↑</button>
   </section>
 
-  <section class="group" id="omr">
+  <section class="group hub-panel" id="omr" role="tabpanel" aria-labelledby="tab-omr" hidden>
     <div class="section-head"><h2>Test <em>시험 · 성적</em></h2><span>02</span></div>
   <a class="tower-cta omr-cta" href="omr/">
     <span class="tower-cta-badge">OMR</span>
@@ -492,9 +573,10 @@
     </span>
   </a>
 
+    <button class="hub-close" type="button" data-hub-close>접기 ↑</button>
   </section>
 
-  <section class="group" id="materials">
+  <section class="group hub-panel" id="materials" role="tabpanel" aria-labelledby="tab-materials" hidden>
     <div class="section-head"><h2>Library <em>자료실</em></h2><span>03</span></div>
     <h3 class="sub-head" id="curriculum">커리큘럼별 자료</h3>
     <div class="curri-list">
@@ -624,9 +706,10 @@
     </div>
   </div>
 
+    <button class="hub-close" type="button" data-hub-close>접기 ↑</button>
   </section>
 
-  <section class="links" id="channel">
+  <section class="links hub-panel" id="channel" role="tabpanel" aria-labelledby="tab-channel" hidden>
     <div class="section-head"><h2>Channel <em>소식 · 상담</em></h2><span>04</span></div>
 
     <a class="link-row" href="https://www.instagram.com/mathcliche/" target="_blank" rel="noopener">
@@ -655,6 +738,10 @@
       </div>
       <div class="rt">→</div>
     </a>
+    <button class="hub-close" type="button" data-hub-close>접기 ↑</button>
+  </section>
+
+    </div>
   </section>
 
   <footer>
@@ -852,11 +939,13 @@
       var key=a.dataset.open, target=document.querySelector(href);
       if(key){
         var item=document.querySelector('.curri-item[data-key="'+key+'"]');
+        if(window.openHubFor) window.openHubFor(item);
         if(item){ target=item;
           var head=item.querySelector('.curri-head');
           if(head && head.getAttribute('aria-expanded')!=='true') head.click(); }
       }
-      if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+      if(target){ if(window.openHubFor) window.openHubFor(target);
+        setTimeout(function(){ target.scrollIntoView({behavior:'smooth',block:'start'}); },30); }
     });
   });
   // 현재 위치 표시
@@ -864,7 +953,7 @@
   function spy(){
     var y=window.scrollY+120, cur=links[0];
     links.forEach(function(a){ var el=document.getElementById(a.dataset.spy);
-      if(el && el.getBoundingClientRect().top+window.scrollY<=y) cur=a; });
+      if(el && el.offsetParent!==null && el.getBoundingClientRect().top+window.scrollY<=y) cur=a; });
     if(window.innerHeight+window.scrollY>=document.body.scrollHeight-4) cur=links[links.length-1];
     links.forEach(function(a){ a.classList.toggle('active',a===cur); });
   }
@@ -896,6 +985,48 @@
   track.addEventListener('mouseenter',stop); track.addEventListener('mouseleave',start);
   window.addEventListener('resize',function(){ track.scrollLeft=cur*track.clientWidth; });
   update(); start();
+})();
+</script>
+<script>
+(function(){
+  var cards=[].slice.call(document.querySelectorAll('.hub-card'));
+  var panels=[].slice.call(document.querySelectorAll('.hub-panel'));
+  function open(id, scroll){
+    cards.forEach(function(c){ c.setAttribute('aria-selected', c.dataset.hub===id ? 'true':'false'); });
+    panels.forEach(function(p){
+      var on=p.id===id;
+      if(on && p.hidden){ p.hidden=false; p.classList.remove('show'); void p.offsetWidth; p.classList.add('show'); }
+      else if(!on){ p.hidden=true; }
+    });
+    if(scroll){ var c=document.getElementById('hub'); c && c.scrollIntoView({behavior:'smooth',block:'start'}); }
+  }
+  function closeAll(){ cards.forEach(function(c){ c.setAttribute('aria-selected','false'); }); panels.forEach(function(p){ p.hidden=true; }); }
+  cards.forEach(function(c){
+    c.addEventListener('click',function(){
+      if(c.getAttribute('aria-selected')==='true'){ closeAll(); return; }
+      open(c.dataset.hub,false);
+      var p=document.getElementById(c.dataset.hub);
+      setTimeout(function(){
+        var r=p.getBoundingClientRect();
+        if(r.top>window.innerHeight*0.75) window.scrollBy({top:r.top-window.innerHeight*0.35,behavior:'smooth'});
+      },60);
+    });
+  });
+  document.querySelectorAll('[data-hub-close]').forEach(function(b){
+    b.addEventListener('click',function(){ closeAll(); document.getElementById('hub').scrollIntoView({behavior:'smooth',block:'start'}); });
+  });
+  // 다른 곳(개요 · 슬라이드)에서 #링크로 들어올 때 해당 메뉴 자동으로 열기
+  window.openHubFor=function(el){
+    if(!el) return; var p=el.closest && el.closest('.hub-panel');
+    if(p && p.hidden) open(p.id,false);
+  };
+  document.addEventListener('click',function(e){
+    var a=e.target.closest && e.target.closest('a[href^="#"]'); if(!a || a.closest('#toc')) return;
+    var t=document.querySelector(a.getAttribute('href')); if(!t) return;
+    if(t.closest('.hub-panel')){ e.preventDefault(); window.openHubFor(t);
+      setTimeout(function(){ t.scrollIntoView({behavior:'smooth',block:'start'}); },30); }
+  });
+  if(location.hash){ var t=document.querySelector(location.hash); if(t) window.openHubFor(t); }
 })();
 </script>
 </body>
