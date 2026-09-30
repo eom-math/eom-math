@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>클리닉 학습지 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<link rel="stylesheet" href="omr.css?v=3">
+<style>
+  .qcard{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+  .qcard .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .qcard .no{font-weight:900;font-size:17px;}
+  .qcard .tag{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--bg2);color:var(--dim);}
+  .qcard .body{font-size:15px;line-height:1.8;margin-bottom:12px;word-break:keep-all;overflow-x:auto;}
+  .qcard img{max-width:100%;border-radius:6px;border:1px solid var(--line2);margin-bottom:10px;}
+  .qcard .choices{display:flex;gap:10px;flex-wrap:wrap;}
+  .qcard.ok{border-color:rgba(31,122,77,.4);}
+  .qcard.no{border-color:rgba(214,48,31,.4);background:#fffafa;}
+  .res{font-size:13px;font-weight:800;margin-left:auto;}
+  .res.ok{color:var(--ok);} .res.no{color:var(--red);}
+  .bubble.answer{box-shadow:0 0 0 3px var(--ok);}
+  .sticky-head{position:sticky;top:0;z-index:10;background:rgba(250,250,248,.94);backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line);margin:0 -16px 14px;padding:10px 16px;}
+  .submit-bar{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 30%);padding:24px 0 calc(14px + env(safe-area-inset-bottom));}
+  .save-state.saving{color:var(--warn);} .save-state.err{color:var(--red);font-weight:700;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="index.html">엄형국 <span>수학</span></a>
+    <span class="sub" id="who"></span>
+  </div>
+  <div id="root"><div class="empty">학습지를 불러오는 중…</div></div>
+</div>
+
+<div class="modal-bg hidden" id="confirmModal">
+  <div class="modal">
+    <h2>학습지를 제출할까요?</h2>
+    <p class="muted">제출하면 답을 고칠 수 없습니다.</p>
+    <p id="confirmBlank" style="margin-top:10px;font-weight:700;"></p>
+    <div class="row" style="margin-top:18px;">
+      <button class="btn grow" id="confirmNo">계속 풀기</button>
+      <button class="btn red grow" id="confirmYes">제출하기</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="common.js?v=3"></script>
+<script>
+window.addEventListener('DOMContentLoaded', async () => {
+  const { db, FV, esc, fmtDateTime, toast } = OMR;
+  const $ = id => document.getElementById(id);
+  const root = $('root');
+  const p = new URLSearchParams(location.search);
+  const id = p.get('id'), previewMode = p.get('preview') === '1';
+  let myCode = null; try { myCode = localStorage.getItem('omrStudentCode'); } catch(e){}
+  const fail = m => { root.innerHTML = `<div class="empty">${m}</div>`; };
+  const math = el => { if (window.renderMathInElement) try {
+    renderMathInElement(el, { delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}], throwOnError:false });
+  } catch(e){} };
+  if (!id) return fail('잘못된 링크입니다.');
+
+  let c, sub = null, result = null;
+  try {
+    const cs = await db.collection('omrClinics').doc(id).get();
+    if (!cs.exists) return fail('학습지를 찾을 수 없습니다.');
+    c = cs.data();
+    const ss = await db.collection('omrClinicSubs').doc(id).get();
+    if (ss.exists) sub = ss.data();
+    if (c.status === 'graded'){
+      const rs = await db.collection('omrClinicResults').doc(id).get();
+      if (rs.exists) result = rs.data();
+    }
+  } catch(e){ console.error(e); return fail('불러오지 못했습니다. 잠시 후 다시 시도하세요.'); }
+
+  const mine = previewMode || myCode === c.code;
+  if (!mine) return fail('이 학습지는 다른 학생의 것입니다.<br><a href="index.html" style="text-decoration:underline;">내 코드로 입장하기</a>');
+  $('who').textContent = c.name;
+  document.title = `${c.title} — ${c.name}`;
+
+  const answers = {};
+  for (let n = 1; n <= c.count; n++) answers[n] = (sub && sub.answers && sub.answers[n]) ? sub.answers[n].map(Number) : [];
+  const locked = previewMode || (sub && sub.status === 'submitted') || c.status !== 'open';
+
+  root.innerHTML = `
+    <div class="sticky-head">
+      <div class="row between" style="flex-wrap:nowrap;">
+        <a class="btn sm ghost" href="index.html" style="padding-left:0;">← 목록</a>
+        <span class="save-state muted" id="saveState">${sub && !locked ? '임시 저장됨' : ''}</span>
+      </div>
+      <div style="font-weight:900;font-size:16px;">${esc(c.title)}</div>
+      <div class="muted" id="prog"></div>
+    </div>
+    ${previewMode ? '<div class="note" style="margin-bottom:12px;font-size:13px;color:var(--dim);background:var(--bg2);padding:10px;border-radius:8px;">선생님 미리 보기 — 학생 화면과 같습니다.</div>' : ''}
+    ${result ? `<div class="card" style="background:var(--ink);color:#fff;border:0;">
+        <div style="font-size:13px;opacity:.7;">채점 결과</div>
+        <div style="font-size:40px;font-weight:900;">${result.correct}<span style="font-size:18px;opacity:.6;"> / ${result.total}</span></div>
+        <div style="font-size:13px;opacity:.8;">정답률 ${result.percent}% · 초록 테두리가 정답입니다</div></div>`
+      : sub && sub.status === 'submitted' ? `<div class="card"><b>제출 완료</b> <span class="muted">${fmtDateTime(sub.submittedAt)} · 선생님이 채점하면 결과가 나옵니다.</span></div>` : ''}
+    <div id="qs"></div>
+    ${locked ? '' : '<div class="submit-bar"><button class="btn red block" id="submitBtn">제출하기</button></div>'}`;
+
+  const qs = $('qs');
+  c.items.forEach((it, i) => {
+    const n = i + 1, r = result && result.questions[i];
+    const el = document.createElement('div');
+    el.className = 'qcard' + (r ? (r.ok ? ' ok' : ' no') : '');
+    el.dataset.n = n;
+    el.innerHTML = `<div class="hd"><span class="no">${n}</span><span class="tag">${esc(it.tag)}</span>${it.level ? `<span class="tag">${esc(it.level)}</span>` : ''}
+        ${r ? `<span class="res ${r.ok ? 'ok' : 'no'}">${r.ok ? '정답' : '오답'}</span>` : ''}</div>
+      ${it.imageUrl ? `<img src="${esc(it.imageUrl)}" alt="${n}번 문제">` : ''}
+      ${it.text ? `<div class="body">${esc(it.text).replace(/\n/g,'<br>')}</div>` : ''}
+      <div class="choices">${Array.from({length: it.choiceCount || 5}, (_, k) => {
+        const ch = k + 1, on = answers[n].includes(ch), isAns = r && r.correct.includes(ch);
+        return `<button class="bubble${on ? ' on' : ''}${isAns ? ' answer' : ''}" data-c="${ch}" ${locked ? 'disabled' : ''}>${ch}</button>`;
+      }).join('')}</div>`;
+    qs.appendChild(el);
+  });
+  math(qs);
+
+  const prog = () => { $('prog').textContent = `${Object.values(answers).filter(a => a.length).length}/${c.count} 풀이 · ${c.count}문항`; };
+  prog();
+  if (locked) return;
+
+  const ref = db.collection('omrClinicSubs').doc(id);
+  let timer = null;
+  const payload = status => ({ clinicId: id, code: myCode, answers, status, savedAt: FV.serverTimestamp(),
+                               submittedAt: status === 'submitted' ? FV.serverTimestamp() : null });
+  async function save(){
+    const st = $('saveState');
+    try { await ref.set(payload('draft')); st.className = 'save-state muted'; st.textContent = `임시 저장됨 ${fmtDateTime(new Date())}`; }
+    catch(e){ console.error(e); st.className = 'save-state err'; st.textContent = '저장 실패'; }
+  }
+  qs.addEventListener('click', e => {
+    const b = e.target.closest('.bubble'); if (!b || b.disabled) return;
+    const n = +b.closest('.qcard').dataset.n, ch = +b.dataset.c;
+    answers[n] = answers[n][0] === ch ? [] : [ch];
+    b.parentNode.querySelectorAll('.bubble').forEach(x => x.classList.toggle('on', answers[n].includes(+x.dataset.c)));
+    prog();
+    $('saveState').className = 'save-state saving'; $('saveState').textContent = '저장 중…';
+    clearTimeout(timer); timer = setTimeout(save, 900);
+  });
+  $('submitBtn').onclick = () => {
+    const blanks = Object.entries(answers).filter(([, a]) => !a.length).map(([n]) => n);
+    $('confirmBlank').textContent = blanks.length ? `안 푼 문항: ${blanks.join(', ')}번` : '모든 문항을 풀었습니다.';
+    $('confirmBlank').style.color = blanks.length ? 'var(--red)' : 'var(--ink)';
+    $('confirmModal').classList.remove('hidden');
+  };
+  $('confirmNo').onclick = () => $('confirmModal').classList.add('hidden');
+  $('confirmYes').onclick = async () => {
+    clearTimeout(timer);
+    $('confirmYes').disabled = true;
+    try { await ref.set(payload('submitted')); toast('제출했습니다'); setTimeout(() => location.reload(), 600); }
+    catch(e){ console.error(e); toast('제출 실패 · 연결을 확인하세요', 3000); $('confirmYes').disabled = false; }
+  };
+});
+</script>
+</body>
+</html>

@@ -72,3 +72,79 @@
         get(/databases/$(database)/documents/omrExams/$(resource.data.examId)).data.status == 'published';
       allow list, write: if omrAdmin();
     }
+
+    // ───────── 재시험 — 관리자만 ─────────
+    match /omrRetests/{id} {
+      allow read, write: if omrAdmin();
+    }
+
+    // ───────── 오답 클리닉 ─────────
+    // 유사 문항 은행 (정답 포함) — 관리자만
+    match /omrBank/{id} {
+      allow read, write: if omrAdmin();
+    }
+    // 학습지 (문항 내용만, 정답 없음). 문서 ID가 무작위라 링크를 아는 학생만 읽음
+    match /omrClinics/{id} {
+      allow get: if true;
+      allow list, write: if omrAdmin();
+    }
+    match /omrClinicKeys/{id} {
+      allow read, write: if omrAdmin();
+    }
+    // 학습지 답안. 문서 ID = 학습지 ID
+    match /omrClinicSubs/{clinicId} {
+      function clinicWrite() {
+        let d = request.resource.data;
+        let c = get(/databases/$(database)/documents/omrClinics/$(clinicId)).data;
+        return d.clinicId == clinicId && d.code == c.code && c.status == 'open'
+          && d.keys().hasOnly(['clinicId', 'code', 'answers', 'status', 'savedAt', 'submittedAt'])
+          && d.answers is map
+          && d.status in ['draft', 'submitted']
+          && d.savedAt == request.time
+          && (d.status == 'draft' || d.submittedAt == request.time);
+      }
+      allow get: if true;
+      allow list, delete: if omrAdmin();
+      allow create: if omrAdmin() || clinicWrite();
+      allow update: if omrAdmin() || (resource.data.status == 'draft' && clinicWrite());
+    }
+    match /omrClinicResults/{id} {
+      allow get: if true;
+      allow list, write: if omrAdmin();
+    }
+
+    // ───────── 과제 ─────────
+    match /omrAssignments/{id} {
+      allow read: if true;
+      allow write: if omrAdmin();
+    }
+    // 과제 제출. 문서 ID = {과제ID}_{학생코드}
+    // 학생 상태: in_progress(진행 중) / submitted(제출 완료), 관리자 상태: revise(보완 필요) / approved(확인 완료)
+    match /omrAssignSubs/{subId} {
+      function assignWrite() {
+        let d = request.resource.data;
+        let codePath = /databases/$(database)/documents/omrCodes/$(d.code);
+        let a = get(/databases/$(database)/documents/omrAssignments/$(d.assignmentId)).data;
+        return subId == d.assignmentId + '_' + d.code
+          && exists(codePath)
+          && d.name == get(codePath).data.name
+          && d.className == get(codePath).data.className
+          && a.className == d.className
+          && a.status == 'open'
+          && d.keys().hasOnly(['assignmentId', 'code', 'name', 'className', 'files', 'memo', 'status',
+                               'savedAt', 'submittedAt', 'feedback', 'reviewedAt'])
+          && d.files is list && d.files.size() <= 20
+          && d.memo is string && d.memo.size() <= 1000
+          && d.status in ['in_progress', 'submitted']
+          && d.savedAt == request.time
+          && (d.status != 'submitted' || d.submittedAt == request.time);
+      }
+      allow get: if true;
+      allow list, delete: if omrAdmin();
+      allow create: if omrAdmin() ||
+        (assignWrite() && !request.resource.data.keys().hasAny(['feedback', 'reviewedAt']));
+      // 제출 완료·확인 완료 뒤에는 학생이 못 바꾸고, 보완 요청을 받으면 다시 제출 가능. 선생님 피드백은 학생이 못 고침
+      allow update: if omrAdmin() ||
+        (resource.data.status in ['in_progress', 'revise'] && assignWrite()
+         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['feedback', 'reviewedAt']));
+    }

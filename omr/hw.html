@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>과제 제출 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=3">
+<style>
+  .drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:26px 16px;border:2px dashed var(--line);
+    border-radius:var(--radius);background:#fff;text-align:center;cursor:pointer;}
+  .drop b{font-size:16px;} .drop span{font-size:12.5px;color:var(--dim);}
+  .file{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:8px;margin-top:8px;}
+  .file .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600;}
+  .file .s{font-size:12px;color:var(--dim);}
+  .file .x{border:0;background:none;color:var(--red);font-weight:800;padding:4px 8px;}
+  .file .pg{height:4px;background:var(--bg2);border-radius:99px;margin-top:4px;overflow:hidden;}
+  .file .pg i{display:block;height:100%;background:var(--ink);width:0;transition:width .2s;}
+  .banner{border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;}
+  .banner b{display:block;font-size:15px;}
+  .banner.done{background:var(--ink);color:#fff;} .banner.done span{opacity:.75;font-size:13px;}
+  .banner.revise{background:var(--red-soft);color:var(--red);border:1px solid rgba(214,48,31,.3);}
+  .banner.closed{background:var(--bg2);color:var(--dim);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="index.html">엄형국 <span>수학</span></a>
+    <span class="sub" id="who"></span>
+  </div>
+  <div id="root"><div class="empty">과제를 불러오는 중…</div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="common.js?v=3"></script>
+<script>
+(async function(){
+  const { db, FV, esc, fmtDateTime, toDate, toast } = OMR;
+  const $ = id => document.getElementById(id);
+  const root = $('root');
+  const fail = m => { root.innerHTML = `<div class="empty">${m}</div>`; };
+  const id = new URLSearchParams(location.search).get('id');
+  let code = null; try { code = localStorage.getItem('omrStudentCode'); } catch(e){}
+  if (!id) return fail('잘못된 링크입니다.');
+  if (!code) return fail('먼저 학생 코드로 입장하세요.<br><a href="index.html" style="text-decoration:underline;">입장하기</a>');
+
+  const MAX_FILES = 20, MAX_MB = 10;
+  let a, me, sub;
+  const subRef = db.collection('omrAssignSubs').doc(`${id}_${code}`);
+  try {
+    const [as, cs, ss] = await Promise.all([db.collection('omrAssignments').doc(id).get(),
+      db.collection('omrCodes').doc(code).get(), subRef.get()]);
+    if (!as.exists) return fail('과제를 찾을 수 없습니다.');
+    if (!cs.exists) return fail('학생 코드를 다시 확인하세요.');
+    a = as.data(); me = cs.data(); sub = ss.exists ? ss.data() : null;
+  } catch(e){ console.error(e); return fail('불러오지 못했습니다. 잠시 후 다시 시도하세요.'); }
+  if (a.className !== me.className) return fail('우리 반 과제가 아닙니다.');
+  $('who').textContent = me.name;
+
+  let files = sub ? (sub.files || []).slice() : [];
+  let memo = sub ? (sub.memo || '') : '';
+  const status = sub ? sub.status : 'none';
+  const canEdit = a.status === 'open' && (status === 'none' || status === 'in_progress' || status === 'revise');
+  const due = toDate(a.dueAt);
+  const overdue = due && due < new Date();
+
+  function render(){
+    root.innerHTML = `
+      <a class="btn sm ghost" href="index.html" style="padding-left:0;margin-bottom:6px;">← 목록</a>
+      <h1>${esc(a.title)}</h1>
+      <p class="muted" style="margin-bottom:14px;">${due ? `제출 기한 ${fmtDateTime(due)}${overdue ? ' · <b style="color:var(--red);">기한이 지났습니다</b>' : ''}` : '제출 기한 없음'}</p>
+      ${a.description ? `<div class="card" style="white-space:pre-wrap;font-size:14.5px;">${esc(a.description)}</div>` : ''}
+      ${status === 'submitted' ? `<div class="banner done"><b>제출 완료</b><span>${fmtDateTime(sub.submittedAt)} · 선생님이 확인하면 표시됩니다.</span></div>` : ''}
+      ${status === 'approved' ? `<div class="banner done"><b>선생님 확인 완료 ✓</b><span>${fmtDateTime(sub.submittedAt)} 제출</span></div>` : ''}
+      ${status === 'revise' ? `<div class="banner revise"><b>보완이 필요합니다</b>${esc(sub.feedback || '')}<br><span style="font-size:12.5px;">파일을 추가하거나 바꾼 뒤 다시 제출하세요.</span></div>` : ''}
+      ${a.status !== 'open' && !['submitted','approved'].includes(status) ? `<div class="banner closed"><b>제출이 마감된 과제입니다</b></div>` : ''}
+
+      ${canEdit ? `<label class="drop" for="picker"><b>📷 사진 찍기 / 파일 올리기</b><span>사진 또는 PDF · 여러 장 가능 · 한 파일 ${MAX_MB}MB 이하</span></label>
+        <input type="file" id="picker" accept="image/*,application/pdf" multiple hidden>` : ''}
+      <div id="fileList"></div>
+      ${canEdit || memo ? `<div style="margin-top:14px;"><label class="f">선생님께 메모 (선택)</label>
+        <textarea class="input" id="memo" ${canEdit ? '' : 'disabled'} style="min-height:70px;" placeholder="어려웠던 문제, 질문 등">${esc(memo)}</textarea></div>` : ''}
+      ${canEdit ? `<button class="btn red block" id="submitBtn" style="margin-top:16px;">${status === 'revise' ? '다시 제출하기' : '제출하기'}</button>
+        <p class="muted" style="text-align:center;margin-top:8px;">올린 파일은 자동 저장됩니다. 다 올린 뒤 제출을 눌러야 제출 완료가 됩니다.</p>` : ''}`;
+    renderFiles();
+    if (!canEdit) return;
+    $('picker').onchange = e => { upload([...e.target.files]); e.target.value = ''; };
+    $('memo').oninput = e => { memo = e.target.value; };
+    $('submitBtn').onclick = submit;
+  }
+
+  function renderFiles(extra = []){
+    const box = $('fileList');
+    box.innerHTML = files.map((f, i) => `<div class="file"><span>${f.type === 'application/pdf' ? '📄' : '🖼'}</span>
+      <div style="flex:1;min-width:0;"><div class="n">${esc(f.name)}</div><div class="s">${(f.size/1024/1024).toFixed(1)}MB</div></div>
+      ${canEdit ? `<button class="x" data-rm="${i}" aria-label="삭제">✕</button>` : ''}</div>`).join('') +
+      extra.map(u => `<div class="file"><span>⏳</span><div style="flex:1;min-width:0;"><div class="n">${esc(u.name)}</div>
+        <div class="pg"><i id="pg_${u.key}"></i></div></div></div>`).join('');
+    box.querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => {
+      files.splice(+b.dataset.rm, 1); renderFiles(); await saveDoc('in_progress');
+    });
+  }
+
+  // 큰 사진은 줄여서 올림 (긴 변 2000px, JPEG)
+  async function shrink(file){
+    if (!file.type.startsWith('image/') || file.size < 1.5 * 1024 * 1024 || file.type === 'image/gif') return file;
+    try {
+      const bmp = await createImageBitmap(file);
+      const k = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+      cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+      const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.85));
+      if (!blob || blob.size >= file.size) return file;
+      return new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+    } catch(e){ return file; }
+  }
+
+  async function upload(list){
+    list = list.filter(f => f.type.startsWith('image/') || f.type === 'application/pdf');
+    if (files.length + list.length > MAX_FILES){ toast(`파일은 최대 ${MAX_FILES}개까지입니다`); return; }
+    const pending = list.map((f, i) => ({ f, name: f.name, key: Date.now() + '_' + i }));
+    renderFiles(pending);
+    $('submitBtn').disabled = true;
+    for (const u of pending){
+      try {
+        const file = await shrink(u.f);
+        if (file.size > MAX_MB * 1024 * 1024){ toast(`${u.name}: ${MAX_MB}MB를 넘습니다`, 3000); continue; }
+        const path = `omrAssign/${id}/${code}/${Date.now()}_${file.name.replace(/[^\w.\-가-힣]/g, '_')}`;
+        const task = firebase.storage().ref(path).put(file, { contentType: file.type });
+        task.on && task.on('state_changed', s => { const el = $('pg_' + u.key); if (el) el.style.width = (s.bytesTransferred / s.totalBytes * 100) + '%'; });
+        await task;
+        files.push({ path, name: file.name, size: file.size, type: file.type });
+      } catch(e){ console.error(e); toast(`${u.name} 올리기 실패`, 3000); }
+    }
+    renderFiles();
+    $('submitBtn').disabled = false;
+    await saveDoc('in_progress');
+  }
+
+  function payload(st){
+    return { assignmentId: id, code, name: me.name, className: me.className, files, memo: memo.trim(), status: st,
+             savedAt: FV.serverTimestamp(), submittedAt: st === 'submitted' ? FV.serverTimestamp() : (sub && sub.submittedAt) || null };
+  }
+  async function saveDoc(st){
+    try { await subRef.set(payload(st), { merge: true }); }
+    catch(e){ console.error(e); toast(e.code === 'permission-denied' ? '마감되어 저장할 수 없습니다' : '저장 실패 · 연결을 확인하세요', 3000); throw e; }
+  }
+  async function submit(){
+    if (!files.length){ toast('파일을 한 개 이상 올려 주세요'); return; }
+    if (!confirm(`파일 ${files.length}개로 제출할까요?`)) return;
+    try { await saveDoc('submitted'); toast('제출했습니다'); setTimeout(() => location.reload(), 600); } catch(e){}
+  }
+  render();
+})();
+</script>
+</body>
+</html>

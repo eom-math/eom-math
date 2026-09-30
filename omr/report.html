@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="omr.css?v=1">
+<link rel="stylesheet" href="omr.css?v=3">
 <style>
   .hero{background:var(--ink);color:#fff;border-radius:14px;padding:22px 20px;margin-bottom:14px;}
   .hero .who{font-size:13px;opacity:.7;}
@@ -55,7 +55,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=1"></script>
+<script src="common.js?v=3"></script>
 <script>
 (async function(){
   const { db, esc } = OMR;
@@ -80,6 +80,9 @@
   const pct = x => r.maxScore ? Math.max(0, Math.min(100, x / r.maxScore * 100)) : 0;
   const wrong = r.questions.filter(q => !q.ok);
   const hardRight = r.questions.filter(q => q.ok && !q.allCorrect && q.rate < 50);
+  const tagMap = {};
+  r.questions.forEach(q => { if (!q.tag) return; const t = tagMap[q.tag] = tagMap[q.tag] || { tag:q.tag, ok:0, total:0 }; t.total++; if (q.ok) t.ok++; });
+  const tagRows = Object.values(tagMap).sort((a,b) => a.ok/a.total - b.ok/b.total);
   const ansText = a => a && a.length ? a.join('·') : '—';
 
   root.innerHTML = `
@@ -92,6 +95,8 @@
         <span>백분위 <b>${r.percentile}</b></span>
         <span>맞은 문항 <b>${r.correctCount}</b> / ${r.questionCount}</span>
       </div>
+      ${r.passScore != null && r.score < r.passScore ? `<div style="margin-top:14px;background:var(--red);border-radius:8px;padding:10px 12px;font-size:13.5px;font-weight:700;">
+        재시험 대상입니다 (기준 ${r.passScore}점). 선생님 안내에 따라 재시험을 준비하세요.</div>` : ''}
     </div>
 
     <div class="card">
@@ -133,6 +138,12 @@
           <div class="rate">반 정답률 ${Math.round(q.rate)}%<div class="bar" style="margin-top:4px;"><i style="width:${q.rate}%"></i></div></div>
         </div>`).join('') : '<p class="muted">모든 문항을 맞혔습니다. 👏</p>'}
     </div>
+
+    ${tagRows.length ? `<div class="card"><h3>단원별 결과</h3>
+      ${tagRows.map(t => `<div class="wl" style="grid-template-columns:1fr 70px 88px;">
+        <b>${esc(t.tag)}</b><span class="ans" style="text-align:right;">${t.ok}/${t.total} 정답</span>
+        <div class="rate">${Math.round(t.ok / t.total * 100)}%<div class="bar" style="margin-top:4px;"><i style="width:${t.ok / t.total * 100}%;${t.ok / t.total < .5 ? 'background:var(--red);' : ''}"></i></div></div>
+      </div>`).join('')}</div>` : ''}
 
     ${hardRight.length ? `<div class="card"><h3>잘한 문항</h3>
       <p class="muted">반 정답률 50% 미만인데 맞힌 문항: <b style="color:var(--ink);">${hardRight.map(q => q.n + '번').join(', ')}</b></p></div>` : ''}

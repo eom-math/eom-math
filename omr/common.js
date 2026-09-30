@@ -122,7 +122,9 @@
       const ans = (key.answers && key.answers[n]) || [];
       const allCorrect = (key.allCorrect || []).includes(n);
       if (!allCorrect && !ans.length) throw new Error(`${n}번 정답이 비어 있습니다.`);
-      questions.push({ n, answers: ans.map(Number), points: Number(key.points[n]) || 0, allCorrect });
+      const meta = (exam.meta && exam.meta[n]) || {};
+      questions.push({ n, answers: ans.map(Number), points: Number(key.points[n]) || 0, allCorrect,
+                       tag: meta.tag || null, level: meta.level || null });
     }
     const maxScore = questions.reduce((s, q) => s + q.points, 0);
 
@@ -134,7 +136,7 @@
         const { ok, earned } = gradeOne(q, marked);
         total += earned; correct += ok ? 1 : 0;
         return { n: q.n, marked, correct: q.answers, ok, blank: !marked.length,
-                 points: q.points, earned, allCorrect: q.allCorrect };
+                 points: q.points, earned, allCorrect: q.allCorrect, tag: q.tag, level: q.level };
       });
       return { code: sub.code, name: sub.name, score: round(total, 2), correctCount: correct, questions: qs };
     });
@@ -181,6 +183,134 @@
     };
   }
 
+  // ───────── 오답 분석 (단원 태그별) ─────────
+  const UNTAGGED = '미분류';
+  /**
+   * exams: [{id, questionCount, meta:{"1":{tag,level}}}]
+   * subs:  채점된 제출 [{examId, code, name, wrong:[번호...]}]
+   * 반환: { tags:[{tag, attempts, wrong, rate}], students:[{code,name,attempts,wrong,tags:{tag:{attempts,wrong,rate}},weak:[tag...]}] }
+   */
+  function analyzeWeakness(exams, subs) {
+    const exMap = Object.fromEntries(exams.map(e => [e.id, e]));
+    const tagAgg = {}, stuAgg = {};
+    subs.forEach(s => {
+      const e = exMap[s.examId];
+      if (!e) return;
+      const wrong = new Set(s.wrong || []);
+      const st = stuAgg[s.code] = stuAgg[s.code] || { code: s.code, name: s.name, attempts: 0, wrong: 0, tags: {} };
+      for (let n = 1; n <= e.questionCount; n++) {
+        const tag = (e.meta && e.meta[n] && e.meta[n].tag) || UNTAGGED;
+        const w = wrong.has(n) ? 1 : 0;
+        const t = tagAgg[tag] = tagAgg[tag] || { tag, attempts: 0, wrong: 0 };
+        t.attempts++; t.wrong += w;
+        const u = st.tags[tag] = st.tags[tag] || { attempts: 0, wrong: 0 };
+        u.attempts++; u.wrong += w;
+        st.attempts++; st.wrong += w;
+      }
+    });
+    const rate = x => x.attempts ? round(x.wrong / x.attempts * 100, 1) : 0;
+    const tags = Object.values(tagAgg).map(t => ({ ...t, rate: rate(t) }))
+      .sort((a, b) => b.rate - a.rate || b.wrong - a.wrong);
+    const students = Object.values(stuAgg).map(s => {
+      Object.values(s.tags).forEach(t => { t.rate = rate(t); });
+      const weak = Object.entries(s.tags).filter(([tag, t]) => t.wrong > 0 && tag !== UNTAGGED)
+        .sort((a, b) => b[1].rate - a[1].rate || b[1].wrong - a[1].wrong).slice(0, 3).map(([tag]) => tag);
+      return { ...s, rate: rate(s), weak };
+    }).sort((a, b) => b.rate - a.rate || a.name.localeCompare(b.name, 'ko'));
+    return { tags, students };
+  }
+
+  // ───────── 맞춤 클리닉 문항 선택 ─────────
+  function shuffle(arr) {
+    const a = arr.slice(), r = new Uint32Array(a.length);
+    crypto.getRandomValues(r);
+    for (let i = a.length - 1; i > 0; i--) { const j = r[i] % (i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+  /**
+   * wrongs: [{tag, level}]  (학생의 오답 문항들)
+   * bank:   [{id, tag, level, ...}]
+   * 같은 단원 문항을 오답 1개당 perWrong개, 같은 난이도 우선, 이미 푼 문항(exclude) 제외.
+   * 반환: { items:[bank item], unmatched:[tag...] }
+   */
+  function pickClinicItems(wrongs, bank, { perWrong = 1, maxItems = 20, exclude = new Set() } = {}) {
+    const byTag = {};
+    wrongs.forEach(w => { if (w.tag) (byTag[w.tag] = byTag[w.tag] || []).push(w); });
+    const order = Object.keys(byTag).sort((a, b) => byTag[b].length - byTag[a].length);
+    const used = new Set(exclude), items = [], unmatched = [];
+    // 단원별로 돌아가며 하나씩 뽑아 한 단원이 학습지를 독차지하지 않게 함
+    const queues = order.map(tag => ({ tag, need: byTag[tag].length * perWrong, levels: byTag[tag].map(w => w.level) }));
+    order.forEach(tag => { if (!bank.some(b => b.tag === tag)) unmatched.push(tag); });
+    let progress = true;
+    while (items.length < maxItems && progress) {
+      progress = false;
+      for (const q of queues) {
+        if (items.length >= maxItems || q.need <= 0) continue;
+        const cands = shuffle(bank.filter(b => b.tag === q.tag && !used.has(b.id)));
+        if (!cands.length) { q.need = 0; continue; }
+        const lv = q.levels[0];
+        const pick = cands.find(b => lv && b.level === lv) || cands[0];
+        used.add(pick.id); items.push(pick); q.need--; q.levels.push(q.levels.shift());
+        progress = true;
+      }
+    }
+    return { items, unmatched };
+  }
+
+  // 학습지 채점 (한 문항 하나만 마킹, 정답 목록에 있으면 정답)
+  function gradeClinic(key, answers, count) {
+    const res = [];
+    let correct = 0;
+    for (let n = 1; n <= count; n++) {
+      const marked = (answers && answers[n]) || [];
+      const ans = (key[n] || []).map(Number);
+      const ok = marked.length === 1 && ans.includes(Number(marked[0]));
+      if (ok) correct++;
+      res.push({ n, marked, correct: ans, ok });
+    }
+    return { correct, total: count, percent: count ? round(correct / count * 100, 1) : 0, questions: res };
+  }
+
+  // 재시험: 가장 높은 재시험 점수를 최종 반영, 기준 이상이면 통과
+  function retestSummary(r) {
+    const scores = (r.attempts || []).map(a => Number(a.score)).filter(x => !isNaN(x));
+    const best = scores.length ? Math.max(...scores) : null;
+    const status = best == null ? 'pending' : (best >= r.passScore ? 'passed' : 'failed');
+    return { best, status, finalScore: best == null ? r.originalScore : Math.max(best, r.originalScore) };
+  }
+
+  // ───────── 관리자 공통: 로그인·상단 메뉴 ─────────
+  const ADMIN_PAGES = [['admin.html', '시험·OMR'], ['clinic.html', '오답 클리닉'], ['assign.html', '과제']];
+  function adminNav(current) {
+    return ADMIN_PAGES.map(([href, label]) =>
+      `<a class="btn sm ${href === current ? 'primary' : 'ghost'}" href="${href}">${label}</a>`).join('');
+  }
+  /** #vLogin 안의 loginEmail/loginPw/loginBtn/loginMsg, logoutBtn, adminEmail 요소를 연결 */
+  function mountAdminLogin(onChange) {
+    const auth = firebase.auth(), $ = id => document.getElementById(id);
+    $('loginBtn').onclick = async () => {
+      $('loginMsg').textContent = '로그인 중…';
+      try { await auth.signInWithEmailAndPassword($('loginEmail').value.trim(), $('loginPw').value); }
+      catch (e) { $('loginMsg').textContent = '로그인 실패: 이메일 또는 비밀번호를 확인하세요.'; }
+    };
+    $('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
+    $('logoutBtn').onclick = () => auth.signOut();
+    auth.onAuthStateChanged(user => {
+      $('logoutBtn').classList.toggle('hidden', !user);
+      $('adminEmail').textContent = user ? user.email : '';
+      onChange(user);
+    });
+  }
+
+  // 여러 문서 쓰기를 400개씩 나눠 커밋
+  async function commitOps(ops) {
+    for (let i = 0; i < ops.length; i += 400) {
+      const bt = db.batch();
+      ops.slice(i, i + 400).forEach(([op, ref, data, opt]) => opt ? bt[op](ref, data, opt) : (data ? bt[op](ref, data) : bt[op](ref)));
+      await bt.commit();
+    }
+  }
+
   function reportUrl(token) {
     return new URL('report.html?t=' + encodeURIComponent(token), location.href).href;
   }
@@ -202,6 +332,7 @@
   global.OMR = {
     db, FV, MESSAGE_TEMPLATE, renderMessage, genCode, genToken, esc, toDate, fmtDateTime,
     normalizePhone, fmtPhone, round, toast, copyText, normalizeAnswers, gradeOne, gradeExam,
-    reportUrl, downloadCsv,
+    reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
+    adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

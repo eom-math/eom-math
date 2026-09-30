@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>과제 관리 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=3">
+<style>
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:640px){ .grid2{grid-template-columns:1fr;} }
+  .as-row{display:grid;grid-template-columns:1fr 160px auto;gap:14px;align-items:center;padding:13px 16px;background:#fff;
+    border:1px solid var(--line);border-radius:var(--radius);margin-bottom:8px;cursor:pointer;width:100%;text-align:left;}
+  .as-row:hover{border-color:var(--ink);}
+  .as-row .t{font-weight:800;} .as-row .m{font-size:12.5px;color:var(--dim);}
+  @media (max-width:640px){ .as-row{grid-template-columns:1fr;gap:8px;} }
+  .file-link{display:inline-block;font-size:12.5px;padding:3px 8px;border-radius:6px;background:var(--bg2);margin:2px 4px 2px 0;
+    text-decoration:none;border:0;cursor:pointer;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;}
+  .file-link:hover{background:var(--line);}
+  .pill.revise{background:var(--red-soft);color:var(--red);}
+  .pill.late{background:var(--warn-soft);color:var(--warn);}
+  .note{font-size:12.5px;color:var(--dim);background:var(--bg2);border-radius:8px;padding:10px 12px;line-height:1.6;}
+  pre.msg{white-space:pre-wrap;font:inherit;font-size:13px;background:#fff;border:1px dashed var(--line);border-radius:8px;padding:10px 12px;}
+</style>
+</head>
+<body>
+<div class="wrap wide">
+  <div class="topbar">
+    <a class="brand" href="../index.html">엄형국 <span>수학</span> · 관리</a>
+    <div class="row"><span class="sub" id="adminEmail"></span><button class="btn sm hidden" id="logoutBtn">로그아웃</button></div>
+  </div>
+  <nav class="row" id="adminNav" style="gap:4px;margin:-8px 0 16px;"></nav>
+
+  <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
+    <h1>관리자 로그인</h1>
+    <div class="card stack">
+      <input class="input" type="email" id="loginEmail" placeholder="이메일" autocomplete="username">
+      <input class="input" type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
+      <button class="btn primary block" id="loginBtn">로그인</button>
+      <p class="muted" id="loginMsg"></p>
+    </div>
+  </section>
+
+  <section id="vList" class="hidden">
+    <div class="row between" style="margin-bottom:12px;">
+      <h1 style="margin:0;">과제</h1>
+      <div class="row">
+        <select class="input" id="classSel" style="width:auto;min-width:160px;"></select>
+        <button class="btn primary" id="newBtn">+ 새 과제</button>
+      </div>
+    </div>
+    <div id="asList"></div>
+  </section>
+
+  <section id="vDetail" class="hidden">
+    <button class="btn sm ghost" id="backBtn" style="padding-left:0;margin-bottom:8px;">← 과제 목록</button>
+    <h1 id="dTitle" style="margin-bottom:2px;"></h1>
+    <p class="muted" id="dMeta" style="margin-bottom:12px;"></p>
+    <div class="row" style="margin-bottom:14px;" id="dActions"></div>
+    <div class="stat-grid" id="dStats"></div>
+    <div class="bar" style="height:10px;margin-bottom:16px;"><i id="dBar" style="width:0"></i></div>
+    <div class="tbl-wrap" style="margin-bottom:16px;"><table class="tbl" id="dTbl"></table></div>
+
+    <div class="card">
+      <h3>미제출·보완 필요 학생 독촉</h3>
+      <pre class="msg" id="remindTpl"></pre>
+      <div class="row" style="margin-top:10px;justify-content:space-between;">
+        <div class="row">
+          <label class="row" style="gap:6px;font-weight:700;font-size:14px;"><input type="checkbox" id="rParent" checked> 학부모</label>
+          <label class="row" style="gap:6px;font-weight:700;font-size:14px;"><input type="checkbox" id="rStudent" checked> 학생</label>
+        </div>
+        <div class="row">
+          <button class="btn" id="remindCopy">전체 메시지 복사</button>
+          <button class="btn primary" id="remindCsv">알리고용 CSV</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="modal-bg hidden" id="asModal">
+  <div class="modal stack">
+    <h2 id="asModalTitle">새 과제</h2>
+    <div><label class="f">과제 제목</label><input class="input" id="fTitle" placeholder="예) 미적분 워크북 p.32~40"></div>
+    <div class="grid2">
+      <div><label class="f">반</label><input class="input" id="fClass" list="classList"></div>
+      <div><label class="f">제출 기한</label><input class="input" id="fDue" type="datetime-local"></div>
+    </div>
+    <div><label class="f">안내 (선택)</label><textarea class="input" id="fDesc" placeholder="풀이 과정이 보이게 사진을 찍어 올리세요."></textarea></div>
+    <p class="muted" id="asMsg"></p>
+    <div class="row"><button class="btn grow" data-close>취소</button><button class="btn primary grow" id="asSave">저장</button></div>
+  </div>
+</div>
+<datalist id="classList"></datalist>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="common.js?v=3"></script>
+<script>
+(function(){
+  const { db, FV, esc, fmtDateTime, toDate, toast, copyText, fmtPhone, normalizePhone } = OMR;
+  const $ = id => document.getElementById(id);
+  $('adminNav').innerHTML = OMR.adminNav('assign.html');
+  const REMIND_TPL = '[엄형국 수학] #{학생이름} 학생의 과제 \'#{과제명}\'이(가) 아직 제출되지 않았습니다.\n제출 기한: #{기한}\n#{링크}';
+  $('remindTpl').textContent = REMIND_TPL;
+  const ST = { none:['미제출',''], in_progress:['진행 중','closed'], submitted:['제출 완료','open'], revise:['보완 필요','revise'], approved:['확인 완료','published'] };
+
+  let students = [], assigns = [], cur = null, subs = [], unsub = null;
+  const handleErr = (e, m) => { console.error(e); toast(m || ('오류: ' + (e.message || e)), 3500); };
+  document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => {
+    if (e.target === m || e.target.hasAttribute('data-close')) m.classList.add('hidden'); }));
+  const show = v => ['vLogin','vList','vDetail'].forEach(x => $(x).classList.toggle('hidden', x !== v));
+
+  OMR.mountAdminLogin(async user => {
+    if (!user) return show('vLogin');
+    show('vList');
+    try {
+      const [st, as] = await Promise.all([db.collection('omrStudents').get(), db.collection('omrAssignments').get()]);
+      students = st.docs.map(d => ({ id:d.id, ...d.data() }));
+      assigns = as.docs.map(d => ({ id:d.id, ...d.data() }));
+    } catch(e){ return handleErr(e, '데이터를 불러오지 못했습니다 (보안 규칙 확인)'); }
+    const classes = [...new Set([...students.map(s => s.className), ...assigns.map(a => a.className)])].sort();
+    $('classList').innerHTML = classes.map(c => `<option value="${esc(c)}">`).join('');
+    $('classSel').innerHTML = '<option value="">전체 반</option>' + classes.map(c => `<option>${esc(c)}</option>`).join('');
+    renderList();
+  });
+  $('classSel').onchange = renderList;
+
+  const roster = cls => students.filter(s => s.className === cls);
+  const isDone = s => s && (s.status === 'submitted' || s.status === 'approved');
+  const isLate = (a, s) => { const d = toDate(a.dueAt), t = s && toDate(s.submittedAt); return !!(d && t && t > d); };
+
+  // 목록: 과제별 수거율 (제출 문서를 과제마다 읽음)
+  async function renderList(){
+    const cls = $('classSel').value;
+    const list = assigns.filter(a => !cls || a.className === cls)
+      .sort((a,b) => (toDate(b.dueAt) || toDate(b.createdAt) || 0) - (toDate(a.dueAt) || toDate(a.createdAt) || 0));
+    const box = $('asList');
+    if (!list.length){ box.innerHTML = '<div class="empty">과제가 없습니다. <b>+ 새 과제</b>로 등록하세요.</div>'; return; }
+    box.innerHTML = '<div class="empty">수거율 계산 중…</div>';
+    const counts = await Promise.all(list.map(a => db.collection('omrAssignSubs').where('assignmentId','==',a.id).get()
+      .then(q => q.docs.filter(d => isDone(d.data())).length).catch(() => 0)));
+    box.innerHTML = '';
+    list.forEach((a, i) => {
+      const total = roster(a.className).length, done = counts[i];
+      const pct = total ? Math.round(done / total * 100) : 0;
+      const due = toDate(a.dueAt), overdue = due && due < new Date();
+      const b = document.createElement('button');
+      b.className = 'as-row';
+      b.innerHTML = `<div><div class="t">${esc(a.title)} ${a.status === 'closed' ? '<span class="pill closed">마감</span>' : ''}</div>
+          <div class="m">${esc(a.className)}${due ? ` · 기한 ${fmtDateTime(due)}${overdue ? ' (지남)' : ''}` : ''}</div></div>
+        <div><div class="bar"><i style="width:${pct}%;${pct < 70 && overdue ? 'background:var(--red);' : ''}"></i></div>
+          <div class="m" style="margin-top:4px;">수거율 <b style="color:var(--ink);">${pct}%</b> · ${done}/${total}</div></div>
+        <span class="muted">›</span>`;
+      b.onclick = () => openDetail(a.id);
+      box.appendChild(b);
+    });
+  }
+
+  // 새 과제·수정
+  let editing = null;
+  function openModal(a){
+    editing = a || null;
+    $('asModalTitle').textContent = a ? '과제 수정' : '새 과제';
+    $('fTitle').value = a ? a.title : ''; $('fClass').value = a ? a.className : $('classSel').value;
+    $('fDesc').value = a ? (a.description || '') : '';
+    const d = a && toDate(a.dueAt);
+    $('fDue').value = d ? new Date(d.getTime() - d.getTimezoneOffset()*60e3).toISOString().slice(0,16) : '';
+    $('asMsg').textContent = ''; $('asModal').classList.remove('hidden');
+  }
+  $('newBtn').onclick = () => openModal(null);
+  $('asSave').onclick = async () => {
+    const title = $('fTitle').value.trim(), className = $('fClass').value.trim();
+    if (!title || !className){ $('asMsg').textContent = '제목과 반을 입력하세요.'; return; }
+    const data = { title, className, description: $('fDesc').value.trim(),
+      dueAt: $('fDue').value ? firebase.firestore.Timestamp.fromDate(new Date($('fDue').value)) : null };
+    try {
+      if (editing){ await db.collection('omrAssignments').doc(editing.id).update(data); Object.assign(editing, data); }
+      else {
+        const ref = await db.collection('omrAssignments').add({ ...data, status:'open', createdAt: FV.serverTimestamp() });
+        assigns.push({ id: ref.id, ...data, status:'open', createdAt: new Date() });
+      }
+      $('asModal').classList.add('hidden'); toast('저장했습니다');
+      if (editing) openDetail(editing.id); else renderList();
+    } catch(e){ handleErr(e); }
+  };
+
+  // 상세
+  $('backBtn').onclick = () => { if (unsub) unsub(); unsub = null; show('vList'); renderList(); };
+  function openDetail(id){
+    cur = assigns.find(a => a.id === id);
+    show('vDetail');
+    renderHead();
+    if (unsub) unsub();
+    unsub = db.collection('omrAssignSubs').where('assignmentId','==',id).onSnapshot(q => {
+      subs = q.docs.map(d => ({ id:d.id, ...d.data() })); renderDetail();
+    }, e => handleErr(e));
+  }
+  function renderHead(){
+    $('dTitle').textContent = cur.title;
+    const due = toDate(cur.dueAt);
+    $('dMeta').textContent = `${cur.className}${due ? ' · 기한 ' + fmtDateTime(due) : ' · 기한 없음'}${cur.description ? ' · ' + cur.description : ''}`;
+    $('dActions').innerHTML = `<span class="pill ${cur.status === 'open' ? 'open' : 'closed'}">${cur.status === 'open' ? '제출 받는 중' : '마감'}</span>
+      <span class="grow"></span>
+      <button class="btn sm" data-a="toggle">${cur.status === 'open' ? '제출 마감' : '다시 열기'}</button>
+      <button class="btn sm" data-a="link">학생 안내 링크 복사</button>
+      <button class="btn sm ghost" data-a="edit">수정</button>
+      <button class="btn sm ghost" data-a="del" style="color:var(--red);">삭제</button>`;
+  }
+  $('dActions').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-a]'); if (!b) return;
+    try {
+      if (b.dataset.a === 'toggle'){
+        const status = cur.status === 'open' ? 'closed' : 'open';
+        await db.collection('omrAssignments').doc(cur.id).update({ status }); cur.status = status; renderHead();
+      } else if (b.dataset.a === 'link'){
+        copyText(`[엄형국 수학] 과제 '${cur.title}' 제출 안내\n${new URL('./', location.href).href}\n학생 코드로 입장해 사진이나 PDF로 제출하세요.`);
+      } else if (b.dataset.a === 'edit') openModal(cur);
+      else if (b.dataset.a === 'del'){
+        if (!confirm(`'${cur.title}' 과제와 제출 기록을 삭제할까요? (올라온 파일은 Storage에 남습니다)`)) return;
+        if (unsub) unsub(); unsub = null;
+        await OMR.commitOps([['delete', db.collection('omrAssignments').doc(cur.id)],
+          ...subs.map(s => ['delete', db.collection('omrAssignSubs').doc(s.id)])]);
+        assigns = assigns.filter(a => a.id !== cur.id); toast('삭제했습니다'); show('vList'); renderList();
+      }
+    } catch(err){ handleErr(err); }
+  });
+
+  function rows(){
+    const byCode = Object.fromEntries(subs.map(s => [s.code, s]));
+    const list = roster(cur.className).map(st => ({ st, s: byCode[st.code] }));
+    subs.forEach(s => { if (!list.find(x => x.st.code === s.code)) list.push({ st: { name: s.name, code: s.code, _gone: true }, s }); });
+    const order = { revise:0, submitted:1, in_progress:2, none:3, approved:4 };
+    return list.sort((a,b) => order[a.s ? a.s.status : 'none'] - order[b.s ? b.s.status : 'none'] || a.st.name.localeCompare(b.st.name,'ko'));
+  }
+  function renderDetail(){
+    const list = rows();
+    const c = k => list.filter(x => (x.s ? x.s.status : 'none') === k).length;
+    const total = roster(cur.className).length || list.length;
+    const done = list.filter(x => isDone(x.s)).length, late = list.filter(x => isDone(x.s) && isLate(cur, x.s)).length;
+    const pct = total ? Math.round(done / total * 100) : 0;
+    $('dStats').innerHTML = [['수거율', `${pct}<small>%</small>`], ['제출', `${done}<small>/ ${total}</small>`], ['진행 중', c('in_progress')],
+      ['보완 필요', c('revise')], ['미제출', c('none')], ['기한 후 제출', late]]
+      .map(([k,v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+    $('dBar').style.width = pct + '%';
+    $('dTbl').innerHTML = `<tr><th>이름</th><th>상태</th><th>파일</th><th>메모·피드백</th><th>제출 시각</th><th></th></tr>` +
+      list.map(({st, s}) => {
+        const k = s ? s.status : 'none', [lab, cls] = ST[k] || [k, ''];
+        const files = (s && s.files || []).map((f, i) => `<button class="file-link" data-file="${esc(s.id)}|${i}" title="${esc(f.name)}">${f.type === 'application/pdf' ? '📄' : '🖼'} ${esc(f.name)}</button>`).join('');
+        return `<tr><td><b>${esc(st.name)}</b>${st._gone ? ' <span class="pill">명단 외</span>' : ''}</td>
+          <td><span class="pill ${cls}">${lab}</span>${isDone(s) && isLate(cur, s) ? ' <span class="pill late">기한 후</span>' : ''}</td>
+          <td>${files || '<span class="muted">-</span>'}</td>
+          <td style="max-width:260px;">${s && s.memo ? `<div>${esc(s.memo)}</div>` : ''}${s && s.feedback ? `<div style="color:var(--red);font-size:12.5px;">↳ ${esc(s.feedback)}</div>` : ''}</td>
+          <td class="muted">${s && s.submittedAt ? fmtDateTime(s.submittedAt) : ''}</td>
+          <td style="white-space:nowrap;text-align:right;">${s && (k === 'submitted' || k === 'approved' || k === 'revise') ? `
+            ${k !== 'approved' ? `<button class="btn sm" data-ok="${esc(s.id)}">확인</button>` : ''}
+            <button class="btn sm ghost" data-rev="${esc(s.id)}" style="color:var(--red);">보완 요청</button>` : ''}</td></tr>`;
+      }).join('');
+  }
+  $('dTbl').addEventListener('click', async e => {
+    const f = e.target.closest('[data-file]'), ok = e.target.closest('[data-ok]'), rev = e.target.closest('[data-rev]');
+    try {
+      if (f){
+        const [sid, i] = f.dataset.file.split('|'); const file = subs.find(s => s.id === sid).files[+i];
+        const w = window.open('', '_blank');
+        const url = await firebase.storage().ref(file.path).getDownloadURL();
+        if (w) w.location = url; else location.href = url;
+      }
+      if (ok) await db.collection('omrAssignSubs').doc(ok.dataset.ok).update({ status:'approved', reviewedAt: FV.serverTimestamp() });
+      if (rev){
+        const s = subs.find(x => x.id === rev.dataset.rev);
+        const fb = prompt(`${s.name} 학생에게 보낼 보완 요청 내용`, s.feedback || '풀이 과정이 빠진 문항을 보완해서 다시 올려주세요.');
+        if (fb == null) return;
+        await db.collection('omrAssignSubs').doc(s.id).update({ status:'revise', feedback: fb.trim(), reviewedAt: FV.serverTimestamp() });
+        toast('보완 요청을 남겼습니다. 학생 화면에 표시됩니다.');
+      }
+    } catch(err){ handleErr(err); }
+  });
+
+  // 독촉
+  function remindList(){
+    const due = toDate(cur.dueAt), link = new URL('./', location.href).href;
+    const out = [];
+    rows().filter(x => !x.st._gone && !isDone(x.s)).forEach(({st, s}) => {
+      const msg = REMIND_TPL.replace('#{학생이름}', st.name).replace('#{과제명}', cur.title)
+        .replace('#{기한}', due ? fmtDateTime(due) : '없음').replace('#{링크}', link) +
+        (s && s.status === 'revise' && s.feedback ? `\n보완 요청: ${s.feedback}` : '');
+      if ($('rParent').checked) out.push({ name: st.name, type:'학부모', phone: normalizePhone(st.parentPhone), msg });
+      if ($('rStudent').checked) out.push({ name: st.name, type:'학생', phone: normalizePhone(st.phone), msg });
+    });
+    return out;
+  }
+  $('remindCopy').onclick = () => {
+    const l = remindList(); if (!l.length){ toast('독촉할 학생이 없습니다'); return; }
+    copyText(l.map(r => `▶ ${r.name} ${r.type} ${r.phone ? fmtPhone(r.phone) : '(번호 없음)'}\n${r.msg}`).join('\n\n'));
+  };
+  $('remindCsv').onclick = () => {
+    const all = remindList(), l = all.filter(r => r.phone);
+    if (!l.length){ toast('보낼 번호가 없습니다'); return; }
+    OMR.downloadCsv(`${cur.title}_미제출독촉.csv`, [['수신번호','학생이름','과제명','구분','메시지'],
+      ...l.map(r => [r.phone, r.name, cur.title, r.type, r.msg])]);
+    toast(`${l.length}건 CSV 저장${all.length - l.length ? ` · 번호 없는 ${all.length - l.length}건 제외` : ''}`, 3000);
+  };
+})();
+</script>
+</body>
+</html>

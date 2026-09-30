@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="omr.css?v=1">
+<link rel="stylesheet" href="omr.css?v=3">
 <style>
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
@@ -24,6 +24,9 @@
   .key-row .no{width:30px;font-weight:900;font-variant-numeric:tabular-nums;}
   .key-row .choices{display:flex;gap:6px;}
   .key-row input.pts{width:64px;padding:6px 8px;font-size:14px;}
+  .key-row input.tag{width:150px;padding:6px 8px;font-size:13px;flex:1 1 120px;}
+  .key-row select.lv{width:auto;padding:6px 6px;font-size:13px;}
+
   .key-row label.ac{font-size:12px;color:var(--dim);display:flex;gap:4px;align-items:center;}
   .key-row.multi .no::after{content:" 복수";font-size:10px;color:var(--red);font-weight:800;}
   .key-cols{columns:2 360px;column-gap:28px;}
@@ -46,9 +49,11 @@
 <body>
 <div class="wrap wide">
   <div class="topbar">
-    <a class="brand" href="../index.html">엄형국 <span>수학</span> · OMR 관리</a>
+    <a class="brand" href="../index.html">엄형국 <span>수학</span> · 관리</a>
     <div class="row"><span class="sub" id="adminEmail"></span><button class="btn sm hidden" id="logoutBtn">로그아웃</button></div>
   </div>
+
+  <nav class="row admin-nav" id="adminNav" style="gap:4px;margin:-8px 0 16px;"></nav>
 
   <!-- 로그인 -->
   <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
@@ -112,6 +117,7 @@
       <button data-tab="subs">제출 현황</button>
       <button data-tab="result">성적</button>
       <button data-tab="send">성적표 발송</button>
+      <button data-tab="retest">재시험</button>
     </div>
 
     <div id="exKey">
@@ -126,6 +132,15 @@
             <div class="row" style="flex-wrap:nowrap;"><input class="input" id="bulkPts" type="number" step="0.5" min="0.5" value="3"><button class="btn" id="bulkPtsBtn">전체 적용</button></div>
           </div>
         </div>
+        <div style="margin-top:12px;">
+          <label class="f">단원 태그 일괄 적용 (오답 클리닉 분석에 쓰입니다)</label>
+          <div class="row" style="flex-wrap:nowrap;">
+            <input class="input" id="tagRange" placeholder="1-5" style="width:90px;flex:0 0 auto;">
+            <input class="input" id="tagBulk" list="tagList" placeholder="함수의 극한">
+            <button class="btn" id="tagBulkBtn">적용</button>
+          </div>
+        </div>
+        <datalist id="tagList"></datalist>
         <p class="muted" style="margin-top:10px;">번호를 눌러 정답을 고릅니다. 두 개 이상 누르면 <b>복수 정답</b>(둘 중 하나만 골라도 정답). 문항 오류는 <b>전원정답</b>에 체크 후 재채점하세요.</p>
       </div>
       <div class="card"><div class="key-cols" id="keyRows"></div></div>
@@ -147,8 +162,19 @@
         <div class="stat-grid" id="resStats"></div>
         <h3>석차</h3>
         <div class="tbl-wrap" style="margin-bottom:18px;"><table class="tbl" id="rankTbl"></table></div>
+        <div id="tagStatWrap" class="hidden"><h3>단원별 정답률</h3><div class="card" id="tagStats"></div></div>
         <h3>문항별 정답률 <span class="muted" style="font-weight:600;">(초록=정답, 빨강=가장 많이 고른 오답)</span></h3>
         <div class="card" id="qStats"></div>
+      </div>
+    </div>
+
+    <div id="exRetest" class="hidden">
+      <div id="retestEmpty" class="empty"></div>
+      <div id="retestBody" class="hidden">
+        <div class="stat-grid" id="retestStats"></div>
+        <div class="tbl-wrap"><table class="tbl" id="retestTbl"></table></div>
+        <p class="muted" style="margin-top:8px;">재시험 점수를 입력하면 이력이 쌓이고, 가장 높은 점수가 최종 반영됩니다. 기준 이상이면 통과로 바뀝니다.
+          맞춤 재시험지는 <a href="clinic.html" style="text-decoration:underline;">오답 클리닉</a>에서 '재시험 대상자만'으로 만들 수 있습니다.</p>
       </div>
     </div>
 
@@ -198,6 +224,10 @@
       <div><label class="f">시험일</label><input class="input" id="fDate" type="date"></div>
       <div><label class="f">제출 마감 (선택)</label><input class="input" id="fDue" type="datetime-local"></div>
     </div>
+    <div class="grid2">
+      <div><label class="f">재시험 기준 점수 (선택)</label><input class="input" id="fPass" type="number" step="0.5" min="0" placeholder="예) 70 — 미만이면 재시험 대상"></div>
+      <div></div>
+    </div>
     <p class="muted" id="examModalMsg"></p>
     <div class="row"><button class="btn grow" data-close>취소</button><button class="btn primary grow" id="examSaveBtn">저장</button></div>
   </div>
@@ -232,7 +262,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=1"></script>
+<script src="common.js?v=3"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast, copyText, fmtPhone, normalizePhone } = OMR;
@@ -246,6 +276,8 @@
   let exKey = null;       // {answers, points, allCorrect}
   let exSubs = [];        // 현재 시험 제출 목록
   let unsubSubs = null;
+  let retests = [];
+  let unsubRetests = null;
 
   function handleErr(e, msg){
     console.error(e);
@@ -266,7 +298,8 @@
     });
   }
   tabs('mainTabs', { exams:'tabExams', students:'tabStudents' });
-  tabs('exTabs', { key:'exKey', subs:'exSubs', result:'exResult', send:'exSend' });
+  tabs('exTabs', { key:'exKey', subs:'exSubs', result:'exResult', send:'exSend', retest:'exRetest' });
+  $('adminNav').innerHTML = OMR.adminNav('admin.html');
 
   // ───────── 로그인 ─────────
   $('loginBtn').onclick = async () => {
@@ -446,6 +479,7 @@
     $('fDate').value = e ? (e.examDate || '') : new Date(Date.now() + 9*3600e3).toISOString().slice(0,10);
     const d = e && toDate(e.dueAt);
     $('fDue').value = d ? new Date(d.getTime() - d.getTimezoneOffset()*60e3).toISOString().slice(0,16) : '';
+    $('fPass').value = e && e.passScore != null ? e.passScore : '';
     $('examModalMsg').textContent = locked ? '응시가 시작된 시험은 문항 수·선지를 바꿀 수 없습니다.' : '';
     openModal('examModal');
   }
@@ -456,7 +490,9 @@
     if (!title || !subject || !className){ $('examModalMsg').textContent = '제목·과목·반을 입력하세요.'; return; }
     if (!(questionCount >= 1 && questionCount <= 100)){ $('examModalMsg').textContent = '문항 수는 1~100입니다.'; return; }
     const due = $('fDue').value ? firebase.firestore.Timestamp.fromDate(new Date($('fDue').value)) : null;
-    const data = { title, subject, className, examDate: $('fDate').value || null, dueAt: due };
+    const passRaw = $('fPass').value.trim();
+    const data = { title, subject, className, examDate: $('fDate').value || null, dueAt: due,
+                   passScore: passRaw === '' ? null : parseFloat(passRaw) };
     try {
       if (editingExam){
         if (editingExam.status === 'draft'){
@@ -476,7 +512,10 @@
   };
 
   // ═════════ 시험 상세 ═════════
-  $('examBack').onclick = () => { if (unsubSubs) unsubSubs(); unsubSubs = null; show('vMain'); loadExams(); };
+  $('examBack').onclick = () => {
+    if (unsubSubs) unsubSubs(); if (unsubRetests) unsubRetests(); unsubSubs = unsubRetests = null;
+    show('vMain'); loadExams();
+  };
 
   async function openExam(id){
     try {
@@ -492,13 +531,19 @@
       exSubs = qs.docs.map(d => ({ id:d.id, ...d.data() }));
       renderSubs(); renderResult(); renderSend();
     }, e => handleErr(e));
+    if (unsubRetests) unsubRetests();
+    unsubRetests = db.collection('omrRetests').where('examId','==',id).onSnapshot(qs => {
+      retests = qs.docs.map(d => ({ id:d.id, ...d.data() }));
+      renderRetest();
+    }, e => handleErr(e));
   }
 
   function renderHeader(){
     $('exTitle').textContent = ex.title;
     const due = toDate(ex.dueAt);
     $('exMeta').textContent = `${ex.className} · ${ex.subject} · ${ex.questionCount}문항 ${ex.choiceCount}지선다 · 만점 ${ex.maxScore ?? ''}` +
-      (ex.examDate ? ` · ${ex.examDate}` : '') + (due ? ` · 마감 ${fmtDateTime(due)}` : '');
+      (ex.examDate ? ` · ${ex.examDate}` : '') + (due ? ` · 마감 ${fmtDateTime(due)}` : '') +
+      (ex.passScore != null ? ` · 재시험 기준 ${ex.passScore}점` : '');
     const [label, cls] = STATUS[ex.status] || [ex.status, 'draft'];
     const sb = $('statusBar');
     const graded = !!ex.gradedAt;
@@ -563,21 +608,29 @@
       const ac = (exKey.allCorrect || []).includes(n);
       html += `<div class="key-row${ans.length > 1 ? ' multi' : ''}" data-n="${n}"><span class="no">${n}</span><div class="choices">`;
       for (let c = 1; c <= ex.choiceCount; c++) html += `<button class="bubble sm${ans.includes(c) ? ' on' : ''}" data-c="${c}">${c}</button>`;
+      const meta = (ex.meta && ex.meta[n]) || {};
       html += `</div><input class="input pts" type="number" step="0.5" min="0.5" value="${exKey.points[n] ?? 3}" aria-label="${n}번 배점">
-        <label class="ac"><input type="checkbox" ${ac ? 'checked' : ''}> 전원정답</label></div>`;
+        <label class="ac"><input type="checkbox" ${ac ? 'checked' : ''}> 전원정답</label>
+        <input class="input tag" list="tagList" placeholder="단원 태그" value="${esc(meta.tag || '')}" aria-label="${n}번 단원">
+        <select class="input lv" aria-label="${n}번 난이도">${['', '하', '중', '상'].map(l =>
+          `<option value="${l}" ${meta.level === l ? 'selected' : ''}>${l || '난이도'}</option>`).join('')}</select></div>`;
     }
     rows.innerHTML = html;
+    const tags = new Set();
+    exams.forEach(e => Object.values(e.meta || {}).forEach(m => m.tag && tags.add(m.tag)));
+    $('tagList').innerHTML = [...tags].sort().map(t => `<option value="${esc(t)}">`).join('');
     updateKeySum();
   }
   function readKeyFromUI(){
-    const answers = {}, points = {}, allCorrect = [];
+    const answers = {}, points = {}, allCorrect = [], meta = {};
     $('keyRows').querySelectorAll('.key-row').forEach(r => {
       const n = +r.dataset.n;
+      meta[n] = { tag: r.querySelector('.tag').value.trim() || null, level: r.querySelector('.lv').value || null };
       answers[n] = [...r.querySelectorAll('.bubble.on')].map(b => +b.dataset.c);
       points[n] = parseFloat(r.querySelector('.pts').value) || 0;
       if (r.querySelector('.ac input').checked) allCorrect.push(n);
     });
-    return { answers, points, allCorrect };
+    return { answers, points, allCorrect, meta };
   }
   function updateKeySum(){
     const k = readKeyFromUI();
@@ -605,6 +658,14 @@
     updateKeySum();
     toast(`${Math.min(digits.length, ex.questionCount)}문항 채웠습니다`);
   };
+  $('tagBulkBtn').onclick = () => {
+    const m = $('tagRange').value.trim().match(/^(\d+)\s*(?:[-~]\s*(\d+))?$/);
+    const tag = $('tagBulk').value.trim();
+    if (!m || !tag){ toast('범위(예: 1-5)와 단원을 입력하세요'); return; }
+    const a = +m[1], b = +(m[2] || m[1]);
+    $('keyRows').querySelectorAll('.key-row').forEach(r => { const n = +r.dataset.n; if (n >= a && n <= b) r.querySelector('.tag').value = tag; });
+    toast(`${a}~${b}번에 '${tag}' 적용`);
+  };
   $('bulkPtsBtn').onclick = () => {
     const v = parseFloat($('bulkPts').value); if (!(v > 0)) return;
     $('keyRows').querySelectorAll('.pts').forEach(i => { i.value = v; });
@@ -618,10 +679,12 @@
     const maxScore = OMR.round(Object.values(k.points).reduce((a,b) => a + b, 0), 2);
     try {
       const batch = db.batch();
-      batch.set(db.collection('omrKeys').doc(ex.id), k);
-      batch.update(db.collection('omrExams').doc(ex.id), { points: k.points, maxScore });
+      const { meta, ...keyOnly } = k;
+      batch.set(db.collection('omrKeys').doc(ex.id), keyOnly);
+      batch.update(db.collection('omrExams').doc(ex.id), { points: k.points, maxScore, meta });
       await batch.commit();
-      exKey = k; ex.points = k.points; ex.maxScore = maxScore;
+      exKey = keyOnly; ex.points = k.points; ex.maxScore = maxScore; ex.meta = meta;
+      const inList = exams.find(e => e.id === ex.id); if (inList) inList.meta = meta;
       renderHeader();
       toast(ex.gradedAt ? '저장했습니다. 반영하려면 다시 채점하세요.' : '정답을 저장했습니다');
     } catch(e){ handleErr(e); }
@@ -683,22 +746,34 @@
         code: r.code, name: r.name, score: r.score, maxScore: stats.maxScore, correctCount: r.correctCount,
         questionCount: ex.questionCount, rank: r.rank, n: stats.n, percentile: r.percentile,
         avg: stats.avg, high: stats.high, low: stats.low, wrong, questions: r.questions, gradedAt: now,
+        passScore: ex.passScore ?? null,
       }]);
+      const wrongDetail = r.questions.filter(q => !q.ok).map(q => ({ n: q.n, tag: q.tag, level: q.level, marked: q.marked, correct: q.correct }));
       ops.push(['update', db.collection('omrSubmissions').doc(sub.id), {
         score: r.score, correctCount: r.correctCount, rank: r.rank, percentile: r.percentile,
-        wrong, reportToken: token, gradedAt: now,
+        wrong, wrongDetail, reportToken: token, gradedAt: now,
       }]);
+      // 재시험 대상 자동 등록 (기존 재시험 기록은 유지)
+      const rid = `${ex.id}_${r.code}`;
+      const prev = retests.find(x => x.id === rid);
+      const below = ex.passScore != null && r.score < ex.passScore;
+      if (below){
+        ops.push(['set', db.collection('omrRetests').doc(rid), {
+          examId: ex.id, examTitle: ex.title, className: ex.className, code: r.code, name: r.name,
+          originalScore: r.score, passScore: ex.passScore, attempts: prev ? (prev.attempts || []) : [],
+          createdAt: prev ? prev.createdAt : now, updatedAt: now,
+        }]);
+      } else if (prev && !(prev.attempts || []).length){
+        ops.push(['delete', db.collection('omrRetests').doc(rid)]);   // 재채점으로 기준 이상이 된 경우
+      }
     });
     ops.push(['update', db.collection('omrExams').doc(ex.id), { stats, gradedAt: now }]);
-    for (let i = 0; i < ops.length; i += 400){
-      const bt = db.batch();
-      ops.slice(i, i + 400).forEach(([op, ref, data]) => bt[op](ref, data));
-      await bt.commit();
-    }
+    await OMR.commitOps(ops);
     const es = await db.collection('omrExams').doc(ex.id).get();
     ex = { id: ex.id, ...es.data() };
     renderHeader(); renderResult();
-    toast(`${results.length}명 채점 완료${ex.status === 'published' ? '' : ' · 확인 후 결과 공개를 누르세요'}`, 3200);
+    const nRe = ex.passScore != null ? results.filter(r => r.score < ex.passScore).length : 0;
+    toast(`${results.length}명 채점 완료${nRe ? ` · 재시험 대상 ${nRe}명` : ''}${ex.status === 'published' ? '' : ' · 확인 후 결과 공개를 누르세요'}`, 3600);
   }
 
   // ───────── 성적 ─────────
@@ -723,6 +798,14 @@
         <td style="white-space:nowrap;text-align:right;">
           <a class="btn sm" href="report.html?t=${encodeURIComponent(s.reportToken)}" target="_blank">성적표</a>
           <button class="btn sm" data-link="${esc(s.reportToken)}">링크 복사</button></td></tr>`).join('');
+    const an = OMR.analyzeWeakness([ex], list);
+    const tagged = an.tags.filter(t => t.tag !== OMR.UNTAGGED);
+    $('tagStatWrap').classList.toggle('hidden', !tagged.length);
+    $('tagStats').innerHTML = tagged.map(t => {
+      const okRate = OMR.round(100 - t.rate, 1);
+      return `<div class="qstat" style="grid-template-columns:140px 1fr 52px;"><b>${esc(t.tag)}</b>
+        <div class="bar ${okRate < 50 ? 'low' : ''}"><i style="width:${okRate}%"></i></div><b class="num" style="text-align:right;">${okRate}%</b></div>`;
+    }).join('');
     const key = exKey.answers || {};
     $('qStats').innerHTML = (st.questionStats || []).map(q => {
       const ans = (key[q.n] || []).map(Number);
@@ -740,6 +823,46 @@
     const b = e.target.closest('button[data-link]'); if (!b) return;
     if (ex.status !== 'published') toast('결과 공개 전에는 링크가 열리지 않습니다', 2600);
     copyText(OMR.reportUrl(b.dataset.link));
+  });
+
+  // ───────── 재시험 ─────────
+  const RT_LABEL = { pending:['재시험 전','closed'], passed:['통과','open'], failed:['미통과','red'] };
+  function renderRetest(){
+    if (ex.passScore == null){
+      $('retestEmpty').innerHTML = '재시험 기준 점수가 없습니다. 위의 <b>시험 설정</b>에서 기준 점수를 넣고 다시 채점하세요.';
+      $('retestEmpty').classList.remove('hidden'); $('retestBody').classList.add('hidden'); return;
+    }
+    if (!retests.length){
+      $('retestEmpty').textContent = ex.gradedAt ? `기준(${ex.passScore}점) 미만인 학생이 없습니다.` : '채점하면 기준 미만 학생이 자동으로 등록됩니다.';
+      $('retestEmpty').classList.remove('hidden'); $('retestBody').classList.add('hidden'); return;
+    }
+    $('retestEmpty').classList.add('hidden'); $('retestBody').classList.remove('hidden');
+    const rows = retests.map(r => ({ r, s: OMR.retestSummary(r) }))
+      .sort((a,b) => ({pending:0,failed:1,passed:2}[a.s.status] - {pending:0,failed:1,passed:2}[b.s.status]) || a.r.name.localeCompare(b.r.name,'ko'));
+    const cnt = st => rows.filter(x => x.s.status === st).length;
+    $('retestStats').innerHTML = [['대상', rows.length], ['재시험 전', cnt('pending')], ['미통과', cnt('failed')], ['통과', cnt('passed')]]
+      .map(([k,v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+    $('retestTbl').innerHTML = `<tr><th>이름</th><th class="num">원점수</th><th>재시험 기록</th><th>상태</th><th class="num">최종</th><th>재시험 점수 입력</th></tr>` +
+      rows.map(({r, s}) => {
+        const [lab, cls] = RT_LABEL[s.status];
+        const hist = (r.attempts || []).map((a, i) => `${i+1}차 <b>${a.score}</b> <span class="muted">${fmtDateTime(a.at)}</span>`).join('<br>') || '<span class="muted">없음</span>';
+        return `<tr><td><b>${esc(r.name)}</b></td><td class="num">${r.originalScore}</td><td>${hist}</td>
+          <td><span class="pill ${cls}">${lab}</span></td><td class="num"><b>${s.finalScore}</b></td>
+          <td style="white-space:nowrap;"><input class="input" type="number" step="0.5" min="0" data-rt-input="${r.id}" style="width:80px;padding:6px 8px;display:inline-block;">
+            <button class="btn sm" data-rt-save="${r.id}">기록</button></td></tr>`;
+      }).join('');
+  }
+  $('retestTbl').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-rt-save]'); if (!b) return;
+    const r = retests.find(x => x.id === b.dataset.rtSave);
+    const v = parseFloat(document.querySelector(`[data-rt-input="${r.id}"]`).value);
+    if (isNaN(v) || v < 0){ toast('점수를 입력하세요'); return; }
+    const attempts = [...(r.attempts || []), { score: v, at: firebase.firestore.Timestamp.now() }];
+    const sum = OMR.retestSummary({ ...r, attempts });
+    try {
+      await db.collection('omrRetests').doc(r.id).update({ attempts, status: sum.status, finalScore: sum.finalScore, updatedAt: FV.serverTimestamp() });
+      toast(`${r.name}: ${v}점 기록 · ${RT_LABEL[sum.status][0]}`);
+    } catch(err){ handleErr(err); }
   });
 
   // ───────── 성적표 발송 ─────────

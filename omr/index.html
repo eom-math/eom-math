@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="omr.css?v=1">
+<link rel="stylesheet" href="omr.css?v=3">
 <style>
   .code-input{font-size:26px;font-weight:900;letter-spacing:.35em;text-align:center;text-transform:uppercase;padding:14px;}
   .exam-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:#fff;border:1px solid var(--line);
@@ -16,6 +16,7 @@
   .exam-item:hover{border-color:var(--ink);}
   .exam-item .t{font-weight:800;font-size:15.5px;}
   .exam-item .m{font-size:12.5px;color:var(--dim);}
+  .sec-h{font-size:13px;font-weight:800;color:var(--dim);letter-spacing:.04em;margin:22px 0 8px;}
   .exam-item .go{margin-left:auto;font-weight:800;color:var(--dim);}
 
   /* OMR 화면 */
@@ -72,6 +73,8 @@
       </div>
       <button class="btn sm" id="logoutBtn">코드 변경</button>
     </div>
+    <div id="todoList"></div>
+    <h2 class="sec-h">시험 OMR</h2>
     <div id="examList"><div class="empty">불러오는 중…</div></div>
   </section>
 
@@ -108,7 +111,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=1"></script>
+<script src="common.js?v=3"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast } = OMR;
@@ -159,6 +162,7 @@
     show('vList');
     $('helloName').textContent = `${me.name} 학생`;
     $('helloClass').textContent = me.className;
+    loadTodos();
     const box = $('examList');
     box.innerHTML = '<div class="empty">불러오는 중…</div>';
     const qs = await db.collection('omrExams').where('className','==',me.className).get();
@@ -190,6 +194,56 @@
         <span class="pill ${pillCls}" style="margin-left:auto;">${pill}</span>`;
       box.appendChild(el);
     });
+  }
+
+  // ───────── 과제 · 클리닉 학습지 ─────────
+  function item(href, title, meta, pill, pillCls){
+    const a = document.createElement('a');
+    a.className = 'exam-item'; a.href = href;
+    a.innerHTML = `<div><div class="t">${esc(title)}</div><div class="m">${meta}</div></div>
+      <span class="pill ${pillCls}" style="margin-left:auto;">${pill}</span>`;
+    return a;
+  }
+  async function loadTodos(){
+    const box = $('todoList');
+    box.innerHTML = '';
+    try {
+      const [cs, as] = await Promise.all([db.collection('omrCodes').doc(me.code).get(),
+        db.collection('omrAssignments').where('className','==',me.className).get()]);
+      const clinicIds = (cs.exists && cs.data().clinics) || [];
+      const assigns = as.docs.map(d => ({ id:d.id, ...d.data() }))
+        .sort((a,b) => (toDate(a.dueAt) || new Date(8.64e15)) - (toDate(b.dueAt) || new Date(8.64e15)));
+      const [aSubs, clinics, cSubs] = await Promise.all([
+        Promise.all(assigns.map(a => db.collection('omrAssignSubs').doc(`${a.id}_${me.code}`).get().then(s => s.exists ? s.data() : null).catch(() => null))),
+        Promise.all(clinicIds.map(id => db.collection('omrClinics').doc(id).get().then(s => s.exists ? { id, ...s.data() } : null).catch(() => null))),
+        Promise.all(clinicIds.map(id => db.collection('omrClinicSubs').doc(id).get().then(s => s.exists ? s.data() : null).catch(() => null))),
+      ]);
+      // 과제: 마감됐고 이미 끝난 과제는 최근 5개만
+      const aRows = assigns.map((a, i) => ({ a, s: aSubs[i] }))
+        .filter(({a, s}) => a.status === 'open' || (s && s.status === 'revise'));
+      const doneRows = assigns.map((a, i) => ({ a, s: aSubs[i] })).filter(r => !aRows.includes(r)).slice(0, 5);
+      if (aRows.length || doneRows.length){
+        box.insertAdjacentHTML('beforeend', '<h2 class="sec-h">과제</h2>');
+        [...aRows, ...doneRows].forEach(({a, s}) => {
+          const st = s ? s.status : 'none';
+          const due = toDate(a.dueAt);
+          const [pill, cls] = { none:[a.status === 'open' ? '미제출' : '마감', a.status === 'open' ? 'red' : 'draft'],
+            in_progress:['진행 중','closed'], submitted:['제출 완료','draft'], revise:['보완 필요','red'], approved:['확인 완료 ✓','published'] }[st];
+          box.appendChild(item(`hw.html?id=${encodeURIComponent(a.id)}`, a.title,
+            due ? `기한 ${fmtDateTime(due)}${due < new Date() && st === 'none' ? ' · 지남' : ''}` : '기한 없음', pill, cls));
+        });
+      }
+      const cRows = clinics.map((c, i) => c && { c, s: cSubs[i] }).filter(Boolean)
+        .sort((x,y) => (toDate(y.c.createdAt)||0) - (toDate(x.c.createdAt)||0)).slice(0, 8);
+      if (cRows.length){
+        box.insertAdjacentHTML('beforeend', '<h2 class="sec-h">클리닉 학습지</h2>');
+        cRows.forEach(({c, s}) => {
+          const [pill, cls] = c.status === 'graded' ? [`결과 ${c.result ? c.result.correct + '/' + c.result.total : ''}`, 'published']
+            : s && s.status === 'submitted' ? ['제출 완료','draft'] : s ? ['이어서 풀기','closed'] : ['풀기','open'];
+          box.appendChild(item(`solve.html?id=${encodeURIComponent(c.id)}`, c.title, `${c.count}문항 · 틀린 단원 맞춤 문제`, pill, cls));
+        });
+      }
+    } catch(e){ console.error(e); }
   }
 
   // ───────── OMR ─────────
