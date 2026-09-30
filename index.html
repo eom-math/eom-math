@@ -312,6 +312,14 @@
     .game-grid .tower-cta{ flex-direction:row; align-items:center; min-height:0; gap:14px; }
   }
   section.group .omr-cta{ margin-top:0; }
+  .study-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px; }
+  .study-grid a{ display:flex; flex-direction:column; gap:4px; padding:16px 14px; border:1px solid var(--line); background:#fff;
+    transition:border-color .2s, transform .2s; }
+  .study-grid a:hover{ border-color:var(--ink); transform:translateY(-2px); }
+  .study-grid b{ font-size:15px; font-weight:800; }
+  .study-grid b::after{ content:" →"; color:var(--red); }
+  .study-grid span{ font-size:12px; color:var(--dim); line-height:1.4; }
+  @media (max-width:640px){ .study-grid{ grid-template-columns:1fr; } .study-grid a{ flex-direction:row; align-items:baseline; justify-content:space-between; } }
   #materials .stats{ border-top:1px solid var(--line); }
 
 
@@ -529,8 +537,8 @@
       <button class="hub-card" id="tab-omr" type="button" role="tab" aria-selected="false" aria-controls="omr" data-hub="omr">
         <span class="hub-top"><span class="hub-no">02</span><span class="hub-ic"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17.5" rx="2"/><path d="M9 3.5h6v2.5H9z"/><path d="M8.5 13l2.3 2.3 4.7-4.8"/></svg></span></span>
         <span class="hub-en">Test</span>
-        <span class="hub-t"><span class="hub-full">시험 · 성적</span><span class="hub-short">시험·성적</span></span>
-        <span class="hub-m"><span>모바일 OMR</span><i class="hub-arrow">↓</i></span>
+        <span class="hub-t"><span class="hub-full">학습 관리</span><span class="hub-short">학습관리</span></span>
+        <span class="hub-m"><span>OMR · 클리닉 · 영상 · 질문</span><i class="hub-arrow">↓</i></span>
       </button>
       <button class="hub-card" id="tab-materials" type="button" role="tab" aria-selected="false" aria-controls="materials" data-hub="materials">
         <span class="hub-top"><span class="hub-no">03</span><span class="hub-ic"><svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"/><path d="M6.5 8h2M15.5 8h2M15.5 11h2"/></svg></span></span>
@@ -578,7 +586,7 @@
   </section>
 
   <section class="group hub-panel" id="omr" role="tabpanel" aria-labelledby="tab-omr" hidden>
-    <div class="section-head"><h2>Test <em>시험 · 성적</em></h2><span>02</span></div>
+    <div class="section-head"><h2>Study <em>학습 관리</em></h2><span>02</span></div>
   <a class="tower-cta omr-cta" href="omr/">
     <span class="tower-cta-badge">OMR</span>
     <span class="tower-cta-body">
@@ -586,6 +594,11 @@
       <span class="tower-cta-sub">학생 코드로 입장해 시험 답안 제출 · 성적표 · 데일리 리포트를 확인하세요 →</span>
     </span>
   </a>
+  <div class="study-grid">
+    <a href="omr/book.html"><b>클리닉 예약</b><span>남은 자리를 보고 바로 예약</span></a>
+    <a href="omr/lectures.html"><b>영상 강의</b><span>복습 영상 · 시청 기록</span></a>
+    <a href="omr/ask.html"><b>질문하기</b><span>사진으로 올리면 답변</span></a>
+  </div>
 
     <button class="hub-close" type="button" data-hub-close>접기 ↑</button>
   </section>
@@ -781,7 +794,7 @@
     <a class="sub" href="tower.html?mode=tower">개념의 탑</a>
     <a class="sub" href="tower.html?mode=monster">수학몬스터</a>
     <a class="sub" href="tower.html?mode=penguin">수학 펭귄</a>
-    <a href="#omr" data-spy="omr"><span class="n">04</span>시험 · 성적 (OMR)</a>
+    <a href="#omr" data-spy="omr"><span class="n">04</span>학습 관리 (OMR · 클리닉 · 영상 · 질문)</a>
     <a href="#materials" data-spy="materials"><span class="n">05</span>자료실</a>
     <a class="sub" href="#curriculum" data-open="concept-cliche">개념 클리셰</a>
     <a class="sub" href="#curriculum" data-open="mise-en-scene">심화 미장센</a>

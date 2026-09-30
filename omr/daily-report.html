@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&family=EB+Garamond:ital,wght@1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="omr.css?v=4">
+<link rel="stylesheet" href="omr.css?v=5">
 <style>
   :root{ --hl:#FFE45C; --hl-soft:#FFF7C7; }
   body{background:#ECEBE6;}
@@ -85,7 +85,18 @@
   .foot b{color:var(--ink);}
   .preview-flag{background:var(--hl);text-align:center;font-size:12.5px;font-weight:800;padding:8px;border-radius:10px;margin-bottom:10px;}
   @media (max-width:400px){ .kpi .big{font-size:40px;} .two{grid-template-columns:1fr;} }
-  @media print{ body{background:#fff;} .paper{box-shadow:none;} }
+  .print-bar{display:flex;justify-content:center;margin:4px 0 18px;}
+  .page + .page{margin-top:28px;}
+  @page{ size:A4; margin:10mm; }
+  @media print{
+    body{background:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .wrap{max-width:none;padding:0;}
+    .print-bar,.preview-flag{display:none !important;}
+    .paper{box-shadow:none;border:1px solid #ddd;}
+    .page{break-after:page;} .page:last-child{break-after:auto;}
+    .sec,.kpi,.extra,.two{break-inside:avoid;}
+    .foot{padding:6px 0 0;}
+  }
 </style>
 </head>
 <body>
@@ -95,29 +106,15 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=4"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="common.js?v=5"></script>
 <script>
 (async function(){
   const { db, esc } = OMR;
   const root = document.getElementById('root');
   const qs = new URLSearchParams(location.search);
   const fail = msg => { root.innerHTML = `<div class="empty">${msg}</div>`; };
-  let r, preview = false;
-
-  if (qs.get('preview')){
-    try { r = JSON.parse(sessionStorage.getItem('dailyPreview')); preview = true; } catch(e){}
-    if (!r) return fail('미리볼 내용이 없습니다.');
-  } else {
-    const token = qs.get('t');
-    if (!token) return fail('잘못된 링크입니다.');
-    try {
-      const snap = await db.collection('dailyReports').doc(token).get();
-      if (!snap.exists) return fail('리포트를 찾을 수 없습니다. 링크를 다시 확인해 주세요.');
-      r = snap.data();
-    } catch(e){ console.error(e); return fail('불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); }
-  }
-  document.title = `${r.name} · ${OMR.fmtKDate(r.date)} 데일리 리포트`;
-
+  function build(r, preview){
   const absent = r.attendance === 'absent';
   const max = r.maxScore || 100;
   const pct = x => Math.max(0, Math.min(100, x / max * 100));
@@ -167,7 +164,7 @@
   const imgs = files.filter(f => (f.type || '').startsWith('image/'));
   const pdfs = files.filter(f => !(f.type || '').startsWith('image/'));
 
-  root.innerHTML = `
+  return `
     ${preview ? '<div class="preview-flag">미리보기 — 아직 발행되지 않은 화면입니다</div>' : ''}
     <article class="paper">
       <header class="rh">
@@ -222,6 +219,39 @@
       </div>
     </article>
     <div class="foot"><b>엄형국 수학</b> · 내신성공의 방정식<br>궁금한 점은 카카오톡으로 편하게 문의해 주세요.</div>`;
+  }
+
+  const printBar = n => `<div class="print-bar"><button class="btn" onclick="window.print()">🖨 종이로 인쇄 · PDF 저장${n > 1 ? ` (${n}명)` : ''}</button></div>`;
+
+  // 반 전체 인쇄: daily-report.html?batch=수업ID (선생님·조교 로그인 필요)
+  if (qs.get('batch')){
+    const user = await new Promise(res => firebase.auth().onAuthStateChanged(res));
+    if (!user) return fail('선생님·조교 로그인 후 데일리 리포트 입력 화면에서 인쇄하세요.');
+    try {
+      const list = (await db.collection('dailyReports').where('lessonId','==',qs.get('batch')).get()).docs.map(d => d.data())
+        .sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+      if (!list.length) return fail('발행된 리포트가 없습니다.');
+      document.title = `${list[0].className} · ${OMR.fmtKDate(list[0].date)} 데일리 리포트`;
+      root.innerHTML = printBar(list.length) + list.map(r => `<div class="page">${build(r, false)}</div>`).join('');
+    } catch(e){ console.error(e); fail('불러오지 못했습니다.'); }
+    return;
+  }
+
+  let r, preview = false;
+  if (qs.get('preview')){
+    try { r = JSON.parse(sessionStorage.getItem('dailyPreview')); preview = true; } catch(e){}
+    if (!r) return fail('미리볼 내용이 없습니다.');
+  } else {
+    const token = qs.get('t');
+    if (!token) return fail('잘못된 링크입니다.');
+    try {
+      const snap = await db.collection('dailyReports').doc(token).get();
+      if (!snap.exists) return fail('리포트를 찾을 수 없습니다. 링크를 다시 확인해 주세요.');
+      r = snap.data();
+    } catch(e){ console.error(e); return fail('불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); }
+  }
+  document.title = `${r.name} · ${OMR.fmtKDate(r.date)} 데일리 리포트`;
+  root.innerHTML = `<div class="page">${build(r, preview)}</div>` + printBar(1);
 })();
 </script>
 </body>

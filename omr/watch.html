@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>강의 시청 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=5">
+<style>
+  .stage{position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:16/9;margin-bottom:12px;user-select:none;-webkit-user-select:none;}
+  .stage:fullscreen{border-radius:0;aspect-ratio:auto;width:100vw;height:100vh;}
+  .stage #player, .stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+  .wm{position:absolute;z-index:3;pointer-events:none;color:rgba(255,255,255,.34);font-size:clamp(11px,2.4vw,15px);font-weight:800;
+    text-shadow:0 0 2px rgba(0,0,0,.5);white-space:nowrap;transition:top 1.2s ease,left 1.2s ease;letter-spacing:.02em;}
+  .fs{position:absolute;z-index:4;right:10px;top:10px;border:0;background:rgba(0,0,0,.55);color:#fff;border-radius:8px;padding:6px 9px;font-size:12px;font-weight:700;}
+  .prog{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;}
+  .prog .row2{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .prog b{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;}
+  .segs{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--bg2);}
+  .segs i{flex:1;} .segs i.on{background:var(--ink);}
+  .done-banner{background:var(--ok);color:#fff;border-radius:12px;padding:12px 14px;font-weight:800;margin-bottom:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="lectures.html">← 강의 목록</a>
+    <span class="sub" id="saveState"></span>
+  </div>
+  <div id="root"><div class="empty">불러오는 중…</div></div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=5"></script>
+<script>
+(async function(){
+  const { db, FV, esc } = OMR;
+  const $ = id => document.getElementById(id);
+  const me = await OMR.requireStudent(); if (!me) return;
+  const id = new URLSearchParams(location.search).get('id');
+  const fail = m => { $('root').innerHTML = `<div class="empty">${m}</div>`; };
+  if (!id) return fail('잘못된 링크입니다.');
+  let lec, view;
+  try {
+    const s = await db.collection('lectures').doc(id).get();
+    if (!s.exists || s.data().status !== 'open') return fail('볼 수 없는 강의입니다.');
+    lec = s.data();
+    if (lec.className !== '전체' && lec.className !== me.className) return fail('우리 반 강의가 아니에요.');
+    const v = await db.collection('lectureViews').doc(`${id}_${me.code}`).get();
+    view = v.exists ? v.data() : null;
+  } catch(e){ console.error(e); return fail('불러오지 못했습니다.'); }
+  document.title = lec.title + ' — 엄형국 수학';
+
+  const SEG = 10;                        // 10초 단위로 본 구간 기록
+  let segs = (view && view.segments) || '';
+  let duration = (view && view.duration) || 0;
+  let watchedSec = (view && view.watchedSec) || 0;
+  let dirty = false, lastSaved = Date.now();
+
+  $('root').innerHTML = `
+    <div class="stage" id="stage"><div id="player"></div>
+      <div class="wm" id="wm">${esc(me.name)} · ${esc(me.className)}</div>
+      <button class="fs" id="fsBtn">전체화면</button></div>
+    <h1 style="font-size:20px;">${esc(lec.title)}</h1>
+    <p class="muted" style="margin-bottom:12px;">${esc(lec.unit || '')}</p>
+    <div id="doneBanner"></div>
+    <div class="prog"><div class="row2"><span class="muted" style="font-weight:800;">내 시청률</span><b id="pct">0%</b></div>
+      <div class="segs" id="segs"></div>
+      <p class="muted" style="font-size:12px;margin-top:8px;">검은 칸이 본 구간이에요. 90% 이상 보면 완강으로 기록됩니다.</p></div>
+    ${lec.note ? `<div class="card"><h3>선생님 안내</h3><div style="white-space:pre-wrap;font-size:14.5px;line-height:1.6;">${esc(lec.note)}</div></div>` : ''}
+    <p class="muted" style="font-size:12px;text-align:center;">이 영상은 수강생 전용입니다. 녹화·공유를 삼가 주세요.</p>`;
+
+  // 워터마크: 20초마다 위치 이동
+  const wm = $('wm');
+  const moveWm = () => { wm.style.left = (5 + Math.random() * 55) + '%'; wm.style.top = (8 + Math.random() * 78) + '%'; };
+  moveWm(); setInterval(moveWm, 20000);
+  $('fsBtn').onclick = () => {
+    const st = $('stage');
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else if (st.requestFullscreen) st.requestFullscreen().catch(() => {});
+    else if (st.webkitRequestFullscreen) st.webkitRequestFullscreen();
+  };
+  document.addEventListener('contextmenu', e => { if (e.target.closest('#stage')) e.preventDefault(); });
+
+  function nSegs(){ return Math.max(1, Math.ceil(duration / SEG)); }
+  function percent(){ const n = nSegs(); let on = 0; for (let i = 0; i < n; i++) if (segs[i] === '1') on++; return Math.min(100, on / n * 100); }
+  function drawProgress(){
+    const n = nSegs(), bars = Math.min(n, 60), per = n / bars;
+    let html = '';
+    for (let b = 0; b < bars; b++){
+      let on = 0, cnt = 0;
+      for (let i = Math.floor(b * per); i < Math.floor((b + 1) * per); i++){ cnt++; if (segs[i] === '1') on++; }
+      html += `<i class="${cnt && on / cnt >= .5 ? 'on' : ''}"></i>`;
+    }
+    $('segs').innerHTML = html;
+    const p = percent();
+    $('pct').textContent = Math.round(p) + '%';
+    $('doneBanner').innerHTML = p >= 90 ? '<div class="done-banner">완강했어요! 👏 기록이 선생님께 전달됩니다.</div>' : '';
+  }
+  function mark(t){
+    const i = Math.floor(t / SEG);
+    if (i < 0 || i > 3999) return;
+    if (segs.length <= i) segs = segs.padEnd(i + 1, '0');
+    if (segs[i] !== '1'){ segs = segs.slice(0, i) + '1' + segs.slice(i + 1); dirty = true; drawProgress(); }
+  }
+  async function save(force){
+    if (!dirty && !force) return;
+    if (!duration) return;
+    dirty = false; lastSaved = Date.now();
+    $('saveState').textContent = '저장 중…';
+    const p = Math.round(percent() * 10) / 10;
+    try {
+      await db.collection('lectureViews').doc(`${id}_${me.code}`).set({
+        lectureId: id, code: me.code, name: me.name, className: me.className,
+        segments: segs.slice(0, 4000), percent: p, watchedSec: Math.round(watchedSec), duration: Math.round(duration),
+        completed: p >= 90, firstAt: (view && view.firstAt) || FV.serverTimestamp(), lastAt: FV.serverTimestamp() });
+      if (!view) view = { firstAt: (await db.collection('lectureViews').doc(`${id}_${me.code}`).get()).data().firstAt };
+      $('saveState').textContent = '시청 기록 저장됨';
+    } catch(e){ console.error(e); dirty = true; $('saveState').textContent = '저장 실패 — 다시 시도 중'; }
+  }
+
+  // 유튜브 플레이어
+  window.onYouTubeIframeAPIReady = () => {
+    const player = new YT.Player('player', {
+      videoId: lec.videoId,
+      playerVars: { rel: 0, modestbranding: 1, playsinline: 1, fs: 0, disablekb: 0 },
+      events: {
+        onReady: () => { duration = player.getDuration() || duration; drawProgress(); },
+        onStateChange: e => { if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) save(); },
+      },
+    });
+    let prevT = null;
+    setInterval(() => {
+      if (!player.getPlayerState || player.getPlayerState() !== YT.PlayerState.PLAYING) { prevT = null; return; }
+      if (!duration) duration = player.getDuration();
+      const t = player.getCurrentTime(), rate = player.getPlaybackRate ? player.getPlaybackRate() : 1;
+      // 1초 간격으로 확인: 건너뛰기(큰 점프)는 시청으로 치지 않음
+      if (prevT != null && t > prevT && t - prevT <= 2.5 * rate){ mark(t); watchedSec += (t - prevT) / rate; }
+      prevT = t;
+      if (Date.now() - lastSaved > 15000) save();
+    }, 1000);
+  };
+  drawProgress();
+  const tag = document.createElement('script'); tag.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(tag);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+  window.addEventListener('pagehide', () => save());
+})();
+</script>
+</body>
+</html>

@@ -179,3 +179,115 @@
       allow get: if true;
       allow list, write: if omrStaffOrAdmin();
     }
+
+    // ───────── 공통: 학생 코드 확인 (코드가 등록돼 있고 이름·반이 일치) ─────────
+    function stuOk(d) {
+      let p = /databases/$(database)/documents/omrCodes/$(d.code);
+      return d.code is string && exists(p)
+        && d.name == get(p).data.name && d.className == get(p).data.className;
+    }
+
+    // ───────── 클리닉 예약 ─────────
+    // 시간표(슬롯). 학생은 예약/취소할 때 count(예약 인원)만 1씩 바꿀 수 있음
+    match /clinicSlots/{slotId} {
+      allow read: if true;
+      allow create, delete: if omrStaffOrAdmin();
+      allow update: if omrStaffOrAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
+        && resource.data.status == 'open'
+        && request.resource.data.count is int
+        && request.resource.data.count >= 0
+        && request.resource.data.count <= resource.data.capacity
+        && (request.resource.data.count == resource.data.count + 1
+            || request.resource.data.count == resource.data.count - 1));
+    }
+    // 예약. 문서 ID = {슬롯ID}_{학생코드}. 예약·취소는 슬롯 count 변경과 한 번에(batch) 해야 함
+    match /clinicBookings/{bid} {
+      function slotPath(){ return /databases/$(database)/documents/clinicSlots/$(request.resource.data.slotId); }
+      function bookOk() {
+        let d = request.resource.data;
+        let s = get(slotPath()).data;
+        return bid == d.slotId + '_' + d.code && stuOk(d)
+          && s.status == 'open' && (s.className == '전체' || s.className == d.className)
+          && getAfter(slotPath()).data.count == s.count + 1
+          && d.keys().hasOnly(['slotId', 'code', 'name', 'className', 'memo', 'bookedAt'])
+          && d.memo is string && d.memo.size() <= 200
+          && d.bookedAt == request.time;
+      }
+      allow get: if true;
+      allow list: if omrStaffOrAdmin();
+      allow create: if omrStaffOrAdmin() || bookOk();
+      allow update: if omrStaffOrAdmin();
+      allow delete: if omrStaffOrAdmin() || (
+        getAfter(/databases/$(database)/documents/clinicSlots/$(resource.data.slotId)).data.count
+          == get(/databases/$(database)/documents/clinicSlots/$(resource.data.slotId)).data.count - 1);
+    }
+
+    // ───────── 영상 강의 ─────────
+    match /lectures/{id} {
+      allow read: if true;
+      allow write: if omrStaffOrAdmin();
+    }
+    // 시청 기록. 문서 ID = {강의ID}_{학생코드}
+    match /lectureViews/{vid} {
+      function viewOk() {
+        let d = request.resource.data;
+        return vid == d.lectureId + '_' + d.code && stuOk(d)
+          && exists(/databases/$(database)/documents/lectures/$(d.lectureId))
+          && d.keys().hasOnly(['lectureId', 'code', 'name', 'className', 'segments', 'percent',
+                               'watchedSec', 'duration', 'completed', 'firstAt', 'lastAt'])
+          && d.percent is number && d.percent >= 0 && d.percent <= 100
+          && d.segments is string && d.segments.size() <= 4000
+          && d.lastAt == request.time;
+      }
+      allow get: if true;
+      allow list: if omrStaffOrAdmin();
+      allow create: if omrStaffOrAdmin() || viewOk();
+      allow update: if omrStaffOrAdmin() || (viewOk() && request.resource.data.firstAt == resource.data.firstAt);
+      allow delete: if omrStaffOrAdmin();
+    }
+
+    // ───────── 질문하기 ─────────
+    // 문서 ID는 무작위라 링크(ID)를 아는 학생만 읽음. 답변은 선생님·조교만
+    match /questions/{qid} {
+      allow get: if true;
+      allow list, update, delete: if omrStaffOrAdmin();
+      allow create: if stuOk(request.resource.data)
+        && request.resource.data.keys().hasOnly(['code', 'name', 'className', 'subject', 'text', 'files', 'status', 'createdAt'])
+        && request.resource.data.text is string && request.resource.data.text.size() <= 3000
+        && request.resource.data.files is list && request.resource.data.files.size() <= 6
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdAt == request.time;
+    }
+    // 학생별 질문 목록. 문서 ID = 학생코드
+    match /questionLinks/{code} {
+      allow get: if true;
+      allow list: if omrStaffOrAdmin();
+      allow write: if omrStaffOrAdmin() || (
+        exists(/databases/$(database)/documents/omrCodes/$(code))
+        && request.resource.data.keys().hasOnly(['items'])
+        && request.resource.data.items is list && request.resource.data.items.size() <= 300);
+    }
+
+    // ───────── 등원 체크 ─────────
+    // 문서 ID = {날짜}_{학생코드}. 데스크 태블릿에서 코드로 등원/하원 기록
+    match /attendance/{aid} {
+      function inOk() {
+        let d = request.resource.data;
+        return aid == d.date + '_' + d.code && stuOk(d)
+          && d.keys().hasOnly(['date', 'code', 'name', 'className', 'inAt', 'status'])
+          && d.status == 'in' && d.inAt == request.time;
+      }
+      allow get: if true;
+      allow list, delete: if omrStaffOrAdmin();
+      allow create: if omrStaffOrAdmin() || inOk();
+      allow update: if omrStaffOrAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['outAt', 'status'])
+        && resource.data.status == 'in' && request.resource.data.status == 'out'
+        && request.resource.data.outAt == request.time);
+    }
+
+    // ───────── 학생 기록 (상담·특이사항) — 선생님·조교만 ─────────
+    match /studentNotes/{id} {
+      allow read, write: if omrStaffOrAdmin();
+    }

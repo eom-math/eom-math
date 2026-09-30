@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>등원 체크 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=5">
+<style>
+  html,body{height:100%;background:#111114;}
+  body{color:#fff;display:flex;flex-direction:column;}
+  .k-top{display:flex;justify-content:space-between;align-items:center;padding:20px 28px;}
+  .k-top .b{font-weight:800;font-size:16px;} .k-top .b span{color:#ff5a45;}
+  .clock{font-size:15px;font-weight:700;opacity:.7;font-variant-numeric:tabular-nums;}
+  .k-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;}
+  .k-main h1{color:#fff;font-size:clamp(26px,5vw,40px);margin-bottom:8px;}
+  .k-main p{opacity:.65;font-size:16px;margin-bottom:26px;}
+  .code{width:min(420px,90vw);font-size:clamp(34px,8vw,54px);font-weight:900;letter-spacing:.3em;text-align:center;text-transform:uppercase;
+    background:#1d1d22;border:2px solid #34343c;color:#fff;border-radius:18px;padding:16px 10px 16px 24px;outline:none;}
+  .code:focus{border-color:#ff5a45;}
+  .go{margin-top:16px;width:min(420px,90vw);padding:18px;border-radius:16px;border:0;background:#D6301F;color:#fff;font-size:20px;font-weight:900;}
+  .msg{margin-top:18px;min-height:24px;font-size:16px;font-weight:700;color:#ffb4aa;}
+  .result{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:20px;
+    background:radial-gradient(circle at 50% 40%, #E0402C 0%, #B3261A 55%, #6d140c 100%);}
+  .result.out{background:radial-gradient(circle at 50% 40%, #2f2f36 0%, #18181c 70%);}
+  .result .big{font-size:clamp(40px,10vw,76px);font-weight:900;letter-spacing:-.03em;}
+  .result .t{font-size:clamp(18px,3.4vw,26px);font-weight:700;opacity:.9;}
+  .result .tm{font-size:clamp(46px,12vw,96px);font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.03em;}
+  .choice{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap;justify-content:center;}
+  .choice button{padding:18px 28px;border-radius:16px;border:0;font-size:20px;font-weight:900;min-width:180px;}
+  .choice .yes{background:#fff;color:#111114;} .choice .no{background:rgba(255,255,255,.14);color:#fff;}
+</style>
+</head>
+<body>
+  <div class="k-top"><div class="b">엄형국 <span>수학</span></div><div class="clock" id="clock"></div></div>
+  <div class="k-main">
+    <h1>안녕하세요!</h1>
+    <p>학생 코드 6자리를 입력하면 등원·하원이 기록돼요.</p>
+    <input class="code" id="code" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="••••••" aria-label="학생 코드">
+    <button class="go" id="go">확인</button>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div class="result hidden" id="result"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=5"></script>
+<script>
+(function(){
+  const { db, FV, esc } = OMR;
+  const $ = id => document.getElementById(id);
+  const DOW = '일월화수목금토';
+  const tick = () => { const d = new Date(); $('clock').textContent = `${d.getMonth()+1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) ${OMR.hhmm(d)}`; };
+  tick(); setInterval(tick, 10000);
+  const focus = () => setTimeout(() => $('code').focus(), 50);
+  focus();
+  $('code').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); $('msg').textContent = ''; });
+  $('code').addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+  $('go').onclick = submit;
+  let timer = null, busy = false;
+  function showResult(html, cls, ms = 4500){
+    const r = $('result');
+    r.className = 'result ' + (cls || ''); r.innerHTML = html;
+    clearTimeout(timer);
+    if (ms) timer = setTimeout(reset, ms);
+    r.onclick = e => { if (!e.target.closest('button')) reset(); };
+  }
+  function reset(){ $('result').className = 'result hidden'; $('code').value = ''; busy = false; focus(); }
+
+  async function submit(){
+    if (busy) return;
+    const code = $('code').value.trim();
+    if (code.length !== 6){ $('msg').textContent = '코드 6자리를 입력하세요.'; return; }
+    busy = true; $('msg').textContent = '확인 중…';
+    try {
+      const st = await OMR.studentByCode(code);
+      if (!st){ $('msg').textContent = '등록되지 않은 코드예요. 선생님께 확인해 주세요.'; busy = false; return; }
+      $('msg').textContent = '';
+      const date = OMR.todayStr(), ref = db.collection('attendance').doc(`${date}_${st.code}`);
+      const cur = await ref.get();
+      if (!cur.exists){
+        await ref.set({ date, code: st.code, name: st.name, className: st.className, inAt: FV.serverTimestamp(), status: 'in' });
+        showResult(`<div class="t">${esc(st.className)}</div><div class="big">${esc(st.name)} 학생</div><div class="tm">${OMR.hhmm(new Date())}</div><div class="t">등원했어요. 오늘도 화이팅!</div>`);
+      } else if (cur.data().status === 'in'){
+        showResult(`<div class="big">${esc(st.name)} 학생</div><div class="t">${OMR.hhmm(cur.data().inAt)}에 등원했어요. 하원할까요?</div>
+          <div class="choice"><button class="yes" id="outYes">하원하기</button><button class="no" id="outNo">아니요</button></div>`, 'out', 15000);
+        $('outNo').onclick = reset;
+        $('outYes').onclick = async () => {
+          try { await ref.update({ outAt: FV.serverTimestamp(), status: 'out' });
+            showResult(`<div class="big">${esc(st.name)} 학생</div><div class="tm">${OMR.hhmm(new Date())}</div><div class="t">하원했어요. 수고했어요!</div>`, 'out'); }
+          catch(e){ console.error(e); showResult('<div class="t">기록하지 못했어요. 선생님께 말씀해 주세요.</div>', 'out'); }
+        };
+      } else {
+        showResult(`<div class="big">${esc(st.name)} 학생</div><div class="t">오늘은 ${OMR.hhmm(cur.data().outAt)}에 이미 하원했어요.</div>`, 'out');
+      }
+    } catch(e){ console.error(e); $('msg').textContent = '연결에 실패했어요. 잠시 후 다시 시도해 주세요.'; busy = false; }
+  }
+})();
+</script>
+</body>
+</html>

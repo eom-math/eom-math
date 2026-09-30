@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>영상 강의 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=5">
+<style>
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+  .summary div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;}
+  .summary .k{font-size:11.5px;color:var(--dim);font-weight:800;} .summary .v{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;}
+  .filter{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;scrollbar-width:none;}
+  .filter button{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--dim);}
+  .filter button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .lec{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:10px;text-decoration:none;}
+  .lec:hover{border-color:var(--ink);}
+  .th{position:relative;flex:0 0 132px;aspect-ratio:16/9;border-radius:9px;overflow:hidden;background:var(--bg2);}
+  .th img{width:100%;height:100%;object-fit:cover;display:block;}
+  .th .pb{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(0,0,0,.35);}
+  .th .pb i{display:block;height:100%;background:var(--red);}
+  .th .done{position:absolute;top:6px;left:6px;background:var(--ok);color:#fff;font-size:10.5px;font-weight:800;padding:2px 6px;border-radius:99px;}
+  .lec .t{font-weight:800;font-size:14.5px;line-height:1.35;}
+  .lec .m{font-size:12px;color:var(--dim);margin-top:3px;}
+  @media (max-width:380px){ .th{flex-basis:110px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="index.html">← 엄형국 <span>수학</span></a>
+    <span class="sub" id="whoami"></span>
+  </div>
+  <div class="kicker">LECTURES</div>
+  <h1>영상 강의</h1>
+  <p class="lead">끝까지 시청하면 ‘완강’으로 기록돼요. 건너뛴 구간은 시청 시간에 들어가지 않아요.</p>
+  <div class="summary" id="summary"></div>
+  <div class="filter" id="filter"></div>
+  <div id="list"><div class="empty">불러오는 중…</div></div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=5"></script>
+<script>
+(async function(){
+  const { db, esc, toDate } = OMR;
+  const $ = id => document.getElementById(id);
+  const me = await OMR.requireStudent(); if (!me) return;
+  $('whoami').textContent = me.name;
+  let lecs = [], views = {}, unit = '전체';
+  try {
+    lecs = (await db.collection('lectures').get()).docs.map(d => ({ id:d.id, ...d.data() }))
+      .filter(l => l.status === 'open' && (l.className === '전체' || l.className === me.className))
+      .sort((a,b) => (toDate(b.createdAt)||0) - (toDate(a.createdAt)||0));
+    const vs = await Promise.all(lecs.map(l => db.collection('lectureViews').doc(`${l.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
+    lecs.forEach((l, i) => { views[l.id] = vs[i]; });
+  } catch(e){ console.error(e); $('list').innerHTML = '<div class="empty">불러오지 못했습니다.</div>'; return; }
+  const done = lecs.filter(l => views[l.id] && views[l.id].completed).length;
+  const mins = Math.round(lecs.reduce((a, l) => a + ((views[l.id] && views[l.id].watchedSec) || 0), 0) / 60);
+  $('summary').innerHTML = `<div><div class="k">전체 강의</div><div class="v">${lecs.length}</div></div>
+    <div><div class="k">완강</div><div class="v" style="color:var(--ok);">${done}</div></div>
+    <div><div class="k">시청 시간</div><div class="v">${mins}<small style="font-size:12px;color:var(--dim);">분</small></div></div>`;
+  const units = ['전체', '안 본 강의', ...new Set(lecs.map(l => l.unit).filter(Boolean))];
+  function render(){
+    $('filter').innerHTML = units.map(u => `<button class="${u === unit ? 'on' : ''}">${esc(u)}</button>`).join('');
+    $('filter').querySelectorAll('button').forEach((b, i) => b.onclick = () => { unit = units[i]; render(); });
+    const list = lecs.filter(l => unit === '전체' || (unit === '안 본 강의' ? !(views[l.id] && views[l.id].completed) : l.unit === unit));
+    $('list').innerHTML = list.length ? list.map(l => { const v = views[l.id];
+      return `<a class="lec" href="watch.html?id=${encodeURIComponent(l.id)}">
+        <div class="th"><img src="https://i.ytimg.com/vi/${esc(l.videoId)}/mqdefault.jpg" alt="" loading="lazy">
+          ${v && v.completed ? '<span class="done">완강</span>' : ''}<div class="pb"><i style="width:${v ? v.percent : 0}%"></i></div></div>
+        <div style="min-width:0;"><div class="t">${esc(l.title)}</div>
+          <div class="m">${esc(l.unit || '')}${l.unit ? ' · ' : ''}${v ? `${Math.round(v.percent)}% 시청` : '아직 안 봤어요'}</div></div></a>`; }).join('')
+      : `<div class="empty">${lecs.length ? '해당하는 강의가 없어요.' : '아직 올라온 강의가 없어요.'}</div>`;
+  }
+  render();
+})();
+</script>
+</body>
+</html>

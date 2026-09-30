@@ -280,7 +280,8 @@
   }
 
   // ───────── 관리자 공통: 로그인·상단 메뉴 ─────────
-  const ADMIN_PAGES = [['admin.html', '시험·OMR'], ['clinic.html', '오답 클리닉'], ['assign.html', '과제'], ['daily.html', '데일리 리포트']];
+  const ADMIN_PAGES = [['admin.html', '시험·OMR'], ['clinic.html', '오답 클리닉'], ['assign.html', '과제'], ['daily.html', '데일리 리포트'], ['ops.html', '운영']];
+  const STAFF_PAGES = [['daily.html', '데일리 리포트'], ['ops.html', '운영']];
   function adminNav(current) {
     return ADMIN_PAGES.map(([href, label]) =>
       `<a class="btn sm ${href === current ? 'primary' : 'ghost'}" href="${href}">${label}</a>`).join('');
@@ -300,6 +301,77 @@
       $('adminEmail').textContent = user ? user.email : '';
       onChange(user);
     });
+  }
+
+  // ───────── 선생님·조교 공통 로그인 ─────────
+  // 반환: {uid, name, role:'admin'|'ta'} 또는 null(권한 없음)
+  async function detectStaff(user) {
+    try {
+      const s = await db.collection('omrStaff').doc(user.uid).get();
+      if (s.exists) return { uid: user.uid, name: s.data().name || '조교', role: 'ta' };
+    } catch (e) { /* 무시 */ }
+    try { await db.collection('omrStaff').limit(1).get(); return { uid: user.uid, name: '엄형국 선생님', role: 'admin' }; }
+    catch (e) { return null; }
+  }
+  function staffNav(current, role) {
+    const pages = role === 'admin' ? ADMIN_PAGES : STAFF_PAGES;
+    return pages.map(([href, label]) =>
+      `<a class="btn sm ${href === current ? 'primary' : 'ghost'}" href="${href}">${label}</a>`).join('');
+  }
+  /** loginEmail/loginPw/loginBtn/loginMsg/logoutBtn/adminEmail 요소를 연결. onChange(me|null, user) */
+  function mountStaffLogin(onChange) {
+    const auth = firebase.auth(), $ = id => document.getElementById(id);
+    $('loginBtn').onclick = async () => {
+      $('loginMsg').textContent = '로그인 중…';
+      try { await auth.signInWithEmailAndPassword(staffEmail($('loginEmail').value), $('loginPw').value); }
+      catch (e) { $('loginMsg').textContent = '로그인 실패: 아이디(이메일) 또는 비밀번호를 확인하세요.'; }
+    };
+    $('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
+    $('logoutBtn').onclick = () => auth.signOut();
+    auth.onAuthStateChanged(async user => {
+      $('logoutBtn').classList.toggle('hidden', !user);
+      $('adminEmail').textContent = user ? staffIdFromEmail(user.email) : '';
+      onChange(user ? await detectStaff(user) : null, user);
+    });
+  }
+
+  // ───────── 학생 코드 (포털과 같은 저장 키) ─────────
+  const STUDENT_KEY = 'omrStudentCode';
+  function savedCode() { try { return localStorage.getItem(STUDENT_KEY); } catch (e) { return null; } }
+  function saveCode(c) { try { localStorage.setItem(STUDENT_KEY, c); } catch (e) {} }
+  async function studentByCode(code) {
+    code = String(code || '').trim().toUpperCase();
+    if (code.length !== 6) return null;
+    const s = await db.collection('omrCodes').doc(code).get();
+    return s.exists ? { code, name: s.data().name, className: s.data().className, studentId: s.data().studentId } : null;
+  }
+  /** 학생 페이지 공통: 저장된 코드로 학생을 불러오고, 없으면 포털로 보냄 */
+  async function requireStudent() {
+    const c = savedCode();
+    const me = c ? await studentByCode(c).catch(() => null) : null;
+    if (!me) { location.href = 'index.html?next=' + encodeURIComponent(location.pathname.split('/').pop() + location.search); return null; }
+    return me;
+  }
+  // 이미지 줄이기 (긴 변 maxPx, JPEG) — 업로드 용량 절약
+  function shrinkImage(file, maxPx = 1800, q = 0.85) {
+    return new Promise(resolve => {
+      if (!file.type.startsWith('image/') || file.type === 'image/gif') return resolve(file);
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => {
+        const r = Math.min(1, maxPx / Math.max(img.width, img.height));
+        if (r === 1 && file.size < 1.5e6) { URL.revokeObjectURL(url); return resolve(file); }
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(b => { URL.revokeObjectURL(url); resolve(b ? new File([b], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file); }, 'image/jpeg', q);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+  function hhmm(v) {
+    const d = toDate(v); if (!d) return '';
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
 
   // 여러 문서 쓰기를 400개씩 나눠 커밋
@@ -364,6 +436,7 @@
     normalizePhone, fmtPhone, round, toast, copyText, normalizeAnswers, gradeOne, gradeExam,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
+    detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

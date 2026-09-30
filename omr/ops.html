@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>운영 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=5">
+<style>
+  .who-badge{font-size:12px;font-weight:800;padding:4px 9px;border-radius:99px;background:var(--bg2);}
+  .who-badge.admin{background:var(--ink);color:#fff;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  @media (max-width:560px){ .grid2,.grid3{grid-template-columns:1fr;} }
+  .day-h{font-size:13px;font-weight:900;margin:18px 0 8px;display:flex;align-items:center;gap:8px;}
+  .day-h small{font-weight:700;color:var(--dim);}
+  .slot{background:#fff;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:8px;}
+  .slot-h{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;width:100%;background:none;border:0;text-align:left;}
+  .slot-h .tm{font-weight:900;font-size:16px;font-variant-numeric:tabular-nums;min-width:96px;}
+  .slot-h .m{font-size:12.5px;color:var(--dim);}
+  .cap{margin-left:auto;text-align:right;min-width:74px;}
+  .cap b{font-size:15px;font-variant-numeric:tabular-nums;}
+  .cap .bar{margin-top:4px;height:5px;}
+  .slot-b{border-top:1px solid var(--line2);padding:10px 14px 14px;}
+  .bk{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line2);font-size:14px;flex-wrap:wrap;}
+  .bk:last-child{border-bottom:0;}
+  .bk .memo{font-size:12.5px;color:var(--dim);flex:1 1 100%;}
+  .rec{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line2);flex-wrap:wrap;font-size:14px;}
+  .rec:last-child{border-bottom:0;}
+  .reason{font-size:12.5px;color:var(--dim);flex:1 1 160px;}
+  .lec{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:10px;margin-bottom:8px;}
+  .lec img{width:112px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;background:var(--bg2);flex:0 0 auto;}
+  .lec .t{font-weight:800;font-size:15px;}
+  .lec .m{font-size:12.5px;color:var(--dim);}
+  .lec .r{margin-left:auto;display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+  .vrow{display:grid;grid-template-columns:70px 1fr 48px;gap:10px;align-items:center;padding:6px 0;font-size:13.5px;}
+  .q{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:10px;}
+  .q .h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--dim);margin-bottom:8px;}
+  .q .h b{color:var(--ink);font-size:14.5px;}
+  .q .txt{white-space:pre-wrap;font-size:14.5px;line-height:1.6;word-break:keep-all;}
+  .thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .thumbs img{width:92px;height:92px;object-fit:cover;border-radius:8px;border:1px solid var(--line);}
+  .ans{background:var(--bg2);border-radius:8px;padding:10px 12px;margin-top:10px;}
+  .ans .by{font-size:12px;color:var(--dim);margin-bottom:4px;font-weight:700;}
+  .att{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line2);font-size:14px;}
+  .att:last-child{border-bottom:0;}
+  .att .t{font-variant-numeric:tabular-nums;font-size:13px;color:var(--dim);}
+  .tl{position:relative;padding-left:18px;}
+  .tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--line2);}
+  .tl-i{position:relative;padding:8px 0 10px;}
+  .tl-i::before{content:"";position:absolute;left:-17px;top:13px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--ink);}
+  .tl-i.note::before{border-color:var(--red);background:var(--red);}
+  .tl-i .d{font-size:11.5px;color:var(--dim);font-weight:700;}
+  .tl-i .x{font-size:14px;line-height:1.55;white-space:pre-wrap;}
+  .tagsel{display:flex;gap:6px;flex-wrap:wrap;}
+  .tagsel button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:5px 11px;font-size:12.5px;font-weight:700;color:var(--dim);}
+  .tagsel button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .stu-pick{display:flex;gap:6px;flex-wrap:wrap;}
+  .stu-pick button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 11px;font-size:13.5px;font-weight:700;}
+  .stu-pick button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0;}
+  @media (max-width:560px){ .kpis{grid-template-columns:repeat(2,1fr);} }
+</style>
+</head>
+<body>
+<div class="wrap wide">
+  <div class="topbar">
+    <a class="brand" href="../index.html">엄형국 <span>수학</span></a>
+    <div class="row" style="gap:8px;">
+      <span class="who-badge hidden" id="whoBadge"></span>
+      <span class="sub" id="adminEmail"></span>
+      <button class="btn sm hidden" id="logoutBtn">로그아웃</button>
+    </div>
+  </div>
+
+  <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
+    <div class="kicker">OPERATIONS</div>
+    <h1>운영 관리</h1>
+    <p class="lead">선생님 이메일 또는 조교 아이디로 로그인하세요.</p>
+    <div class="card stack">
+      <input class="input" id="loginEmail" placeholder="이메일 또는 조교 아이디" autocomplete="username" autocapitalize="none">
+      <input class="input" type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
+      <button class="btn primary block" id="loginBtn">로그인</button>
+      <p class="muted" id="loginMsg"></p>
+    </div>
+  </section>
+  <section id="vDenied" class="hidden"><div class="empty">이 계정은 운영 권한이 없습니다.</div></section>
+
+  <section id="vMain" class="hidden">
+    <div class="row" id="nav" style="margin-bottom:12px;gap:4px;"></div>
+    <div class="tabs" id="tabs">
+      <button class="on" data-tab="clinic">클리닉 예약</button>
+      <button data-tab="lecture">영상 강의</button>
+      <button data-tab="qna">질문 답변 <span class="pill red hidden" id="qnaBadge"></span></button>
+      <button data-tab="att">등원</button>
+      <button data-tab="notes">학생 기록</button>
+    </div>
+
+    <!-- 클리닉 -->
+    <div data-pane="clinic">
+      <div class="row between" style="margin-bottom:6px;">
+        <p class="muted">학생은 모바일 OMR 포털 → <b>클리닉 예약</b>에서 코드로 예약합니다.</p>
+        <button class="btn primary" id="newSlotBtn">+ 클리닉 시간 열기</button>
+      </div>
+      <div class="card">
+        <div class="row between"><h2 style="margin:0;">예약 추천 학생</h2><button class="btn sm" id="recCopyAll">안내 문구 전체 복사</button></div>
+        <p class="muted" style="margin:6px 0 8px;">최근 2주 데일리 리포트에서 ‘추가학습 필요’로 표시된 학생과 (선생님 계정에서는) 재시험 대상입니다.</p>
+        <div id="recList"><div class="empty">불러오는 중…</div></div>
+      </div>
+      <div id="slotList"><div class="empty">불러오는 중…</div></div>
+    </div>
+
+    <!-- 영상 강의 -->
+    <div data-pane="lecture" class="hidden">
+      <div class="row between" style="margin-bottom:12px;">
+        <select class="input" id="lecClass" style="width:auto;min-width:140px;"></select>
+        <button class="btn primary" id="newLecBtn">+ 영상 강의 등록</button>
+      </div>
+      <div id="lecList"></div>
+      <div class="card hidden" id="lecViews">
+        <div class="row between"><h2 style="margin:0;" id="lecViewsTitle"></h2><button class="btn sm" id="lecViewsClose">닫기</button></div>
+        <div id="lecViewsBody" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- 질문 -->
+    <div data-pane="qna" class="hidden">
+      <div class="tabs" id="qnaTabs" style="border:0;margin-bottom:8px;">
+        <button class="on" data-s="open">답변 대기</button><button data-s="answered">답변 완료</button>
+      </div>
+      <div id="qnaList"></div>
+    </div>
+
+    <!-- 등원 -->
+    <div data-pane="att" class="hidden">
+      <div class="row" style="margin-bottom:10px;">
+        <input class="input" type="date" id="attDate" style="width:auto;">
+        <select class="input" id="attClass" style="width:auto;min-width:130px;"></select>
+        <a class="btn" href="checkin.html" target="_blank" rel="noopener">데스크 체크인 화면 열기 ↗</a>
+        <button class="btn" id="attCopy">등원 알림 문구 복사</button>
+        <button class="btn" id="attCsv">CSV</button>
+      </div>
+      <div class="kpis" id="attKpis"></div>
+      <div class="card" id="attList"></div>
+    </div>
+
+    <!-- 학생 기록 -->
+    <div data-pane="notes" class="hidden">
+      <div class="row" style="margin-bottom:10px;">
+        <select class="input" id="noteClass" style="width:auto;min-width:130px;"></select>
+      </div>
+      <div class="stu-pick" id="notePick"></div>
+      <div id="noteBody" style="margin-top:14px;"></div>
+    </div>
+  </section>
+</div>
+
+<!-- 클리닉 시간 -->
+<div class="modal-bg hidden" id="slotModal">
+  <div class="modal">
+    <h2>클리닉 시간 열기</h2>
+    <div class="stack">
+      <div class="grid3">
+        <div><label class="f">날짜</label><input class="input" type="date" id="sDate"></div>
+        <div><label class="f">시작</label><input class="input" type="time" id="sStart" value="18:00"></div>
+        <div><label class="f">끝</label><input class="input" type="time" id="sEnd" value="19:00"></div>
+      </div>
+      <div class="grid2">
+        <div><label class="f">대상 반</label><select class="input" id="sClass"></select></div>
+        <div><label class="f">정원</label><input class="input" type="number" id="sCap" value="6" min="1" max="60"></div>
+      </div>
+      <div class="grid2">
+        <div><label class="f">장소</label><input class="input" id="sPlace" placeholder="예: 2강의실"></div>
+        <div><label class="f">담당</label><input class="input" id="sStaff" placeholder="예: 김조교"></div>
+      </div>
+      <div><label class="f">안내</label><input class="input" id="sNote" placeholder="예: 오답노트 지참"></div>
+      <div><label class="f">매주 반복</label><select class="input" id="sRepeat"><option value="1">이번만</option><option value="2">2주</option><option value="4">4주</option><option value="8">8주</option></select></div>
+    </div>
+    <p class="muted" id="slotMsg" style="margin-top:8px;"></p>
+    <div class="row" style="margin-top:14px;"><button class="btn grow" data-close="slotModal">취소</button><button class="btn primary grow" id="slotSave">열기</button></div>
+  </div>
+</div>
+
+<!-- 영상 강의 -->
+<div class="modal-bg hidden" id="lecModal">
+  <div class="modal">
+    <h2 id="lecModalTitle">영상 강의 등록</h2>
+    <div class="stack">
+      <div><label class="f">유튜브 링크 (일부 공개로 올린 영상 권장)</label><input class="input" id="lUrl" placeholder="https://youtu.be/…"></div>
+      <div><label class="f">제목</label><input class="input" id="lTitle" placeholder="예: 명제 3강 — 대우를 이용한 증명"></div>
+      <div class="grid2">
+        <div><label class="f">반</label><select class="input" id="lClass2"></select></div>
+        <div><label class="f">단원</label><input class="input" id="lUnit" placeholder="예: 공통수학2 · 명제"></div>
+      </div>
+      <div><label class="f">설명</label><textarea class="input" id="lNote" style="min-height:70px;" placeholder="시청 전 준비물, 풀어볼 문제 등"></textarea></div>
+      <label class="toggle" style="display:flex;gap:8px;align-items:center;font-weight:700;font-size:14px;"><input type="checkbox" id="lOpen" checked style="width:18px;height:18px;"> 학생에게 공개</label>
+    </div>
+    <p class="muted" id="lecMsg" style="margin-top:8px;"></p>
+    <div class="row" style="margin-top:14px;"><button class="btn grow" data-close="lecModal">취소</button><button class="btn primary grow" id="lecSave">저장</button></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="common.js?v=5"></script>
+<script>
+(function(){
+  const { db, FV, esc, toast, copyText, toDate, round } = OMR;
+  const $ = id => document.getElementById(id);
+  const VIEWS = ['vLogin','vDenied','vMain'];
+  const show = v => VIEWS.forEach(x => $(x).classList.toggle('hidden', x !== v));
+  const openModal = id => $(id).classList.remove('hidden');
+  const closeModal = id => $(id).classList.add('hidden');
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeModal(b.dataset.close));
+  const DOW = '일월화수목금토';
+  const kDate = s => OMR.fmtKDate(s);
+  const bookUrl = () => new URL('book.html', location.href).href;
+
+  let me = null, roster = [], classes = [];
+  function handleErr(e){ console.error(e); toast(e && e.code === 'permission-denied' ? '권한이 없습니다 (보안 규칙을 확인하세요)' : '오류: ' + (e.message || e)); }
+  const classOpts = (withAll, allLabel) => (withAll ? `<option value="${withAll}">${allLabel}</option>` : '') + classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+
+  OMR.mountStaffLogin(async (m, user) => {
+    me = m;
+    $('whoBadge').classList.add('hidden');
+    if (!user){ show('vLogin'); return; }
+    if (!me){ show('vDenied'); return; }
+    $('whoBadge').textContent = me.role === 'admin' ? '선생님' : '조교 · ' + me.name;
+    $('whoBadge').className = 'who-badge' + (me.role === 'admin' ? ' admin' : '');
+    $('nav').innerHTML = OMR.staffNav('ops.html', me.role);
+    show('vMain');
+    await loadRoster();
+    const tab = (location.hash || '#clinic').slice(1);
+    selectTab(['clinic','lecture','qna','att','notes'].includes(tab) ? tab : 'clinic');
+    refreshQnaBadge();
+  });
+
+  async function loadRoster(){
+    try {
+      roster = (await db.collection('omrCodes').get()).docs.map(d => ({ code:d.id, ...d.data() }))
+        .filter(s => s.name && s.className).sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+    } catch(e){ roster = []; handleErr(e); }
+    classes = [...new Set(roster.map(s => s.className))].sort((a,b) => a.localeCompare(b, 'ko'));
+    $('sClass').innerHTML = classOpts('전체', '전체 반');
+    $('lClass2').innerHTML = classOpts('전체', '전체 반');
+    $('lecClass').innerHTML = classOpts('*', '모든 강의');
+    $('attClass').innerHTML = classOpts('*', '전체 반');
+    $('noteClass').innerHTML = classOpts('', '반 선택');
+  }
+
+  // ───────── 탭 ─────────
+  const loaded = {};
+  function selectTab(t){
+    [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+    document.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('hidden', p.dataset.pane !== t));
+    history.replaceState(null, '', '#' + t);
+    ({ clinic: loadClinic, lecture: loadLectures, qna: loadQna, att: loadAtt, notes: () => {} })[t]();
+  }
+  $('tabs').onclick = e => { const b = e.target.closest('button'); if (b) selectTab(b.dataset.tab); };
+
+  // ═════════ 클리닉 ═════════
+  async function loadClinic(){
+    const box = $('slotList');
+    box.innerHTML = '<div class="empty">불러오는 중…</div>';
+    try {
+      const today = OMR.todayStr();
+      const slots = (await db.collection('clinicSlots').get()).docs.map(d => ({ id:d.id, ...d.data() }))
+        .filter(s => s.date >= today).sort((a,b) => (a.date + a.start).localeCompare(b.date + b.start));
+      loadRecs(slots);
+      if (!slots.length){ box.innerHTML = '<div class="empty">열린 클리닉 시간이 없습니다.<br>‘클리닉 시간 열기’로 시간표를 만드세요.</div>'; return; }
+      box.innerHTML = '';
+      let curDate = '';
+      slots.forEach(s => {
+        if (s.date !== curDate){ curDate = s.date; box.insertAdjacentHTML('beforeend', `<div class="day-h">${esc(kDate(s.date))}</div>`); }
+        box.appendChild(slotCard(s));
+      });
+    } catch(e){ box.innerHTML = '<div class="empty">불러오지 못했습니다.</div>'; handleErr(e); }
+  }
+  function slotCard(s){
+    const el = document.createElement('div');
+    el.className = 'slot';
+    const full = s.count >= s.capacity;
+    el.innerHTML = `
+      <button class="slot-h">
+        <span class="tm">${esc(s.start)}–${esc(s.end)}</span>
+        <span><b>${esc(s.className === '전체' ? '전체 반' : s.className)}</b> <span class="pill ${s.status === 'open' ? (full ? 'closed' : 'open') : 'draft'}">${s.status !== 'open' ? '예약 닫힘' : full ? '마감' : '예약 중'}</span>
+          <div class="m">${[s.place, s.staff, s.note].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</div></span>
+        <span class="cap"><b>${s.count || 0}</b><span class="muted">/${s.capacity}</span><div class="bar"><i style="width:${Math.min(100, (s.count||0) / s.capacity * 100)}%;${full ? 'background:var(--red);' : ''}"></i></div></span>
+      </button>
+      <div class="slot-b hidden"></div>`;
+    const body = el.querySelector('.slot-b');
+    el.querySelector('.slot-h').onclick = async () => {
+      body.classList.toggle('hidden');
+      if (body.classList.contains('hidden')) return;
+      body.innerHTML = '<div class="muted">불러오는 중…</div>';
+      try {
+        const bks = (await db.collection('clinicBookings').where('slotId','==',s.id).get()).docs.map(d => ({ id:d.id, ...d.data() }))
+          .sort((a,b) => (toDate(a.bookedAt)||0) - (toDate(b.bookedAt)||0));
+        body.innerHTML = (bks.length ? bks.map(b => `
+          <div class="bk"><b>${esc(b.name)}</b><span class="muted">${esc(b.className)}</span>
+            <span class="muted" style="font-size:12px;">${OMR.fmtDateTime(b.bookedAt)} 예약</span>
+            <span style="margin-left:auto;" class="row"><button class="btn sm ${b.attended === true ? 'primary' : ''}" data-att="${esc(b.id)}" data-v="1">참석</button>
+            <button class="btn sm ${b.attended === false ? 'red' : ''}" data-att="${esc(b.id)}" data-v="0">불참</button>
+            <button class="btn sm ghost" data-cancel="${esc(b.id)}">취소</button></span>
+            ${b.memo ? `<div class="memo">메모: ${esc(b.memo)}</div>` : ''}</div>`).join('') : '<div class="muted">아직 예약한 학생이 없습니다.</div>')
+          + `<div class="row" style="margin-top:12px;gap:6px;">
+              <button class="btn sm" data-toggle>${s.status === 'open' ? '예약 닫기' : '예약 다시 열기'}</button>
+              <button class="btn sm" data-copy>예약 안내 문구 복사</button>
+              <button class="btn sm ghost" data-del style="color:var(--red);">시간 삭제</button></div>`;
+        body.querySelectorAll('[data-att]').forEach(b => b.onclick = async () => {
+          try { await db.collection('clinicBookings').doc(b.dataset.att).update({ attended: b.dataset.v === '1', checkedBy: me.name });
+            body.querySelectorAll(`[data-att="${b.dataset.att}"]`).forEach(x => x.className = 'btn sm' + (x === b ? (b.dataset.v === '1' ? ' primary' : ' red') : ''));
+          } catch(e){ handleErr(e); }
+        });
+        body.querySelectorAll('[data-cancel]').forEach(b => b.onclick = async () => {
+          if (!confirm('이 예약을 취소할까요?')) return;
+          try {
+            const bt = db.batch();
+            bt.delete(db.collection('clinicBookings').doc(b.dataset.cancel));
+            bt.update(db.collection('clinicSlots').doc(s.id), { count: FV.increment(-1) });
+            await bt.commit(); toast('취소했습니다'); loadClinic();
+          } catch(e){ handleErr(e); }
+        });
+        body.querySelector('[data-toggle]').onclick = async () => {
+          try { await db.collection('clinicSlots').doc(s.id).update({ status: s.status === 'open' ? 'closed' : 'open' }); loadClinic(); } catch(e){ handleErr(e); }
+        };
+        body.querySelector('[data-copy]').onclick = () => copyText(`[엄형국 수학] 클리닉 예약 안내\n${kDate(s.date)} ${s.start}–${s.end}${s.place ? ' · ' + s.place : ''}\n정원 ${s.capacity}명, 선착순입니다.\n예약: ${bookUrl()}`);
+        body.querySelector('[data-del]').onclick = async () => {
+          if (bks.length && !confirm(`예약한 학생 ${bks.length}명이 있습니다. 그래도 삭제할까요?`)) return;
+          if (!bks.length && !confirm('이 시간을 삭제할까요?')) return;
+          try { await OMR.commitOps([...bks.map(b => ['delete', db.collection('clinicBookings').doc(b.id)]), ['delete', db.collection('clinicSlots').doc(s.id)]]); toast('삭제했습니다'); loadClinic(); } catch(e){ handleErr(e); }
+        };
+      } catch(e){ body.innerHTML = '<div class="muted">불러오지 못했습니다.</div>'; handleErr(e); }
+    };
+    return el;
+  }
+
+  $('newSlotBtn').onclick = () => {
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    $('sDate').value = OMR.todayStr(d); $('slotMsg').textContent = '';
+    if (me.role !== 'admin' && !$('sStaff').value) $('sStaff').value = me.name;
+    openModal('slotModal');
+  };
+  $('slotSave').onclick = async () => {
+    const date = $('sDate').value, start = $('sStart').value, end = $('sEnd').value, cap = parseInt($('sCap').value, 10);
+    if (!date || !start || !end || !(cap > 0)){ $('slotMsg').textContent = '날짜, 시간, 정원을 입력하세요.'; return; }
+    if (end <= start){ $('slotMsg').textContent = '끝나는 시간이 시작보다 늦어야 합니다.'; return; }
+    const n = +$('sRepeat').value, ops = [];
+    for (let i = 0; i < n; i++){
+      const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() + 7 * i);
+      ops.push(['set', db.collection('clinicSlots').doc(), {
+        date: OMR.todayStr(d), start, end, capacity: cap, count: 0, status: 'open',
+        className: $('sClass').value, place: $('sPlace').value.trim(), staff: $('sStaff').value.trim(), note: $('sNote').value.trim(),
+        createdAt: FV.serverTimestamp(), createdBy: { uid: me.uid, name: me.name } }]);
+    }
+    try { await OMR.commitOps(ops); closeModal('slotModal'); toast(n > 1 ? `${n}주 시간을 열었습니다` : '시간을 열었습니다'); loadClinic(); }
+    catch(e){ handleErr(e); }
+  };
+
+  // 예약 추천: 최근 14일 데일리 리포트의 추가학습 필요 + (선생님) 재시험 대상
+  let recRows = [];
+  async function loadRecs(slots){
+    const box = $('recList');
+    try {
+      const since = new Date(); since.setDate(since.getDate() - 14);
+      const sinceStr = OMR.todayStr(since);
+      const lessons = (await db.collection('dailyLessons').get()).docs.map(d => ({ id:d.id, ...d.data() })).filter(l => (l.date || '') >= sinceStr);
+      const recs = {};
+      await Promise.all(lessons.map(async l => {
+        const es = await db.collection('dailyEntries').where('lessonId','==',l.id).get();
+        es.docs.forEach(d => { const e = d.data(); if (e.extra && e.extra.needed){
+          const r = recs[e.code] = recs[e.code] || { code:e.code, name:e.name, className:l.className, reasons:[] };
+          r.reasons.push(`${l.date.slice(5).replace('-','/')} ${e.extra.reason || '추가학습'}`);
+        } });
+      }));
+      if (me.role === 'admin'){
+        try {
+          (await db.collection('omrRetests').get()).docs.forEach(d => {
+            const r0 = d.data(); const sum = OMR.retestSummary(r0);
+            if (sum.status === 'passed') return;
+            const st = roster.find(s => s.code === r0.code); if (!st) return;
+            const r = recs[r0.code] = recs[r0.code] || { code:r0.code, name:st.name, className:st.className, reasons:[] };
+            r.reasons.push(`재시험 ${sum.status === 'failed' ? '미통과' : '대기'}${r0.examTitle ? ' · ' + r0.examTitle : ''}`);
+          });
+        } catch(e){ console.warn(e); }
+      }
+      // 이미 앞으로의 클리닉을 예약했는지
+      const booked = new Set();
+      await Promise.all(Object.keys(recs).flatMap(code => (slots || []).map(s =>
+        db.collection('clinicBookings').doc(`${s.id}_${code}`).get().then(x => { if (x.exists) booked.add(code); }).catch(() => {}))));
+      recRows = Object.values(recs).sort((a,b) => booked.has(a.code) - booked.has(b.code) || a.name.localeCompare(b.name, 'ko'));
+      if (!recRows.length){ box.innerHTML = '<div class="muted">지금은 추천할 학생이 없습니다.</div>'; return; }
+      box.innerHTML = recRows.map((r, i) => `
+        <div class="rec"><b>${esc(r.name)}</b><span class="muted">${esc(r.className)}</span>
+          <span class="reason">${r.reasons.map(esc).join(' · ')}</span>
+          ${booked.has(r.code) ? '<span class="pill open">예약함</span>' : `<button class="btn sm" data-i="${i}">안내 문구 복사</button>`}</div>`).join('');
+      box.querySelectorAll('[data-i]').forEach(b => b.onclick = () => copyText(recMsg(recRows[+b.dataset.i])));
+      recRows.forEach(r => r.booked = booked.has(r.code));
+    } catch(e){ box.innerHTML = '<div class="muted">불러오지 못했습니다.</div>'; console.warn(e); }
+  }
+  const recMsg = r => `[엄형국 수학] ${r.name} 학생, ${r.reasons[0]} 보완을 위해 클리닉 예약을 부탁드립니다.\n예약: ${bookUrl()}`;
+  $('recCopyAll').onclick = () => { const rows = recRows.filter(r => !r.booked); if (!rows.length) return toast('복사할 학생이 없습니다'); copyText(rows.map(recMsg).join('\n\n')); };
+
+  // ═════════ 영상 강의 ═════════
+  function ytId(url){
+    const m = String(url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/);
+    return m ? m[1] : (/^[\w-]{11}$/.test(String(url).trim()) ? String(url).trim() : null);
+  }
+  let lectures = [], editingLec = null;
+  $('lecClass').onchange = () => renderLectures();
+  async function loadLectures(){
+    try {
+      lectures = (await db.collection('lectures').get()).docs.map(d => ({ id:d.id, ...d.data() }))
+        .sort((a,b) => (toDate(b.createdAt)||0) - (toDate(a.createdAt)||0));
+    } catch(e){ lectures = []; handleErr(e); }
+    renderLectures();
+  }
+  function renderLectures(){
+    const cf = $('lecClass').value, box = $('lecList');
+    const list = lectures.filter(l => cf === '*' || l.className === cf || l.className === '전체');
+    if (!list.length){ box.innerHTML = '<div class="empty">등록된 영상 강의가 없습니다.<br>유튜브에 ‘일부 공개’로 올린 뒤 링크를 등록하세요.</div>'; return; }
+    box.innerHTML = list.map(l => `
+      <div class="lec">
+        <img src="https://i.ytimg.com/vi/${esc(l.videoId)}/mqdefault.jpg" alt="" loading="lazy">
+        <div style="min-width:0;"><div class="t">${esc(l.title)}</div>
+          <div class="m">${esc(l.className === '전체' ? '전체 반' : l.className)}${l.unit ? ' · ' + esc(l.unit) : ''} ${l.status === 'open' ? '' : '<span class="pill draft">비공개</span>'}</div></div>
+        <div class="r"><button class="btn sm primary" data-views="${esc(l.id)}">시청 현황</button>
+          <span class="row" style="gap:4px;"><button class="btn sm" data-edit="${esc(l.id)}">수정</button><button class="btn sm ghost" data-del="${esc(l.id)}">삭제</button></span></div>
+      </div>`).join('');
+    box.querySelectorAll('[data-views]').forEach(b => b.onclick = () => showViews(lectures.find(l => l.id === b.dataset.views)));
+    box.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => editLecture(lectures.find(l => l.id === b.dataset.edit)));
+    box.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      if (!confirm('이 강의를 삭제할까요? 시청 기록도 함께 지워집니다.')) return;
+      try {
+        const vs = (await db.collection('lectureViews').where('lectureId','==',b.dataset.del).get()).docs;
+        await OMR.commitOps([...vs.map(v => ['delete', v.ref]), ['delete', db.collection('lectures').doc(b.dataset.del)]]);
+        toast('삭제했습니다'); loadLectures();
+      } catch(e){ handleErr(e); }
+    });
+  }
+  function editLecture(l){
+    editingLec = l || null;
+    $('lecModalTitle').textContent = l ? '영상 강의 수정' : '영상 강의 등록';
+    $('lUrl').value = l ? 'https://youtu.be/' + l.videoId : '';
+    $('lTitle').value = l ? l.title : '';
+    $('lClass2').value = l ? l.className : ($('lecClass').value !== '*' ? $('lecClass').value : '전체');
+    $('lUnit').value = l ? (l.unit || '') : '';
+    $('lNote').value = l ? (l.note || '') : '';
+    $('lOpen').checked = l ? l.status === 'open' : true;
+    $('lecMsg').textContent = '';
+    openModal('lecModal');
+  }
+  $('newLecBtn').onclick = () => editLecture(null);
+  $('lecSave').onclick = async () => {
+    const videoId = ytId($('lUrl').value), title = $('lTitle').value.trim();
+    if (!videoId){ $('lecMsg').textContent = '유튜브 링크를 확인하세요.'; return; }
+    if (!title){ $('lecMsg').textContent = '제목을 입력하세요.'; return; }
+    const data = { videoId, title, className: $('lClass2').value, unit: $('lUnit').value.trim(), note: $('lNote').value.trim(),
+      status: $('lOpen').checked ? 'open' : 'hidden', updatedAt: FV.serverTimestamp() };
+    try {
+      if (editingLec) await db.collection('lectures').doc(editingLec.id).update(data);
+      else await db.collection('lectures').add({ ...data, createdAt: FV.serverTimestamp(), createdBy: { uid:me.uid, name:me.name } });
+      closeModal('lecModal'); toast('저장했습니다'); loadLectures();
+    } catch(e){ handleErr(e); }
+  };
+  async function showViews(l){
+    $('lecViews').classList.remove('hidden');
+    $('lecViewsTitle').textContent = l.title + ' · 시청 현황';
+    const body = $('lecViewsBody');
+    body.innerHTML = '<div class="muted">불러오는 중…</div>';
+    try {
+      const vs = {}; (await db.collection('lectureViews').where('lectureId','==',l.id).get()).docs.forEach(d => { vs[d.data().code] = d.data(); });
+      const target = roster.filter(s => l.className === '전체' || s.className === l.className);
+      const rows = target.map(s => ({ s, v: vs[s.code] })).sort((a,b) => ((b.v && b.v.percent) || 0) - ((a.v && a.v.percent) || 0));
+      const done = rows.filter(r => r.v && r.v.completed).length, started = rows.filter(r => r.v).length;
+      body.innerHTML = `<div class="stat-grid"><div class="stat"><div class="k">완강</div><div class="v">${done}<small>/${rows.length}</small></div></div>
+        <div class="stat"><div class="k">시청 시작</div><div class="v">${started}<small>명</small></div></div>
+        <div class="stat"><div class="k">미시청</div><div class="v" style="color:var(--red);">${rows.length - started}<small>명</small></div></div></div>`
+        + rows.map(({s, v}) => `<div class="vrow"><b>${esc(s.name)}</b>
+          <div><div class="bar"><i style="width:${v ? v.percent : 0}%;${v && v.completed ? 'background:var(--ok);' : ''}"></i></div>
+            <div class="muted" style="font-size:11.5px;margin-top:2px;">${v ? `${OMR.fmtDateTime(v.lastAt)} · ${Math.round((v.watchedSec||0)/60)}분 시청` : '미시청'}</div></div>
+          <b style="text-align:right;font-variant-numeric:tabular-nums;">${v ? Math.round(v.percent) + '%' : '–'}</b></div>`).join('')
+        + `<div class="row" style="margin-top:10px;"><button class="btn sm" id="nudgeBtn">미시청 학생 안내 문구 복사</button></div>`;
+      $('nudgeBtn').onclick = () => {
+        const miss = rows.filter(r => !r.v || !r.v.completed).map(r => r.s.name);
+        if (!miss.length) return toast('모두 완강했습니다 👏');
+        copyText(`[엄형국 수학] 영상 강의 ‘${l.title}’ 시청 안내\n아직 완강하지 않은 학생: ${miss.join(', ')}\n시청: ${new URL('watch.html?id=' + l.id, location.href).href}`);
+      };
+      $('lecViews').scrollIntoView({ behavior:'smooth', block:'start' });
+    } catch(e){ body.innerHTML = '<div class="muted">불러오지 못했습니다.</div>'; handleErr(e); }
+  }
+  $('lecViewsClose').onclick = () => $('lecViews').classList.add('hidden');
+
+  // ═════════ 질문 답변 ═════════
+  let qnaState = 'open';
+  $('qnaTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return;
+    [...$('qnaTabs').children].forEach(x => x.classList.toggle('on', x === b)); qnaState = b.dataset.s; loadQna(); };
+  async function refreshQnaBadge(){
+    try { const n = (await db.collection('questions').where('status','==','open').get()).size;
+      $('qnaBadge').textContent = n; $('qnaBadge').classList.toggle('hidden', !n); } catch(e){}
+  }
+  async function loadQna(){
+    const box = $('qnaList');
+    box.innerHTML = '<div class="empty">불러오는 중…</div>';
+    try {
+      const qs = (await db.collection('questions').where('status','==',qnaState).get()).docs.map(d => ({ id:d.id, ...d.data() }))
+        .sort((a,b) => qnaState === 'open' ? (toDate(a.createdAt)||0) - (toDate(b.createdAt)||0) : (toDate(b.answer && b.answer.at)||0) - (toDate(a.answer && a.answer.at)||0))
+        .slice(0, 80);
+      if (!qs.length){ box.innerHTML = `<div class="empty">${qnaState === 'open' ? '답변을 기다리는 질문이 없습니다. 👏' : '답변한 질문이 없습니다.'}</div>`; return; }
+      box.innerHTML = '';
+      qs.forEach(q => box.appendChild(qCard(q)));
+    } catch(e){ box.innerHTML = '<div class="empty">불러오지 못했습니다.</div>'; handleErr(e); }
+  }
+  const thumbs = files => files && files.length ? `<div class="thumbs">${files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><img src="${esc(f.url)}" alt="첨부 사진" loading="lazy"></a>`).join('')}</div>` : '';
+  function qCard(q){
+    const el = document.createElement('div');
+    el.className = 'q';
+    el.innerHTML = `
+      <div class="h"><b>${esc(q.name)}</b><span>${esc(q.className)}</span>${q.subject ? `<span class="pill">${esc(q.subject)}</span>` : ''}<span style="margin-left:auto;">${OMR.fmtDateTime(q.createdAt)}</span></div>
+      <div class="txt">${esc(q.text)}</div>${thumbs(q.files)}
+      ${q.answer ? `<div class="ans"><div class="by">${esc(q.answer.by)} · ${OMR.fmtDateTime(q.answer.at)}</div><div class="txt">${esc(q.answer.text)}</div>${thumbs(q.answer.files)}</div>` : ''}
+      <div class="stack" style="margin-top:10px;">
+        <textarea class="input" data-a placeholder="답변을 입력하세요" style="min-height:90px;">${q.answer ? esc(q.answer.text) : ''}</textarea>
+        <div class="row"><label class="btn sm">📷 답변 사진<input type="file" accept="image/*" multiple hidden data-f></label><span class="muted" data-fn style="font-size:12px;"></span>
+          <button class="btn primary sm" data-send style="margin-left:auto;">${q.answer ? '답변 수정' : '답변 등록'}</button></div>
+      </div>`;
+    let files = [];
+    el.querySelector('[data-f]').onchange = e => { files = [...e.target.files].slice(0, 4); el.querySelector('[data-fn]').textContent = files.length ? `${files.length}장 선택` : ''; };
+    el.querySelector('[data-send]').onclick = async () => {
+      const text = el.querySelector('[data-a]').value.trim();
+      if (!text && !files.length) return toast('답변을 입력하세요');
+      const btn = el.querySelector('[data-send]'); btn.disabled = true; btn.textContent = '등록 중…';
+      try {
+        const up = [];
+        for (const f0 of files){
+          const f = await OMR.shrinkImage(f0);
+          const path = `staffFiles/qna/${OMR.genToken().slice(0,16)}.jpg`;
+          const snap = await firebase.storage().ref(path).put(f, { contentType: f.type });
+          up.push({ path, url: await snap.ref.getDownloadURL(), type: f.type });
+        }
+        const prevFiles = (q.answer && q.answer.files) || [];
+        await db.collection('questions').doc(q.id).update({ status:'answered',
+          answer: { text, files: [...(files.length ? [] : prevFiles), ...up], by: me.name, uid: me.uid, at: FV.serverTimestamp() } });
+        toast('답변을 등록했습니다'); loadQna(); refreshQnaBadge();
+      } catch(e){ handleErr(e); btn.disabled = false; btn.textContent = '답변 등록'; }
+    };
+    return el;
+  }
+
+  // ═════════ 등원 ═════════
+  $('attDate').value = OMR.todayStr();
+  $('attDate').onchange = $('attClass').onchange = () => loadAtt();
+  let attRows = [];
+  async function loadAtt(){
+    const date = $('attDate').value || OMR.todayStr(), cf = $('attClass').value;
+    const box = $('attList');
+    box.innerHTML = '<div class="muted">불러오는 중…</div>';
+    try {
+      const recs = {}; (await db.collection('attendance').where('date','==',date).get()).docs.forEach(d => { recs[d.data().code] = { id:d.id, ...d.data() }; });
+      const list = roster.filter(s => cf === '*' || s.className === cf);
+      attRows = list.map(s => ({ s, r: recs[s.code] })).sort((a,b) => (a.r ? 0 : 1) - (b.r ? 0 : 1) || (toDate(a.r && a.r.inAt)||0) - (toDate(b.r && b.r.inAt)||0));
+      const inN = attRows.filter(x => x.r).length, outN = attRows.filter(x => x.r && x.r.status === 'out').length;
+      $('attKpis').innerHTML = `<div class="stat"><div class="k">등원</div><div class="v">${inN}<small>/${list.length}</small></div></div>
+        <div class="stat"><div class="k">하원</div><div class="v">${outN}<small>명</small></div></div>
+        <div class="stat"><div class="k">미등원</div><div class="v" style="color:var(--red);">${list.length - inN}<small>명</small></div></div>
+        <div class="stat"><div class="k">날짜</div><div class="v" style="font-size:16px;">${esc(kDate(date))}</div></div>`;
+      box.innerHTML = attRows.length ? attRows.map(({s, r}, i) => `
+        <div class="att"><div><b>${esc(s.name)}</b> <span class="muted">${esc(s.className)}</span></div>
+          <span class="t">${r ? `등원 ${OMR.hhmm(r.inAt)}${r.outAt ? ` · 하원 ${OMR.hhmm(r.outAt)}` : ''}` : '<span style="color:var(--red);font-weight:700;">미등원</span>'}</span>
+          ${r ? `<button class="btn sm" data-msg="${i}">알림 문구</button>` : `<button class="btn sm" data-in="${i}">등원 처리</button>`}</div>`).join('')
+        : '<div class="muted">학생이 없습니다.</div>';
+      box.querySelectorAll('[data-msg]').forEach(b => b.onclick = () => copyText(attMsg(attRows[+b.dataset.msg])));
+      box.querySelectorAll('[data-in]').forEach(b => b.onclick = async () => {
+        const { s } = attRows[+b.dataset.in];
+        try { await db.collection('attendance').doc(`${date}_${s.code}`).set({ date, code:s.code, name:s.name, className:s.className, inAt: FV.serverTimestamp(), status:'in', manualBy: me.name });
+          loadAtt(); } catch(e){ handleErr(e); }
+      });
+    } catch(e){ box.innerHTML = '<div class="muted">불러오지 못했습니다.</div>'; handleErr(e); }
+  }
+  const attMsg = ({ s, r }) => r.status === 'out'
+    ? `[엄형국 수학] ${s.name} 학생이 ${OMR.hhmm(r.outAt)}에 하원했습니다. (등원 ${OMR.hhmm(r.inAt)})`
+    : `[엄형국 수학] ${s.name} 학생이 ${OMR.hhmm(r.inAt)}에 등원했습니다.`;
+  $('attCopy').onclick = () => { const rows = attRows.filter(x => x.r); if (!rows.length) return toast('등원한 학생이 없습니다'); copyText(rows.map(attMsg).join('\n')); };
+  $('attCsv').onclick = async () => {
+    let phones = {};
+    if (me.role === 'admin'){ try { (await db.collection('omrStudents').get()).docs.forEach(d => { phones[d.data().code] = d.data(); }); } catch(e){} }
+    OMR.downloadCsv(`등원_${$('attDate').value}.csv`, [['이름','반','등원','하원','학부모 연락처','메시지'],
+      ...attRows.map(x => [x.s.name, x.s.className, x.r ? OMR.hhmm(x.r.inAt) : '미등원', x.r && x.r.outAt ? OMR.hhmm(x.r.outAt) : '',
+        OMR.fmtPhone((phones[x.s.code] || {}).parentPhone), x.r ? attMsg(x) : ''])]);
+  };
+
+  // ═════════ 학생 기록 ═════════
+  const TAGS = ['상담','학습','생활','학부모','기타'];
+  $('noteClass').onchange = () => {
+    const list = roster.filter(s => s.className === $('noteClass').value);
+    $('notePick').innerHTML = list.map(s => `<button data-code="${esc(s.code)}">${esc(s.name)}</button>`).join('');
+    $('noteBody').innerHTML = '';
+    $('notePick').querySelectorAll('button').forEach(b => b.onclick = () => {
+      $('notePick').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      openStudent(roster.find(s => s.code === b.dataset.code));
+    });
+  };
+  async function openStudent(s){
+    const box = $('noteBody');
+    box.innerHTML = '<div class="empty">불러오는 중…</div>';
+    const safe = p => p.then(q => q.docs.map(d => ({ id:d.id, ...d.data() }))).catch(e => { console.warn(e); return []; });
+    const [notes, reports, att, bks, qs] = await Promise.all([
+      safe(db.collection('studentNotes').where('code','==',s.code).get()),
+      db.collection('dailyReportLinks').doc(s.code).get().then(d => d.exists ? (d.data().items || []) : []).catch(() => []),
+      safe(db.collection('attendance').where('code','==',s.code).get()),
+      safe(db.collection('clinicBookings').where('code','==',s.code).get()),
+      safe(db.collection('questions').where('code','==',s.code).get()),
+    ]);
+    const scored = reports.filter(r => r.score != null && !r.absent);
+    const avgPct = scored.length ? Math.round(scored.reduce((a, r) => a + r.score / (r.max || 100) * 100, 0) / scored.length) : null;
+    const since30 = OMR.todayStr(new Date(Date.now() - 30 * 864e5));
+    const att30 = att.filter(a => a.date >= since30).length;
+    const events = [
+      ...notes.map(n => ({ t: toDate(n.at), cls:'note', h:`${n.tag || '기록'} · ${n.by || ''}`, x: n.text, id:n.id })),
+      ...reports.map(r => ({ t: new Date(r.date + 'T12:00:00'), h:'데일리 리포트' + (r.title ? ' · ' + r.title : ''), x: r.absent ? '결석' : r.score != null ? `복습 테스트 ${r.score}/${r.max}점 (반 평균 ${r.avg ?? '–'})` : '리포트 발행', link: r.token ? 'daily-report.html?t=' + r.token : null })),
+      ...bks.map(b => ({ t: toDate(b.bookedAt), h:'클리닉 예약', x: (b.attended === true ? '참석' : b.attended === false ? '불참' : '예약') + (b.memo ? ' · ' + b.memo : '') })),
+      ...qs.map(q => ({ t: toDate(q.createdAt), h:'질문' + (q.status === 'answered' ? ' · 답변 완료' : ' · 답변 대기'), x: q.text.slice(0, 80) })),
+    ].filter(e => e.t).sort((a,b) => b.t - a.t).slice(0, 60);
+    box.innerHTML = `
+      <div class="card">
+        <div class="row between"><div><h2 style="margin:0;">${esc(s.name)}</h2><p class="muted">${esc(s.className)}</p></div></div>
+        <div class="kpis">
+          <div class="stat"><div class="k">복습 테스트 평균</div><div class="v">${avgPct != null ? avgPct + '<small>%</small>' : '–'}</div></div>
+          <div class="stat"><div class="k">최근 30일 등원</div><div class="v">${att30}<small>회</small></div></div>
+          <div class="stat"><div class="k">클리닉</div><div class="v">${bks.length}<small>회</small></div></div>
+          <div class="stat"><div class="k">질문</div><div class="v">${qs.length}<small>개</small></div></div>
+        </div>
+        <label class="f">새 기록</label>
+        <div class="tagsel" id="tagSel">${TAGS.map((t,i) => `<button class="${i === 0 ? 'on' : ''}" data-t="${t}">${t}</button>`).join('')}</div>
+        <textarea class="input" id="noteText" style="margin-top:8px;min-height:80px;" placeholder="상담 내용, 학습 태도, 학부모 요청 사항 등"></textarea>
+        <div class="row" style="margin-top:8px;"><button class="btn primary" id="noteSave">기록 저장</button><span class="muted" style="font-size:12px;">선생님·조교만 볼 수 있습니다.</span></div>
+      </div>
+      <div class="card"><h2>타임라인</h2>
+        ${events.length ? `<div class="tl">${events.map(e => `<div class="tl-i ${e.cls || ''}"><div class="d">${e.t.getMonth()+1}/${e.t.getDate()} (${DOW[e.t.getDay()]}) · ${esc(e.h)}</div>
+          <div class="x">${esc(e.x)}${e.link ? ` <a href="${esc(e.link)}" target="_blank" rel="noopener" style="font-size:12.5px;">리포트 ↗</a>` : ''}
+          ${e.cls === 'note' ? ` <button class="btn sm ghost" data-delnote="${esc(e.id)}" style="padding:2px 6px;">삭제</button>` : ''}</div></div>`).join('')}</div>`
+          : '<div class="muted">아직 기록이 없습니다.</div>'}
+      </div>`;
+    let tag = TAGS[0];
+    $('tagSel').onclick = e => { const b = e.target.closest('button'); if (!b) return; tag = b.dataset.t; $('tagSel').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
+    $('noteSave').onclick = async () => {
+      const text = $('noteText').value.trim(); if (!text) return toast('내용을 입력하세요');
+      try { await db.collection('studentNotes').add({ code:s.code, name:s.name, className:s.className, tag, text, by: me.name, uid: me.uid, at: FV.serverTimestamp() });
+        toast('저장했습니다'); openStudent(s); } catch(e){ handleErr(e); }
+    };
+    box.querySelectorAll('[data-delnote]').forEach(b => b.onclick = async () => {
+      if (!confirm('이 기록을 삭제할까요?')) return;
+      try { await db.collection('studentNotes').doc(b.dataset.delnote).delete(); openStudent(s); } catch(e){ handleErr(e); }
+    });
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>클리닉 예약 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=5">
+<style>
+  .mine{background:var(--ink);color:#fff;border-radius:14px;padding:16px;margin-bottom:14px;}
+  .mine .k{font-size:11.5px;font-weight:800;letter-spacing:.12em;color:#ff7a6c;}
+  .mine-i{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.12);}
+  .mine-i:last-child{border-bottom:0;padding-bottom:0;}
+  .mine-i .t{font-weight:800;} .mine-i .m{font-size:12.5px;opacity:.7;}
+  .mine-i .btn{margin-left:auto;background:transparent;color:#fff;border-color:rgba(255,255,255,.3);}
+  .days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;scrollbar-width:none;}
+  .days::-webkit-scrollbar{display:none;}
+  .day{flex:0 0 auto;width:58px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 0;text-align:center;}
+  .day b{display:block;font-size:19px;font-weight:900;line-height:1.1;} .day span{font-size:11px;color:var(--dim);font-weight:700;}
+  .day.on{background:var(--ink);color:#fff;border-color:var(--ink);} .day.on span{color:rgba(255,255,255,.7);}
+  .day i{display:block;width:5px;height:5px;border-radius:50%;background:var(--red);margin:4px auto 0;}
+  .slot{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:8px;width:100%;text-align:left;}
+  .slot:hover:not([disabled]){border-color:var(--ink);}
+  .slot[disabled]{opacity:.55;cursor:default;}
+  .slot .tm{font-weight:900;font-size:17px;font-variant-numeric:tabular-nums;}
+  .slot .m{font-size:12.5px;color:var(--dim);}
+  .slot .seats{margin-left:auto;text-align:right;font-size:12px;color:var(--dim);font-weight:700;min-width:62px;}
+  .slot .seats b{display:block;font-size:15px;color:var(--ok);}
+  .slot .seats b.few{color:var(--warn);} .slot .seats b.full{color:var(--red);}
+  .slot.booked{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="index.html">← 엄형국 <span>수학</span></a>
+    <span class="sub" id="whoami"></span>
+  </div>
+  <div class="kicker">CLINIC</div>
+  <h1>클리닉 예약</h1>
+  <p class="lead">원하는 시간을 눌러 예약하세요. 선착순이며, 예약 취소도 여기서 할 수 있어요.</p>
+  <div id="mine"></div>
+  <div class="days" id="days"></div>
+  <div id="slots"><div class="empty">불러오는 중…</div></div>
+</div>
+
+<div class="modal-bg hidden" id="bookModal">
+  <div class="modal">
+    <h2 id="bmTitle"></h2>
+    <p class="muted" id="bmMeta"></p>
+    <label class="f" style="margin-top:12px;">선생님께 남길 말 (선택)</label>
+    <input class="input" id="bmMemo" maxlength="200" placeholder="예: 명제 대우 증명 질문하고 싶어요">
+    <div class="row" style="margin-top:16px;"><button class="btn grow" id="bmNo">닫기</button><button class="btn red grow" id="bmYes">예약하기</button></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=5"></script>
+<script>
+(async function(){
+  const { db, FV, esc, toast } = OMR;
+  const $ = id => document.getElementById(id);
+  const me = await OMR.requireStudent(); if (!me) return;
+  $('whoami').textContent = me.name;
+  const DOW = '일월화수목금토';
+  let slots = [], mine = new Set(), curDay = null, picking = null;
+
+  const past = s => new Date(`${s.date}T${s.end}:00`) < new Date();
+  async function load(){
+    try {
+      const today = OMR.todayStr();
+      slots = (await db.collection('clinicSlots').get()).docs.map(d => ({ id:d.id, ...d.data() }))
+        .filter(s => s.date >= today && (s.className === '전체' || s.className === me.className) && !past(s))
+        .sort((a,b) => (a.date + a.start).localeCompare(b.date + b.start));
+      const got = await Promise.all(slots.map(s => db.collection('clinicBookings').doc(`${s.id}_${me.code}`).get().then(x => x.exists).catch(() => false)));
+      mine = new Set(slots.filter((s, i) => got[i]).map(s => s.id));
+    } catch(e){ console.error(e); $('slots').innerHTML = '<div class="empty">불러오지 못했습니다. 잠시 후 다시 시도하세요.</div>'; return; }
+    render();
+  }
+  function render(){
+    const my = slots.filter(s => mine.has(s.id));
+    $('mine').innerHTML = my.length ? `<div class="mine"><div class="k">내 예약</div>${my.map(s => `
+      <div class="mine-i"><div><div class="t">${esc(OMR.fmtKDate(s.date))} ${esc(s.start)}–${esc(s.end)}</div>
+        <div class="m">${[s.place, s.staff].filter(Boolean).map(esc).join(' · ') || '클리닉'}</div></div>
+        <button class="btn sm" data-cancel="${esc(s.id)}">취소</button></div>`).join('')}</div>` : '';
+    $('mine').querySelectorAll('[data-cancel]').forEach(b => b.onclick = () => cancel(slots.find(s => s.id === b.dataset.cancel)));
+
+    const dates = [...new Set(slots.map(s => s.date))];
+    if (!dates.length){ $('days').innerHTML = ''; $('slots').innerHTML = '<div class="empty">지금은 열린 클리닉 시간이 없어요.<br>선생님이 시간을 열면 여기에 나타납니다.</div>'; return; }
+    if (!dates.includes(curDay)) curDay = dates[0];
+    $('days').innerHTML = dates.map(d => { const x = new Date(d + 'T00:00:00');
+      return `<button class="day ${d === curDay ? 'on' : ''}" data-d="${d}"><span>${x.getMonth()+1}월</span><b>${x.getDate()}</b><span>${DOW[x.getDay()]}</span>${slots.some(s => s.date === d && mine.has(s.id)) ? '<i></i>' : ''}</button>`; }).join('');
+    $('days').querySelectorAll('.day').forEach(b => b.onclick = () => { curDay = b.dataset.d; render(); });
+    const list = slots.filter(s => s.date === curDay);
+    $('slots').innerHTML = list.map(s => {
+      const left = s.capacity - (s.count || 0), isMine = mine.has(s.id), closed = s.status !== 'open';
+      const cls = left <= 0 ? 'full' : left <= 2 ? 'few' : '';
+      return `<button class="slot ${isMine ? 'booked' : ''}" data-id="${esc(s.id)}" ${(!isMine && (left <= 0 || closed)) ? 'disabled' : ''}>
+        <div><div class="tm">${esc(s.start)}–${esc(s.end)}</div>
+          <div class="m">${[s.place, s.staff, s.note].filter(Boolean).map(esc).join(' · ') || '클리닉'}</div></div>
+        <div class="seats">${isMine ? '<b style="color:var(--ink);">예약함 ✓</b>' : closed ? '<b class="full">닫힘</b>' : left <= 0 ? '<b class="full">마감</b>' : `<b class="${cls}">${left}자리</b>남음`}</div></button>`;
+    }).join('');
+    $('slots').querySelectorAll('.slot').forEach(b => b.onclick = () => {
+      const s = slots.find(x => x.id === b.dataset.id);
+      if (mine.has(s.id)) return cancel(s);
+      picking = s;
+      $('bmTitle').textContent = `${OMR.fmtKDate(s.date)} ${s.start}–${s.end}`;
+      $('bmMeta').textContent = [s.place, s.staff && '담당 ' + s.staff, s.note].filter(Boolean).join(' · ') || '클리닉';
+      $('bmMemo').value = '';
+      $('bookModal').classList.remove('hidden');
+    });
+  }
+  $('bmNo').onclick = () => $('bookModal').classList.add('hidden');
+  $('bmYes').onclick = async () => {
+    const s = picking; if (!s) return;
+    $('bmYes').disabled = true;
+    try {
+      const bt = db.batch();
+      bt.set(db.collection('clinicBookings').doc(`${s.id}_${me.code}`), {
+        slotId: s.id, code: me.code, name: me.name, className: me.className, memo: $('bmMemo').value.trim().slice(0, 200), bookedAt: FV.serverTimestamp() });
+      bt.update(db.collection('clinicSlots').doc(s.id), { count: FV.increment(1) });
+      await bt.commit();
+      $('bookModal').classList.add('hidden');
+      toast('예약했어요');
+    } catch(e){ console.error(e); toast('예약하지 못했어요. 자리가 마감됐을 수 있어요.'); }
+    $('bmYes').disabled = false;
+    load();
+  };
+  async function cancel(s){
+    if (!confirm(`${OMR.fmtKDate(s.date)} ${s.start} 예약을 취소할까요?`)) return;
+    try {
+      const bt = db.batch();
+      bt.delete(db.collection('clinicBookings').doc(`${s.id}_${me.code}`));
+      bt.update(db.collection('clinicSlots').doc(s.id), { count: FV.increment(-1) });
+      await bt.commit(); toast('취소했어요');
+    } catch(e){ console.error(e); toast('취소하지 못했어요. 예약이 닫혔다면 선생님께 말씀해 주세요.'); }
+    load();
+  }
+  load();
+})();
+</script>
+</body>
+</html>

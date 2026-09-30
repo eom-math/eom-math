@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="omr.css?v=4">
+<link rel="stylesheet" href="omr.css?v=5">
 <style>
   :root{ --hl:#FFE45C; --hl-soft:#FFF6BF; }
   .who-badge{font-size:12px;font-weight:800;padding:4px 9px;border-radius:99px;background:var(--bg2);}
@@ -197,6 +197,7 @@
       <div class="row" style="margin-bottom:8px;gap:6px;">
         <button class="btn sm" id="csvBtn">CSV 받기</button>
         <button class="btn sm" id="copyAllBtn">전체 메시지 복사</button>
+        <button class="btn sm" id="printAllBtn">🖨 반 전체 종이 리포트</button>
       </div>
       <div id="pubList"></div>
     </div>
@@ -232,7 +233,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=4"></script>
+<script src="common.js?v=5"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, genToken, round } = OMR;
@@ -275,7 +276,7 @@
     $('whoBadge').textContent = me.role === 'admin' ? '선생님' : '조교 · ' + me.name;
     $('whoBadge').className = 'who-badge' + (me.role === 'admin' ? ' admin' : '');
     document.querySelectorAll('.admin-only').forEach(el => el.classList.toggle('hidden', me.role !== 'admin'));
-    $('adminNav').innerHTML = me.role === 'admin' ? OMR.adminNav('daily.html') : '';
+    $('adminNav').innerHTML = OMR.staffNav('daily.html', me.role);
     $('mainTabs').querySelector('[data-tab="lessons"]').click();
     show('vMain');
     await loadRoster();
@@ -716,6 +717,7 @@
     $('pubList').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copyText(rows[+b.dataset.copy].url));
     $('pubList').querySelectorAll('[data-msg]').forEach(b => b.onclick = () => copyText(rows[+b.dataset.msg].msg));
   }
+  $('printAllBtn').onclick = () => window.open('daily-report.html?batch=' + encodeURIComponent(lesson.id), '_blank');
   $('copyAllBtn').onclick = () => copyText(publishedRows().map(r => r.msg).join('\n\n────────\n\n'));
   $('csvBtn').onclick = async () => {
     const rows = publishedRows();

@@ -40,3 +40,19 @@
         && (omrAdmin() || (request.auth != null
         && firestore.exists(/databases/(default)/documents/omrStaff/$(request.auth.uid))));
     }
+
+    // 질문 사진: qna/{학생코드}/{파일} — 등록된 코드만 10MB 이하 사진 업로드
+    match /qna/{code}/{file} {
+      allow read: if true;
+      allow create: if request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*')
+        && firestore.exists(/databases/(default)/documents/omrCodes/$(code));
+      allow delete: if omrAdmin() || (request.auth != null
+        && firestore.exists(/databases/(default)/documents/omrStaff/$(request.auth.uid)));
+    }
+    // 답변 사진·강의 자료: staffFiles/{종류}/{파일} — 선생님·조교만 올림
+    match /staffFiles/{kind}/{file} {
+      allow read: if true;
+      allow create, delete: if omrAdmin() || (request.auth != null
+        && firestore.exists(/databases/(default)/documents/omrStaff/$(request.auth.uid)));
+    }

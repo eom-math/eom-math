@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>질문하기 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=5">
+<style>
+  .subj{display:flex;gap:6px;flex-wrap:wrap;}
+  .subj button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--dim);}
+  .subj button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .pics{display:flex;gap:8px;flex-wrap:wrap;}
+  .pic{position:relative;width:78px;height:78px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--bg2);}
+  .pic img{width:100%;height:100%;object-fit:cover;}
+  .pic button{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(17,17,20,.7);color:#fff;font-size:13px;}
+  .pic.add{display:flex;flex-direction:column;align-items:center;justify-content:center;border-style:dashed;background:#fff;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--dim);}
+  .pic.add b{font-size:22px;color:var(--ink);line-height:1;}
+  .qi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;}
+  .qi .h{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--dim);margin-bottom:6px;}
+  .qi .txt{white-space:pre-wrap;font-size:14.5px;line-height:1.6;word-break:keep-all;}
+  .thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .thumbs img{width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--line);}
+  .ans{margin-top:12px;background:var(--bg2);border-radius:10px;padding:12px;position:relative;}
+  .ans::before{content:"A";position:absolute;left:12px;top:10px;font-weight:900;color:var(--red);}
+  .ans .by{font-size:12px;font-weight:800;color:var(--dim);margin:0 0 4px 18px;}
+  .ans .txt{margin-left:18px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="index.html">← 엄형국 <span>수학</span></a>
+    <span class="sub" id="whoami"></span>
+  </div>
+  <div class="kicker">Q&amp;A</div>
+  <h1>질문하기</h1>
+  <p class="lead">모르는 문제를 사진으로 찍어 올리면 선생님·조교가 답해 드려요.</p>
+
+  <div class="card stack">
+    <div><label class="f">과목</label><div class="subj" id="subj"></div></div>
+    <div><label class="f">질문 내용</label>
+      <textarea class="input" id="qText" maxlength="3000" placeholder="예: 쎈 B 215번, 대우를 쓰는 이유를 모르겠어요. 제 풀이는 사진처럼 했는데 어디서 막혔는지 궁금해요."></textarea></div>
+    <div><label class="f">사진 (최대 4장)</label><div class="pics" id="pics"></div></div>
+    <button class="btn red block" id="sendBtn">질문 보내기</button>
+    <p class="muted" id="sendMsg"></p>
+  </div>
+
+  <h2 style="margin-top:22px;">내 질문</h2>
+  <div id="list"><div class="empty">불러오는 중…</div></div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="common.js?v=5"></script>
+<script>
+(async function(){
+  const { db, FV, esc, toast, toDate } = OMR;
+  const $ = id => document.getElementById(id);
+  const me = await OMR.requireStudent(); if (!me) return;
+  $('whoami').textContent = me.name;
+  const SUBJ = ['공통수학1','공통수학2','대수','미적분','확률과 통계','기하','기타'];
+  let subject = null, files = [];
+  $('subj').innerHTML = SUBJ.map(s => `<button type="button">${s}</button>`).join('');
+  $('subj').querySelectorAll('button').forEach(b => b.onclick = () => { subject = subject === b.textContent ? null : b.textContent;
+    $('subj').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.textContent === subject)); });
+
+  function drawPics(){
+    $('pics').innerHTML = files.map((f, i) => `<div class="pic"><img src="${URL.createObjectURL(f)}" alt=""><button data-i="${i}" aria-label="삭제">×</button></div>`).join('')
+      + (files.length < 4 ? `<label class="pic add"><b>+</b>사진<input type="file" accept="image/*" multiple hidden id="picIn"></label>` : '');
+    $('pics').querySelectorAll('[data-i]').forEach(b => b.onclick = () => { files.splice(+b.dataset.i, 1); drawPics(); });
+    const inp = $('picIn'); if (inp) inp.onchange = e => { files = [...files, ...e.target.files].slice(0, 4); drawPics(); };
+  }
+  drawPics();
+
+  $('sendBtn').onclick = async () => {
+    const text = $('qText').value.trim();
+    if (!text && !files.length){ $('sendMsg').textContent = '질문 내용이나 사진을 올려 주세요.'; return; }
+    $('sendBtn').disabled = true; $('sendMsg').textContent = '보내는 중…';
+    try {
+      const up = [];
+      for (const f0 of files){
+        const f = await OMR.shrinkImage(f0);
+        const path = `qna/${me.code}/${OMR.genToken().slice(0,16)}.jpg`;
+        const snap = await firebase.storage().ref(path).put(f, { contentType: f.type || 'image/jpeg' });
+        up.push({ path, url: await snap.ref.getDownloadURL(), type: f.type || 'image/jpeg' });
+      }
+      const ref = db.collection('questions').doc();
+      await ref.set({ code: me.code, name: me.name, className: me.className, subject: subject || '', text: text || '(사진 질문)', files: up, status: 'open', createdAt: FV.serverTimestamp() });
+      const lk = await db.collection('questionLinks').doc(me.code).get();
+      const items = (lk.exists ? lk.data().items || [] : []).concat({ id: ref.id, at: new Date().toISOString(), preview: (text || '사진 질문').slice(0, 40) }).slice(-300);
+      await db.collection('questionLinks').doc(me.code).set({ items });
+      $('qText').value = ''; files = []; subject = null; drawPics();
+      $('subj').querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      $('sendMsg').textContent = ''; toast('질문을 보냈어요');
+      loadList();
+    } catch(e){ console.error(e); $('sendMsg').textContent = '보내지 못했어요. 잠시 후 다시 시도해 주세요.'; }
+    $('sendBtn').disabled = false;
+  };
+
+  const thumbs = fs => fs && fs.length ? `<div class="thumbs">${fs.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><img src="${esc(f.url)}" alt="첨부 사진" loading="lazy"></a>`).join('')}</div>` : '';
+  async function loadList(){
+    try {
+      const lk = await db.collection('questionLinks').doc(me.code).get();
+      const ids = (lk.exists ? lk.data().items || [] : []).slice().reverse().slice(0, 30);
+      if (!ids.length){ $('list').innerHTML = '<div class="empty">아직 보낸 질문이 없어요.</div>'; return; }
+      const qs = await Promise.all(ids.map(x => db.collection('questions').doc(x.id).get().then(s => s.exists ? { id:s.id, ...s.data() } : null).catch(() => null)));
+      $('list').innerHTML = qs.filter(Boolean).map(q => `
+        <div class="qi"><div class="h">${q.subject ? `<span class="pill">${esc(q.subject)}</span>` : ''}<span>${OMR.fmtDateTime(q.createdAt)}</span>
+          <span class="pill ${q.status === 'answered' ? 'open' : 'closed'}" style="margin-left:auto;">${q.status === 'answered' ? '답변 완료' : '답변 대기'}</span></div>
+          <div class="txt">${esc(q.text)}</div>${thumbs(q.files)}
+          ${q.answer ? `<div class="ans"><div class="by">${esc(q.answer.by)} · ${OMR.fmtDateTime(q.answer.at)}</div><div class="txt">${esc(q.answer.text)}</div>${thumbs(q.answer.files)}</div>` : ''}
+        </div>`).join('') || '<div class="empty">아직 보낸 질문이 없어요.</div>';
+    } catch(e){ console.error(e); $('list').innerHTML = '<div class="empty">불러오지 못했습니다.</div>'; }
+  }
+  loadList();
+})();
+</script>
+</body>
+</html>
