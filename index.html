@@ -297,6 +297,23 @@
   @media (prefers-reduced-motion: reduce){ *{ animation:none !important; opacity:1 !important; transform:none !important; } }
   :focus-visible{ outline:2px solid var(--red); outline-offset:3px; }
 
+
+  /* ---------- grouped sections ---------- */
+  section.group{ padding:64px 0 0; }
+  .section-head h2 em{ font-style:normal; font-weight:600; letter-spacing:0; color:var(--dim); margin-left:8px; text-transform:none; }
+  .sub-head{ font-size:13px; font-weight:800; color:var(--ink); margin:30px 0 12px; display:flex; align-items:center; gap:8px; }
+  .sub-head::before{ content:""; width:14px; height:2px; background:var(--red); }
+  #materials .section-head + .sub-head{ margin-top:4px; }
+  .game-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .game-grid .tower-cta{ margin:0; flex-direction:column; align-items:flex-start; gap:18px; padding:20px 18px; min-height:150px; }
+  .game-grid .tower-cta-sub{ line-height:1.45; }
+  @media (max-width:640px){
+    .game-grid{ grid-template-columns:1fr; }
+    .game-grid .tower-cta{ flex-direction:row; align-items:center; min-height:0; gap:14px; }
+  }
+  section.group .omr-cta{ margin-top:0; }
+  #materials .stats{ border-top:1px solid var(--line); }
+
   /* ---------- hero slider ---------- */
   .hero-slider{ position:relative; }
   .slides{ display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth;
@@ -435,86 +452,39 @@
       <a class="cta" href="https://open.kakao.com/o/gvaZ3mHi" target="_blank" rel="noopener">상담 신청 →</a>
     </div>
   </div>
-  <div class="stats" id="stats">
-    <div class="stat" data-key="megastudy">
-      <button class="stat-head" type="button">
-        <span><span class="k">Career</span><span class="v">메가스터디학원</span></span>
-        <span class="u">자료함 열기 ↓</span>
-      </button>
-      <div class="stat-panel" hidden>
-        <ul class="file-list"><li class="empty">불러오는 중...</li></ul>
-        <label class="admin-upload" hidden>
-          <input type="file" class="file-input">
-          <span class="upload-btn">+ 파일 업로드</span>
-        </label>
-      </div>
-    </div>
-    <div class="stat" data-key="megastudy-russel">
-      <button class="stat-head" type="button">
-        <span><span class="k">Career</span><span class="v">메가스터디 러셀</span></span>
-        <span class="u">자료함 열기 ↓</span>
-      </button>
-      <div class="stat-panel" hidden>
-        <ul class="file-list"><li class="empty">불러오는 중...</li></ul>
-        <label class="admin-upload" hidden>
-          <input type="file" class="file-input">
-          <span class="upload-btn">+ 파일 업로드</span>
-        </label>
-      </div>
-    </div>
-    <div class="stat" data-key="daechi-sangsang">
-      <button class="stat-head" type="button">
-        <span><span class="k">Career</span><span class="v">대치 상상학원</span></span>
-        <span class="u">자료함 열기 ↓</span>
-      </button>
-      <div class="stat-panel" hidden>
-        <ul class="file-list"><li class="empty">불러오는 중...</li></ul>
-        <label class="admin-upload" hidden>
-          <input type="file" class="file-input">
-          <span class="upload-btn">+ 파일 업로드</span>
-        </label>
-      </div>
-    </div>
-    <div class="stat" data-key="daechi-snt">
-      <button class="stat-head" type="button">
-        <span><span class="k">Career</span><span class="v">대치 SNT학원</span></span>
-        <span class="u">자료함 열기 ↓</span>
-      </button>
-      <div class="stat-panel" hidden>
-        <ul class="file-list"><li class="empty">불러오는 중...</li></ul>
-        <label class="admin-upload" hidden>
-          <input type="file" class="file-input">
-          <span class="upload-btn">+ 파일 업로드</span>
-        </label>
-      </div>
-    </div>
-  </div>
+  <section class="group" id="games">
+    <div class="section-head"><h2>Game <em>개념 퀴즈 게임</em></h2><span>01</span></div>
+    <div class="game-grid">
+    <a class="tower-cta" href="tower.html?mode=tower">
+      <span class="tower-cta-badge">NEW</span>
+      <span class="tower-cta-body">
+        <span class="tower-cta-title">개념의 탑</span>
+        <span class="tower-cta-sub">15초 개념 퀴즈 →</span>
+      </span>
+    </a>
 
-  <a class="tower-cta" id="games" href="tower.html?mode=tower">
-    <span class="tower-cta-badge">NEW</span>
-    <span class="tower-cta-body">
-      <span class="tower-cta-title">개념의 탑</span>
-      <span class="tower-cta-sub">15초 개념 퀴즈 →</span>
-    </span>
-  </a>
+    <a class="tower-cta monster-cta" href="tower.html?mode=monster">
+      <span class="tower-cta-badge monster-badge">⚔</span>
+      <span class="tower-cta-body">
+        <span class="tower-cta-title">수학몬스터</span>
+        <span class="tower-cta-sub">10초 안에 몬스터와 대결하는 개념 퀴즈 →</span>
+      </span>
+    </a>
 
-  <a class="tower-cta monster-cta" href="tower.html?mode=monster">
-    <span class="tower-cta-badge monster-badge">⚔</span>
-    <span class="tower-cta-body">
-      <span class="tower-cta-title">수학몬스터</span>
-      <span class="tower-cta-sub">10초 안에 몬스터와 대결하는 개념 퀴즈 →</span>
-    </span>
-  </a>
+    <a class="tower-cta penguin-cta" href="tower.html?mode=penguin">
+      <span class="tower-cta-badge penguin-badge">🐧</span>
+      <span class="tower-cta-body">
+        <span class="tower-cta-title">수학 펭귄</span>
+        <span class="tower-cta-sub">8초 안에 장애물을 피하는 개념 퀴즈 →</span>
+      </span>
+    </a>
 
-  <a class="tower-cta penguin-cta" href="tower.html?mode=penguin">
-    <span class="tower-cta-badge penguin-badge">🐧</span>
-    <span class="tower-cta-body">
-      <span class="tower-cta-title">수학 펭귄</span>
-      <span class="tower-cta-sub">8초 안에 장애물을 피하는 개념 퀴즈 →</span>
-    </span>
-  </a>
+    </div>
+  </section>
 
-  <a class="tower-cta omr-cta" id="omr" href="omr/">
+  <section class="group" id="omr">
+    <div class="section-head"><h2>Test <em>시험 · 성적</em></h2><span>02</span></div>
+  <a class="tower-cta omr-cta" href="omr/">
     <span class="tower-cta-badge">OMR</span>
     <span class="tower-cta-body">
       <span class="tower-cta-title">모바일 OMR 답안 제출</span>
@@ -522,8 +492,11 @@
     </span>
   </a>
 
-  <section class="curriculum" id="curriculum">
-    <div class="section-head"><h2>Curriculum</h2><span>03</span></div>
+  </section>
+
+  <section class="group" id="materials">
+    <div class="section-head"><h2>Library <em>자료실</em></h2><span>03</span></div>
+    <h3 class="sub-head" id="curriculum">커리큘럼별 자료</h3>
     <div class="curri-list">
 
       <div class="curri-item" data-key="concept-cliche">
@@ -595,10 +568,66 @@
       </div>
 
     </div>
+    <h3 class="sub-head">출강 학원별 자료</h3>
+  <div class="stats" id="stats">
+    <div class="stat" data-key="megastudy">
+      <button class="stat-head" type="button">
+        <span><span class="k">Career</span><span class="v">메가스터디학원</span></span>
+        <span class="u">자료함 열기 ↓</span>
+      </button>
+      <div class="stat-panel" hidden>
+        <ul class="file-list"><li class="empty">불러오는 중...</li></ul>
+        <label class="admin-upload" hidden>
+          <input type="file" class="file-input">
+          <span class="upload-btn">+ 파일 업로드</span>
+        </label>
+      </div>
+    </div>
+    <div class="stat" data-key="megastudy-russel">
+      <button class="stat-head" type="button">
+        <span><span class="k">Career</span><span class="v">메가스터디 러셀</span></span>
+        <span class="u">자료함 열기 ↓</span>
+      </button>
+      <div class="stat-panel" hidden>
+        <ul class="file-list"><li class="empty">불러오는 중...</li></ul>
+        <label class="admin-upload" hidden>
+          <input type="file" class="file-input">
+          <span class="upload-btn">+ 파일 업로드</span>
+        </label>
+      </div>
+    </div>
+    <div class="stat" data-key="daechi-sangsang">
+      <button class="stat-head" type="button">
+        <span><span class="k">Career</span><span class="v">대치 상상학원</span></span>
+        <span class="u">자료함 열기 ↓</span>
+      </button>
+      <div class="stat-panel" hidden>
+        <ul class="file-list"><li class="empty">불러오는 중...</li></ul>
+        <label class="admin-upload" hidden>
+          <input type="file" class="file-input">
+          <span class="upload-btn">+ 파일 업로드</span>
+        </label>
+      </div>
+    </div>
+    <div class="stat" data-key="daechi-snt">
+      <button class="stat-head" type="button">
+        <span><span class="k">Career</span><span class="v">대치 SNT학원</span></span>
+        <span class="u">자료함 열기 ↓</span>
+      </button>
+      <div class="stat-panel" hidden>
+        <ul class="file-list"><li class="empty">불러오는 중...</li></ul>
+        <label class="admin-upload" hidden>
+          <input type="file" class="file-input">
+          <span class="upload-btn">+ 파일 업로드</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
   </section>
 
   <section class="links" id="channel">
-    <div class="section-head"><h2>Channel</h2><span>04</span></div>
+    <div class="section-head"><h2>Channel <em>소식 · 상담</em></h2><span>04</span></div>
 
     <a class="link-row" href="https://www.instagram.com/mathcliche/" target="_blank" rel="noopener">
       <div class="lt">
@@ -646,18 +675,18 @@
   <nav>
     <a href="#intro" data-spy="intro"><span class="n">01</span>소개</a>
     <a href="#profile" data-spy="profile"><span class="n">02</span>선생님 · 상담</a>
-    <a href="#stats" data-spy="stats"><span class="n">03</span>경력 · 자료함</a>
-    <a href="#games" data-spy="games"><span class="n">04</span>개념 퀴즈 게임</a>
+    <a href="#games" data-spy="games"><span class="n">03</span>개념 퀴즈 게임</a>
     <a class="sub" href="tower.html?mode=tower">개념의 탑</a>
     <a class="sub" href="tower.html?mode=monster">수학몬스터</a>
     <a class="sub" href="tower.html?mode=penguin">수학 펭귄</a>
-    <a href="#omr" data-spy="omr"><span class="n">05</span>모바일 OMR</a>
-    <a href="#curriculum" data-spy="curriculum"><span class="n">06</span>커리큘럼</a>
+    <a href="#omr" data-spy="omr"><span class="n">04</span>시험 · 성적 (OMR)</a>
+    <a href="#materials" data-spy="materials"><span class="n">05</span>자료실</a>
     <a class="sub" href="#curriculum" data-open="concept-cliche">개념 클리셰</a>
     <a class="sub" href="#curriculum" data-open="mise-en-scene">심화 미장센</a>
     <a class="sub" href="#curriculum" data-open="gichul-hommage">기출 오마주</a>
     <a class="sub" href="#curriculum" data-open="final-cut">파이널 컷</a>
-    <a href="#channel" data-spy="channel"><span class="n">07</span>채널</a>
+    <a class="sub" href="#stats">출강 학원별 자료</a>
+    <a href="#channel" data-spy="channel"><span class="n">06</span>채널</a>
   </nav>
   <div class="toc-foot"><a href="https://open.kakao.com/o/gvaZ3mHi" target="_blank" rel="noopener">카카오톡 상담 신청 →</a></div>
 </aside>
