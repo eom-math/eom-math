@@ -18,10 +18,24 @@
   .exam-item .m{font-size:12.5px;color:var(--dim);}
   .sec-h{font-size:13px;font-weight:800;color:var(--dim);letter-spacing:.04em;margin:22px 0 8px;}
   .exam-item .go{margin-left:auto;font-weight:800;color:var(--dim);}
+  .pcard{display:block;background:#fff;border-radius:22px;padding:18px 18px 16px;margin:12px 0;box-shadow:0 2px 14px rgba(17,17,20,.05);text-decoration:none;color:inherit;}
+  .pcard .ph{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px;}
+  .pcard .ph h3{font-size:17px;font-weight:900;margin:0;letter-spacing:-.02em;}
+  .pcard .ph span{font-size:12.5px;font-weight:800;color:var(--faint);}
+  .pcard .wk{border:0;padding:0;margin:0;background:none;}
+  .pcard .trend{border:0;padding:0;margin:0;background:none;}
+  .dsum{display:flex;align-items:center;gap:16px;}
+  .dsum .sc{font-size:44px;font-weight:900;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;}
+  .dsum .sc small{font-size:15px;color:var(--faint);font-weight:800;letter-spacing:0;}
+  .dsum .info{min-width:0;}
+  .dsum .info .m{font-size:13px;color:var(--dim);margin-bottom:5px;}
+  .dsum .hl{display:flex;flex-wrap:wrap;gap:4px 8px;}
+  .dsum .hl span{font-weight:800;font-size:14.5px;padding:0 2px;background:linear-gradient(transparent 50%,#FFE45C 50%);}
+  .dsum .ok{font-size:13.5px;font-weight:700;}
   .wk{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:4px 14px;margin-top:4px;}
   .wk a{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line2);text-decoration:none;font-size:14px;}
   .wk a:last-child{border-bottom:0;}
-  .wk .d{flex:0 0 auto;min-width:46px;text-align:center;font-size:11px;font-weight:900;padding:4px 6px;border-radius:6px;background:var(--bg2);color:var(--dim);font-variant-numeric:tabular-nums;}
+  .wk .d{flex:0 0 auto;min-width:48px;text-align:center;font-size:12px;font-weight:900;padding:6px 8px;border-radius:10px;background:var(--bg2);color:var(--dim);font-variant-numeric:tabular-nums;}
   .wk .d.red{background:var(--red-soft);color:var(--red);} .wk .d.ok{background:var(--ok-soft);color:var(--ok);} .wk .d.ink{background:var(--ink);color:#fff;}
   .wk .t{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .wk .m{margin-left:auto;flex:0 0 auto;font-size:12px;color:var(--dim);}
@@ -103,7 +117,9 @@
       <a href="ask.html"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A1.5 1.5 0 0 1 4 14.5z"/><path d="M10.2 8.4a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3"/></svg></span>질문하기</a>
       <a href="#dailyList"><span class="qi"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5A.5.5 0 0 1 6.5 20V4a.5.5 0 0 1 .5-.5z"/><path d="M9.5 12h5M9.5 15.5h5"/></svg></span>리포트</a>
     </nav>
+    <div id="dailyCardBox"></div>
     <div id="weekBox"></div>
+    <div id="trendBox"></div>
     <div id="dailyList"></div>
     <div id="todoList"></div>
     <h2 class="sec-h">시험 OMR</h2>
@@ -241,8 +257,21 @@
       const items = d.exists ? (d.data().items || []).slice().sort((a,b) => (b.date||'').localeCompare(a.date||'')) : [];
       if (!items.length) return;
       const scored = items.filter(x => x.score != null && !x.absent).slice(0, 5).reverse();
-      if (scored.length){
-        box.insertAdjacentHTML('beforeend', '<h2 class="sec-h">복습 테스트 추이</h2>' + trendCard(scored));
+      $('trendBox').innerHTML = scored.length ? `<div class="pcard"><div class="ph"><h3>복습 테스트 추이</h3><span>최근 ${scored.length}회</span></div>${trendCard(scored)}</div>` : '';
+      // 최신 데일리 리포트 요약 카드
+      const latest = items[0];
+      const rep0 = await db.collection('dailyReports').doc(latest.token).get().then(x => x.exists ? x.data() : null).catch(() => null);
+      if (rep0){
+        const weak = rep0.weak || [];
+        $('dailyCardBox').innerHTML = `<a class="pcard" href="daily-report.html?t=${encodeURIComponent(latest.token)}">
+          <div class="ph"><h3>데일리 리포트</h3><span>${esc(OMR.fmtKDate(rep0.date))}${rep0.title ? ' · ' + esc(rep0.title) : ''}</span></div>
+          <div class="dsum">
+            ${rep0.attendance === 'absent' ? '<div class="sc" style="font-size:26px;">결석</div>' : rep0.score != null ? `<div class="sc">${rep0.score}<small>/${rep0.maxScore}</small></div>` : ''}
+            <div class="info">
+              <div class="m">${rep0.avg != null && rep0.score != null ? `반 평균 ${rep0.avg}` : ''}${rep0.homework != null ? `${rep0.avg != null && rep0.score != null ? ' · ' : ''}과제 ${rep0.homework}%` : ''}</div>
+              ${weak.length ? `<div class="m" style="margin:2px 0 3px;font-size:12px;">보완할 유형</div><div class="hl">${weak.map(w => `<span>${esc(w)}</span>`).join('')}</div>` : `<div class="ok">${rep0.attendance === 'absent' ? '진도와 과제를 확인해 주세요' : '보완할 유형 없음 👏'}</div>`}
+            </div>
+          </div></a>`;
       }
       box.insertAdjacentHTML('beforeend', '<h2 class="sec-h">데일리 리포트</h2>');
       items.slice(0, 5).forEach((x, i) => {
@@ -262,25 +291,26 @@
     const last = list[list.length - 1], prev = list[list.length - 2];
     const diff = prev ? Math.round((pct(last) - pct(prev)) * 10) / 10 : null;
     const W = 320, H = 132, pl = 4, pr = 4, pt = 20, pb = 22, n = list.length;
-    const bw = Math.min(38, (W - pl - pr) / n * 0.5);
+    const bw = Math.min(52, (W - pl - pr) / n * 0.78);
     const cx = i => pl + (i + 0.5) * (W - pl - pr) / n;
     const y = v => pt + (1 - Math.max(0, Math.min(100, v)) / 100) * (H - pt - pb);
     const avgPts = list.map((x, i) => x.avg != null ? `${cx(i).toFixed(1)},${y(x.max ? x.avg / x.max * 100 : x.avg).toFixed(1)}` : null).filter(Boolean);
     const lab = d => { const t = new Date(d + 'T00:00:00'); return isNaN(t) ? '' : `${t.getMonth()+1}/${t.getDate()}`; };
     const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 복습 테스트 점수">
+      <defs><linearGradient id="tgGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0805F"/><stop offset="1" stop-color="#D6301F"/></linearGradient></defs>
       <line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" stroke="rgba(17,17,20,.12)"/>
       ${list.map((x, i) => { const v = pct(x), on = i === n - 1;
-        return `<rect x="${(cx(i) - bw / 2).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0) - y(v)).toFixed(1)}" rx="4" fill="${on ? '#D6301F' : '#111114'}" opacity="${on ? 1 : .82}"/>
+        return `<rect x="${(cx(i) - bw / 2).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0) - y(v)).toFixed(1)}" rx="7" fill="${on ? 'url(#tgGrad)' : '#E4E3DF'}"/>
           <text x="${cx(i).toFixed(1)}" y="${(y(v) - 6).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="800" fill="${on ? '#D6301F' : '#111114'}">${x.score}</text>
           <text x="${cx(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="10" fill="#63636B">${lab(x.date)}</text>`; }).join('')}
       ${avgPts.length > 1 ? `<polyline points="${avgPts.join(' ')}" fill="none" stroke="#D6301F" stroke-width="1.5" stroke-dasharray="4 4" opacity=".75"/>` : ''}
       ${avgPts.map(p => `<circle cx="${p.split(',')[0]}" cy="${p.split(',')[1]}" r="2.5" fill="#fff" stroke="#D6301F" stroke-width="1.5"/>`).join('')}
     </svg>`;
-    return `<a class="trend" href="daily-report.html?t=${encodeURIComponent(last.token)}" style="display:block;text-decoration:none;">
+    return `<a class="trend" href="daily-report.html?t=${encodeURIComponent(last.token)}" style="display:block;text-decoration:none;color:inherit;">
       <div class="top"><b>${last.score}</b><small>/ ${last.max}점 · ${esc(OMR.fmtKDate(last.date))}</small>
         ${diff != null && diff !== 0 ? `<span class="chg ${diff > 0 ? 'up' : 'down'}">${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)}%p</span>` : ''}</div>
       ${svg}
-      <div class="lg"><span><i style="background:#111114;height:6px;width:8px;border-radius:2px;"></i>내 점수</span><span><i style="background:repeating-linear-gradient(90deg,#D6301F 0 3px,transparent 3px 6px);"></i>반 평균</span></div></a>`;
+      <div class="lg"><span><i style="background:#E4E3DF;height:8px;width:10px;border-radius:2px;"></i>내 점수</span><span><i style="background:repeating-linear-gradient(90deg,#D6301F 0 3px,transparent 3px 6px);"></i>반 평균</span></div></a>`;
   }
 
   // ───────── 이번 주 할 일 (과제 기한 · 클리닉 예약 · 안 본 영상 · 추가학습 · 열린 시험) ─────────
@@ -346,9 +376,9 @@
       });
     }
     rows.sort((a,b) => a.sort - b.sort);
-    box.innerHTML = `<h2 class="sec-h">이번 주 할 일${rows.length ? ` <span class="pill red" style="margin-left:4px;">${rows.length}</span>` : ''}</h2>
+    box.innerHTML = `<div class="pcard"><div class="ph"><h3>이번 주 할 일</h3><span>${rows.length}개</span></div>
       <div class="wk">${rows.length ? rows.map((r, i) => `<a href="${r.href ? esc(r.href) : '#'}" data-i="${i}"><span class="d ${r.cls}">${esc(r.d)}</span>
-        <span class="t">${esc(r.t)}</span><span class="m">${esc(r.m)}</span></a>`).join('') : '<div class="none">이번 주에 남은 할 일이 없어요. 👏</div>'}</div>`;
+        <span class="t">${esc(r.t)}</span><span class="m">${esc(r.m)}</span></a>`).join('') : '<div class="none">이번 주에 남은 할 일이 없어요. 👏</div>'}</div></div>`;
     box.querySelectorAll('a[data-i]').forEach(a => { const r = rows[+a.dataset.i]; if (r.exam) a.onclick = e => { e.preventDefault(); openExam(r.exam, r.sub); }; });
   }
 
