@@ -43,6 +43,19 @@
   .wl .rate{font-size:12px;color:var(--dim);text-align:right;}
   .legend{display:flex;gap:12px;font-size:12px;color:var(--dim);margin-bottom:10px;flex-wrap:wrap;}
   .print-bar{display:flex;justify-content:center;margin:14px 0 4px;}
+  .card svg{width:100%;height:auto;display:block;}
+  .legend .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px;}
+  .legend .sw.dot{border-radius:50%;}
+  .hero .chips .gchip{background:var(--red);}
+  .cuts{display:grid;gap:6px;}
+  .cuts div{display:grid;grid-template-columns:80px 1fr auto;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;background:var(--bg2);font-size:13.5px;}
+  .cuts div b{font-size:15px;font-variant-numeric:tabular-nums;}
+  .cuts div.me{background:var(--ink);color:#fff;} .cuts div.me .muted{color:rgba(255,255,255,.7);}
+  .tbl tr.me td{background:var(--red-soft);font-weight:700;}
+  .card .tbl{font-size:12.5px;} .card .tbl th,.card .tbl td.num{white-space:nowrap;}
+  .card .tbl td,.card .tbl th{padding:8px 7px;}
+  .tbl tr.low td:last-child b{color:var(--red);}
+  .tbl a{color:var(--ink);font-weight:700;}
   @page{ size:A4; margin:10mm; }
   @media print{
     body{background:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -92,14 +105,94 @@
   const tagRows = Object.values(tagMap).sort((a,b) => a.ok/a.total - b.ok/b.total);
   const ansText = a => a && a.length ? a.join('·') : '—';
 
+  const G = r.grade, sysLabel = r.gradeSystem === '9' ? '수능 9등급' : r.gradeSystem === '5' ? '내신 5등급' : '';
+  const topPct = r.percentile != null ? Math.max(0, Math.round((100 - r.percentile) * 10) / 10) : null;
+  const C = { ink:'#111114', dim:'#63636B', faint:'#9A9AA2', red:'#D6301F', teal:'#2F8F8B', tealSoft:'#9FD3CF', grid:'rgba(17,17,20,.08)', orange:'#E08A2E' };
+
+  // 점수대별 인원 (내 구간 빨강)
+  function histSvg(){
+    const h = r.hist; if (!h || !h.length) return '';
+    const W = 320, H = 150, pl = 26, pr = 6, pt = 14, pb = 26, mx = Math.max(1, ...h.map(b => b.count));
+    const bw = (W - pl - pr) / h.length;
+    const y = v => pt + (1 - v / mx) * (H - pt - pb);
+    const mine = h.findIndex((b, i) => r.score >= b.from && (r.score < b.to || i === h.length - 1));
+    const ticks = [0, Math.ceil(mx / 2), mx];
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="점수 구간별 학생 수">
+      ${ticks.map(t => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="${C.grid}"/><text x="${pl - 6}" y="${y(t) + 3.5}" text-anchor="end" font-size="9" fill="${C.faint}">${t}</text>`).join('')}
+      ${h.map((b, i) => `<rect x="${(pl + i * bw + bw * .18).toFixed(1)}" y="${y(b.count).toFixed(1)}" width="${(bw * .64).toFixed(1)}" height="${(y(0) - y(b.count)).toFixed(1)}" rx="3" fill="${i === mine ? C.red : C.tealSoft}"/>
+        ${b.count ? `<text x="${(pl + i * bw + bw / 2).toFixed(1)}" y="${(y(b.count) - 4).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${i === mine ? C.red : C.dim}">${b.count}명</text>` : ''}
+        <text x="${(pl + i * bw + bw / 2).toFixed(1)}" y="${H - 9}" text-anchor="middle" font-size="9" fill="${C.dim}">${b.from}–${b.to}</text>`).join('')}
+    </svg>`;
+  }
+
+  // 유형별 분석: 막대(진한 = 내 점수, 연한 = 평균), 주황 점 = 상위 30%
+  function typeBlock(){
+    const ts = (r.types || []).slice().sort((a,b) => (a.mine / a.max) - (b.mine / b.max));
+    if (!ts.length) return '';
+    const mx = Math.max(...ts.map(t => t.max));
+    const W = 320, rowH = 38, pl = 92, pr = 10, H = ts.length * rowH + 24;
+    const x = v => pl + v / mx * (W - pl - pr);
+    const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="유형별 점수 비교">
+      ${ts.map((t, i) => { const y0 = i * rowH + 6; return `
+        <text x="${pl - 8}" y="${y0 + 15}" text-anchor="end" font-size="10.5" font-weight="700" fill="${C.ink}">${esc(t.tag.length > 9 ? t.tag.slice(0, 9) + '…' : t.tag)}</text>
+        <rect x="${pl}" y="${y0 + 2}" width="${(x(t.max) - pl).toFixed(1)}" height="24" rx="4" fill="${C.grid}"/>
+        <rect x="${pl}" y="${y0 + 3}" width="${Math.max(1, x(t.mine) - pl).toFixed(1)}" height="11" rx="3" fill="${C.teal}"/>
+        <rect x="${pl}" y="${y0 + 15}" width="${Math.max(1, x(t.avg) - pl).toFixed(1)}" height="10" rx="3" fill="${C.tealSoft}"/>
+        <circle cx="${x(t.top30).toFixed(1)}" cy="${y0 + 8.5}" r="4" fill="${C.orange}" stroke="#fff" stroke-width="1.5"/>`; }).join('')}
+      ${[0, mx / 2, mx].map(v => `<text x="${x(v).toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="${C.faint}">${Math.round(v * 10) / 10}</text>`).join('')}
+    </svg>`;
+    return `<div class="card"><h3>유형별 분석</h3>
+      <div class="legend"><span><i class="sw" style="background:${C.teal}"></i>내 점수</span><span><i class="sw" style="background:${C.tealSoft}"></i>평균</span><span><i class="sw dot" style="background:${C.orange}"></i>상위 30%</span></div>
+      ${svg}
+      <div class="tbl-wrap" style="margin-top:10px;"><table class="tbl"><tr><th>유형</th><th class="num">석차</th><th class="num">평균</th><th class="num">상위30%</th><th class="num">내 점수</th></tr>
+        ${ts.slice().sort((a,b) => a.tag.localeCompare(b.tag, 'ko')).map(t => `<tr${t.mine < t.avg ? ' class="low"' : ''}><td><b>${esc(t.tag)}</b></td><td class="num">${t.rank}위</td><td class="num">${t.avg}점</td><td class="num">${t.top30}점</td><td class="num"><b>${t.mine}</b> / ${t.max}점</td></tr>`).join('')}
+      </table></div></div>`;
+  }
+
+  // 누적 성적표: 점수 막대 + 등수 선
+  function historyBlock(){
+    const hs = (r.history || []); if (hs.length < 2) return '';
+    const W = 320, H = 160, pl = 10, pr = 30, pt = 16, pb = 26, n = hs.length;
+    const cx = i => pl + (i + .5) * (W - pl - pr) / n, bw = Math.min(30, (W - pl - pr) / n * .5);
+    const y = p => pt + (1 - p / 100) * (H - pt - pb);
+    const maxN = Math.max(...hs.map(h => h.n || 1));
+    const yr = rk => pt + (rk - 1) / Math.max(1, maxN - 1) * (H - pt - pb);   // 1등이 위
+    const line = hs.map((h, i) => `${i ? 'L' : 'M'}${cx(i).toFixed(1)},${yr(h.rank).toFixed(1)}`).join('');
+    const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="시험별 점수와 등수">
+      ${[0, 50, 100].map(g => `<line x1="${pl}" x2="${W - pr}" y1="${y(g)}" y2="${y(g)}" stroke="${C.grid}"/><text x="${W - pr + 4}" y="${y(g) + 3.5}" font-size="9" fill="${C.faint}">${g}%</text>`).join('')}
+      ${hs.map((h, i) => { const p = h.max ? h.score / h.max * 100 : 0, me = h.examId === r.examId;
+        return `<rect x="${(cx(i) - bw / 2).toFixed(1)}" y="${y(p).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0) - y(p)).toFixed(1)}" rx="3" fill="${me ? C.teal : C.tealSoft}"/>
+          <text x="${cx(i).toFixed(1)}" y="${H - 9}" text-anchor="middle" font-size="9" fill="${C.dim}">${i + 1}회</text>`; }).join('')}
+      <path d="${line}" fill="none" stroke="${C.orange}" stroke-width="1.6"/>
+      ${hs.map((h, i) => `<circle cx="${cx(i).toFixed(1)}" cy="${yr(h.rank).toFixed(1)}" r="3" fill="${C.orange}"/>`).join('')}
+    </svg>`;
+    return `<div class="card"><h3>누적 성적표 <span class="muted" style="font-weight:600;">${esc(r.className)}</span></h3>
+      <div class="legend"><span><i class="sw" style="background:${C.teal}"></i>점수</span><span><i class="sw dot" style="background:${C.orange}"></i>등수</span></div>
+      ${svg}
+      <div class="tbl-wrap" style="margin-top:10px;"><table class="tbl"><tr><th>회차</th><th>시험</th><th class="num">점수</th><th class="num">등수</th>${hs.some(h => h.grade) ? '<th class="num">등급</th>' : ''}</tr>
+        ${hs.map((h, i) => `<tr${h.examId === r.examId ? ' class="me"' : ''}><td>${i + 1}회</td>
+          <td>${h.token && h.examId !== r.examId ? `<a href="report.html?t=${encodeURIComponent(h.token)}">${esc(h.title)}</a>` : esc(h.title)}</td>
+          <td class="num"><b>${h.score}</b><span class="muted">/${h.max}</span></td><td class="num">${h.rank}등 <span class="muted">/ ${h.n}명</span></td>
+          ${hs.some(x => x.grade) ? `<td class="num">${h.grade ? h.grade + '등급' : '–'}</td>` : ''}</tr>`).join('')}
+      </table></div></div>`;
+  }
+
+  function retestBlock(){
+    const rt = r.retest; if (!rt || !(rt.attempts || []).length) return '';
+    return `<div class="card"><h3>재시험 이력</h3>${rt.attempts.map((a, i) => `
+      <div class="wl" style="grid-template-columns:70px 1fr 70px;"><b>${i + 1}차 시험</b><span class="ans">${a.at ? OMR.fmtDateTime(a.at) : ''}</span>
+        <span style="text-align:right;"><b>${a.score}점</b> <span class="pill ${a.score >= rt.passScore ? 'open' : 'red'}">${a.score >= rt.passScore ? '통과' : '미통과'}</span></span></div>`).join('')}</div>`;
+  }
+
   root.innerHTML = `
     <div class="hero">
       <div class="who">${esc(r.name)} · ${esc(r.className)}${r.examDate ? ' · ' + esc(r.examDate) : ''}</div>
       <div class="title">${esc(r.examTitle)} <span style="opacity:.6;font-weight:700;font-size:14px;">${esc(r.subject)}</span></div>
       <div class="score">${r.score}<small>/ ${r.maxScore}점</small></div>
       <div class="chips">
+        ${G ? `<span class="gchip"><b>${G}등급</b> ${sysLabel}</span>` : ''}
         <span>석차 <b>${r.rank}</b> / ${r.n}명</span>
-        <span>백분위 <b>${r.percentile}</b></span>
+        ${topPct != null ? `<span>상위 <b>${topPct}</b>%</span>` : `<span>백분위 <b>${r.percentile}</b></span>`}
         <span>맞은 문항 <b>${r.correctCount}</b> / ${r.questionCount}</span>
       </div>
       ${r.passScore != null && r.score < r.passScore ? `<div style="margin-top:14px;background:var(--red);border-radius:8px;padding:10px 12px;font-size:13.5px;font-weight:700;">
@@ -107,12 +200,13 @@
     </div>
 
     <div class="card">
-      <h3>반 전체와 비교</h3>
+      <h3>통계</h3>
       <div class="stat-grid" style="margin-bottom:4px;">
-        <div class="stat"><div class="k">내 점수</div><div class="v" style="color:var(--red);">${r.score}</div></div>
-        <div class="stat"><div class="k">반 평균</div><div class="v">${r.avg}</div></div>
-        <div class="stat"><div class="k">최고</div><div class="v">${r.high}</div></div>
-        <div class="stat"><div class="k">최저</div><div class="v">${r.low}</div></div>
+        ${G ? `<div class="stat"><div class="k">나의 등급</div><div class="v" style="color:var(--red);">${G}<small>등급</small></div></div>` : `<div class="stat"><div class="k">내 점수</div><div class="v" style="color:var(--red);">${r.score}</div></div>`}
+        <div class="stat"><div class="k">평균</div><div class="v">${r.avg}<small>점</small></div></div>
+        ${r.std != null ? `<div class="stat"><div class="k">표준편차</div><div class="v">${r.std}</div></div>` : ''}
+        <div class="stat"><div class="k">최고 점수</div><div class="v">${r.high}<small>점</small></div></div>
+        ${topPct != null ? `<div class="stat"><div class="k">상위</div><div class="v">${topPct}<small>%</small></div></div>` : ''}
       </div>
       <div class="scale" aria-hidden="true">
         <div class="track"></div>
@@ -122,6 +216,20 @@
         <div class="ends"><span>0</span><span>${r.maxScore}</span></div>
       </div>
     </div>
+
+    ${r.hist ? `<div class="card"><h3>점수대별 인원</h3>${histSvg()}</div>` : ''}
+
+    ${r.cutoffs && r.cutoffs.length ? `<div class="card"><h3>등급 정보 <span class="muted" style="font-weight:600;">${sysLabel}</span></h3>
+      <div class="cuts">${r.cutoffs.map(c => `<div class="${c.grade === G ? 'me' : ''}"><span>${c.grade}등급 컷</span><b>${c.score}점</b><span class="muted">${c.upTo}등까지</span></div>`).join('')}</div></div>` : ''}
+
+    ${typeBlock()}
+
+    ${r.topWrong && r.topWrong.length ? `<div class="card"><h3>오답률 TOP 5</h3>
+      <div class="tbl-wrap"><table class="tbl"><tr><th>순위</th><th>문항</th><th class="num">배점</th><th class="num">정답률</th><th class="num">내 결과</th></tr>
+        ${r.topWrong.map((q, i) => { const mine = r.questions[q.n - 1];
+          return `<tr><td>${i + 1}위</td><td><b>${q.n}번</b>${q.tag ? ` <span class="muted">${esc(q.tag)}</span>` : ''}</td><td class="num">${q.points}점</td><td class="num">${Math.round(q.rate * 10) / 10}%</td>
+            <td class="num"><span class="pill ${mine && mine.ok ? 'open' : 'red'}">${mine && mine.ok ? '정답' : '오답'}</span></td></tr>`; }).join('')}
+      </table></div></div>` : ''}
 
     <div class="card">
       <h3>문항별 정오답</h3>
@@ -146,11 +254,14 @@
         </div>`).join('') : '<p class="muted">모든 문항을 맞혔습니다. 👏</p>'}
     </div>
 
-    ${tagRows.length ? `<div class="card"><h3>단원별 결과</h3>
+    ${!(r.types && r.types.length) && tagRows.length ? `<div class="card"><h3>단원별 결과</h3>
       ${tagRows.map(t => `<div class="wl" style="grid-template-columns:1fr 70px 88px;">
         <b>${esc(t.tag)}</b><span class="ans" style="text-align:right;">${t.ok}/${t.total} 정답</span>
         <div class="rate">${Math.round(t.ok / t.total * 100)}%<div class="bar" style="margin-top:4px;"><i style="width:${t.ok / t.total * 100}%;${t.ok / t.total < .5 ? 'background:var(--red);' : ''}"></i></div></div>
       </div>`).join('')}</div>` : ''}
+
+    ${retestBlock()}
+    ${historyBlock()}
 
     ${hardRight.length ? `<div class="card"><h3>잘한 문항</h3>
       <p class="muted">반 정답률 50% 미만인데 맞힌 문항: <b style="color:var(--ink);">${hardRight.map(q => q.n + '번').join(', ')}</b></p></div>` : ''}

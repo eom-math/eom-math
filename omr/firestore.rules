@@ -291,3 +291,15 @@
     match /studentNotes/{id} {
       allow read, write: if omrStaffOrAdmin();
     }
+
+    // ───────── 성적표 확장 ─────────
+    // 학생별 누적 성적표 목록. 문서 ID = 학생코드
+    match /omrReportLinks/{code} {
+      allow get: if true;
+      allow list, write: if omrStaffOrAdmin();
+    }
+    // 유형 분류(대분류 › 중분류 › 유형). 문서 하나(tree)
+    match /omrTypes/{id} {
+      allow read: if omrStaffOrAdmin();
+      allow write: if omrAdmin();
+    }

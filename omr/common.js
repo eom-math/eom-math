@@ -183,6 +183,63 @@
     };
   }
 
+  // ───────── 등급 · 시험 분석 (성적표용) ─────────
+  // 2022 개정 내신 5등급(누적 10·34·66·90·100%), 수능 9등급(4·11·23·40·60·77·89·96·100%)
+  const GRADE_BANDS = { '5': [10, 34, 66, 90, 100], '9': [4, 11, 23, 40, 60, 77, 89, 96, 100] };
+  function gradeOf(rank, n, system) {
+    const bands = GRADE_BANDS[system]; if (!bands || !n) return null;
+    const p = rank / n * 100;                      // 석차(동점 같은 등수) 기준 누적 비율
+    for (let g = 0; g < bands.length; g++) if (p <= bands[g] + 1e-9) return g + 1;
+    return bands.length;
+  }
+  /**
+   * 채점 결과(gradeExam 반환값)로 성적표에 넣을 분석을 만든다.
+   * 반환: { system, std, cutoffs[{grade, score, upTo}], hist[{from,to,count}], topWrong[], typeStats{tag:{max, avg, top30, sorted[]}}, byCode{code:{grade, types[]}} }
+   */
+  function examAnalytics(exam, graded) {
+    const { results, stats, questions } = graded;
+    const system = exam.gradeSystem === undefined ? '5' : exam.gradeSystem;   // 기본: 내신 5등급
+    const N = results.length;
+    const byCode = {};
+    results.forEach(r => { byCode[r.code] = { grade: gradeOf(r.rank, N, system) }; });
+    // 등급 컷: 등급마다 가장 낮은 점수와 그 등급까지의 누적 인원
+    const cutoffs = [];
+    if (GRADE_BANDS[system]) {
+      const bands = GRADE_BANDS[system];
+      for (let g = 1; g <= bands.length; g++) {
+        const inG = results.filter(r => byCode[r.code].grade === g);
+        if (!inG.length) continue;
+        cutoffs.push({ grade: g, score: Math.min(...inG.map(r => r.score)), upTo: Math.max(...inG.map(r => r.rank + results.filter(x => x.score === r.score).length - 1)) });
+      }
+    }
+    // 점수 구간별 인원 (만점을 5칸으로)
+    const max = stats.maxScore || 100, bins = 5, w = max / bins, hist = [];
+    for (let i = 0; i < bins; i++) hist.push({ from: round(i * w, 1), to: round((i + 1) * w, 1), count: 0 });
+    results.forEach(r => { hist[Math.min(bins - 1, Math.floor(r.score / w))].count++; });
+    // 오답률 TOP5
+    const topWrong = stats.questionStats.map(q => ({ n: q.n, rate: q.rate, points: questions[q.n - 1].points, tag: questions[q.n - 1].tag || null }))
+      .filter(q => !questions[q.n - 1].allCorrect).sort((a, b) => a.rate - b.rate || a.n - b.n).slice(0, 5);
+    // 유형(단원 태그)별: 배점 합, 평균, 상위 30% 평균, 석차
+    const tags = [...new Set(questions.map(q => q.tag).filter(Boolean))];
+    const typeStats = {};
+    tags.forEach(tag => {
+      const qs = questions.filter(q => q.tag === tag);
+      const tmax = qs.reduce((a, q) => a + q.points, 0);
+      const earned = results.map(r => ({ code: r.code, v: r.questions.filter(x => x.tag === tag).reduce((a, x) => a + x.earned, 0) }))
+        .sort((a, b) => b.v - a.v);
+      const vals = earned.map(e => e.v);
+      const top = vals.slice(0, Math.max(1, Math.ceil(N * 0.3)));
+      typeStats[tag] = { max: round(tmax, 1), avg: round(vals.reduce((a, b) => a + b, 0) / (N || 1), 1),
+        top30: round(top.reduce((a, b) => a + b, 0) / top.length, 1), count: qs.length };
+      earned.forEach(e => {
+        const t = { tag, mine: round(e.v, 1), max: typeStats[tag].max, avg: typeStats[tag].avg, top30: typeStats[tag].top30,
+          rank: vals.filter(v => v > e.v).length + 1 };
+        (byCode[e.code].types = byCode[e.code].types || []).push(t);
+      });
+    });
+    return { system, std: stats.std, cutoffs, hist, topWrong, typeStats, byCode };
+  }
+
   // ───────── 오답 분석 (단원 태그별) ─────────
   const UNTAGGED = '미분류';
   /**
@@ -433,6 +490,7 @@
 
   global.OMR = {
     db, FV, MESSAGE_TEMPLATE, renderMessage, genCode, genToken, esc, toDate, fmtDateTime,
+    GRADE_BANDS, gradeOf, examAnalytics,
     normalizePhone, fmtPhone, round, toast, copyText, normalizeAnswers, gradeOne, gradeExam,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
