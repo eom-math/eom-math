@@ -384,6 +384,42 @@
     .hub-card::after{ height:3px; }
   }
 
+
+  /* ---------- 입장 선택 (학생 코드 / 방문자) ---------- */
+  .gate{ position:fixed; inset:0; z-index:200; background:var(--bg); display:flex; align-items:center; justify-content:center;
+    padding:24px 20px calc(24px + env(safe-area-inset-bottom)); overflow-y:auto; }
+  .gate[hidden]{ display:none; }
+  .gate.out{ animation:gateOut .35s ease forwards; }
+  @keyframes gateOut{ to{ opacity:0; transform:scale(1.02); visibility:hidden; } }
+  .gate-in{ width:100%; max-width:400px; }
+  .gate .brand{ font-size:16px; margin-bottom:34px; }
+  .gate h1{ font-weight:900; font-size:clamp(34px,9vw,46px); line-height:1.05; letter-spacing:-.03em; margin-bottom:16px; }
+  .gate .gate-code::placeholder{ letter-spacing:.08em; font-size:18px; font-weight:700; color:var(--dim); opacity:.7; }
+  .gate h1 .accent{ color:var(--red); }
+  .gate .lead{ font-size:14.5px; color:var(--dim); line-height:1.6; margin-bottom:26px; }
+  .gate-card{ background:#fff; border:1px solid var(--line); padding:18px; }
+  .gate-card .lbl{ font-size:11.5px; font-weight:800; letter-spacing:.14em; color:var(--red); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .gate-card .lbl::before{ content:""; width:16px; height:2px; background:var(--red); }
+  .gate-code{ width:100%; font:inherit; font-size:26px; font-weight:900; letter-spacing:.34em; text-align:center; text-transform:uppercase;
+    padding:14px 10px 14px 20px; border:1.5px solid var(--line); background:var(--bg); color:var(--ink); outline:none; }
+  .gate-code:focus{ border-color:var(--ink); }
+  .gate-go{ width:100%; margin-top:10px; padding:15px; border:0; background:var(--ink); color:#fff; font:inherit; font-size:15.5px; font-weight:800; cursor:pointer; }
+  .gate-go:hover{ background:var(--red); }
+  .gate-go:disabled{ opacity:.5; cursor:default; }
+  .gate-msg{ min-height:20px; margin-top:8px; font-size:13px; color:var(--red); font-weight:600; }
+  .gate-saved{ display:flex; align-items:center; gap:10px; width:100%; margin-bottom:10px; padding:12px 14px; border:1.5px solid var(--ink);
+    background:var(--ink); color:#fff; font:inherit; font-size:14.5px; font-weight:800; cursor:pointer; text-align:left; }
+  .gate-saved span{ margin-left:auto; color:#ff8a78; }
+  .gate-saved[hidden]{ display:none; }
+  .gate-or{ display:flex; align-items:center; gap:12px; margin:18px 0; font-size:12px; color:var(--dim); font-weight:700; }
+  .gate-or::before,.gate-or::after{ content:""; flex:1; height:1px; background:var(--line); }
+  .gate-visit{ width:100%; padding:15px; border:1.5px solid var(--line); background:transparent; color:var(--ink); font:inherit; font-size:15px; font-weight:800; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px; }
+  .gate-visit:hover{ border-color:var(--ink); }
+  .gate-visit small{ font-weight:600; color:var(--dim); font-size:12.5px; }
+  .gate-foot{ margin-top:22px; font-size:12px; color:var(--dim); line-height:1.6; text-align:center; }
+  body.gate-open{ overflow:hidden; }
+
   /* ---------- hero slider ---------- */
   .hero-slider{ position:relative; }
   .slides{ display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth;
@@ -781,6 +817,23 @@
 
 </div>
 
+<div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle" hidden>
+  <div class="gate-in">
+    <div class="brand">엄형국<span>수학</span></div>
+    <h1 id="gateTitle">어떻게<br>입장할까요<span class="accent">?</span></h1>
+    <p class="lead">재원생은 선생님께 받은 6자리 학생 코드로 입장하면 성적표·데일리 리포트·과제·클리닉을 바로 볼 수 있어요.</p>
+    <div class="gate-card">
+      <div class="lbl">재원생</div>
+      <button class="gate-saved" id="gateSaved" type="button" hidden></button>
+      <input class="gate-code" id="gateCode" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" placeholder="학생 코드" aria-label="학생 코드 6자리">
+      <button class="gate-go" id="gateGo" type="button">학생 코드로 입장</button>
+      <div class="gate-msg" id="gateMsg" role="status"></div>
+    </div>
+    <div class="gate-or">또는</div>
+    <button class="gate-visit" id="gateVisit" type="button">방문자로 둘러보기 <small>수업 소개 · 상담</small></button>
+    <p class="gate-foot">학생 코드를 모르면 선생님께 문의해 주세요.</p>
+  </div>
+</div>
 <div class="toc-dim" id="tocDim"></div>
 <aside class="toc" id="toc" aria-label="개요" aria-hidden="true">
   <div class="toc-top">
@@ -820,6 +873,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
   const firebaseConfig = {
@@ -1055,6 +1109,57 @@
       setTimeout(function(){ t.scrollIntoView({behavior:'smooth',block:'start'}); },30); }
   });
   if(location.hash){ var t=document.querySelector(location.hash); if(t) window.openHubFor(t); }
+})();
+</script>
+<script>
+// 입장 선택: 학생 코드로 포털 입장 / 방문자로 둘러보기
+(function(){
+  var gate = document.getElementById('gate'); if (!gate) return;
+  var store = {
+    get: function(s, k){ try { return window[s].getItem(k); } catch(e){ return null; } },
+    set: function(s, k, v){ try { window[s].setItem(k, v); } catch(e){} }
+  };
+  var qs = new URLSearchParams(location.search);
+  // 이번 방문에서 이미 골랐거나, 링크로 특정 위치(#…)를 열었거나, ?visit 로 들어오면 건너뜀
+  if (store.get('sessionStorage', 'gateChoice') || qs.has('visit') || (location.hash && location.hash.length > 1)) return;
+  gate.hidden = false; document.body.classList.add('gate-open');
+  var codeIn = document.getElementById('gateCode'), go = document.getElementById('gateGo'), msg = document.getElementById('gateMsg');
+  var saved = store.get('localStorage', 'omrStudentCode'), savedName = store.get('localStorage', 'omrStudentName');
+  if (saved){
+    var sb = document.getElementById('gateSaved');
+    sb.hidden = false;
+    sb.innerHTML = (savedName ? savedName.replace(/[<>&]/g, '') + ' 학생으로' : saved + ' 코드로') + ' 계속하기<span>→</span>';
+    sb.onclick = function(){ store.set('sessionStorage', 'gateChoice', 'student'); location.href = 'omr/'; };
+  } else {
+    setTimeout(function(){ try { codeIn.focus({ preventScroll:true }); } catch(e){} }, 60);
+  }
+  function close(){
+    store.set('sessionStorage', 'gateChoice', 'visitor');
+    gate.classList.add('out'); document.body.classList.remove('gate-open');
+    setTimeout(function(){ gate.hidden = true; gate.classList.remove('out'); }, 360);
+  }
+  document.getElementById('gateVisit').onclick = close;
+  codeIn.addEventListener('input', function(){ codeIn.value = codeIn.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); msg.textContent = ''; });
+  codeIn.addEventListener('keydown', function(e){ if (e.key === 'Enter') go.click(); });
+  go.onclick = async function(){
+    var code = codeIn.value.trim().toUpperCase();
+    if (code.length !== 6){ msg.textContent = '학생 코드 6자리를 입력하세요.'; return; }
+    go.disabled = true; msg.style.color = ''; msg.textContent = '';
+    go.textContent = '확인 중…';
+    try {
+      var snap = await firebase.firestore().collection('omrCodes').doc(code).get();
+      if (!snap.exists){ msg.textContent = '등록되지 않은 코드예요. 선생님께 확인해 주세요.'; }
+      else {
+        store.set('localStorage', 'omrStudentCode', code);
+        store.set('localStorage', 'omrStudentName', snap.data().name || '');
+        store.set('sessionStorage', 'gateChoice', 'student');
+        location.href = 'omr/?code=' + encodeURIComponent(code);
+        return;
+      }
+    } catch(e){ console.error(e); msg.textContent = '연결에 실패했어요. 잠시 후 다시 시도해 주세요.'; }
+    go.disabled = false; go.textContent = '학생 코드로 입장';
+  };
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !gate.hidden) close(); });
 })();
 </script>
 </body>

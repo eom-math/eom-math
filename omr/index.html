@@ -188,7 +188,7 @@
       const snap = await db.collection('omrCodes').doc(code).get();
       if (!snap.exists){ $('loginMsg').textContent = '등록되지 않은 코드입니다. 선생님께 확인해 주세요.'; return false; }
       me = { code, ...snap.data() };
-      ls.set(LS_KEY, code);
+      ls.set(LS_KEY, code); ls.set('omrStudentName', me.name || '');
       const next = new URLSearchParams(location.search).get('next');
       if (next && /^[a-z-]+\.html(\?[\w=&%-]*)?$/.test(next)){ location.href = next; return true; }
       $('whoami').textContent = me.name;
@@ -204,7 +204,7 @@
   $('loginBtn').onclick = () => login($('codeInput').value);
   $('codeInput').addEventListener('keydown', e => { if (e.key === 'Enter') login(e.target.value); });
   $('codeInput').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''); });
-  $('logoutBtn').onclick = () => { ls.del(LS_KEY); me = null; $('whoami').textContent=''; $('codeInput').value=''; show('vLogin'); };
+  $('logoutBtn').onclick = () => { ls.del(LS_KEY); ls.del('omrStudentName'); me = null; $('whoami').textContent=''; $('codeInput').value=''; show('vLogin'); };
 
   // ───────── 시험 목록 ─────────
   const STATUS_LABEL = { open:'응시 가능', closed:'마감', published:'성적 공개' };
