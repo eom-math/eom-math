@@ -61,6 +61,11 @@
   .stu-pick{display:flex;gap:6px;flex-wrap:wrap;}
   .stu-pick button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 11px;font-size:13.5px;font-weight:700;}
   .stu-pick button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .study{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line2);font-size:14px;}
+  .study .t{font-variant-numeric:tabular-nums;font-size:13px;color:var(--dim);}
+  .study .ss{grid-column:1/-1;font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums;line-height:1.7;}
+  .rate{font-weight:800;font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:99px;font-size:12.5px;}
+  .rate.ok{background:var(--ok-soft);color:var(--ok);} .rate.mid{background:var(--warn-soft);color:var(--warn);} .rate.low{background:var(--red-soft);color:var(--red);}
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0;}
   @media (max-width:560px){ .kpis{grid-template-columns:repeat(2,1fr);} }
 </style>
@@ -100,6 +105,7 @@
       <button data-tab="lecture">영상 강의</button>
       <button data-tab="qna">질문 답변 <span class="pill red hidden" id="qnaBadge"></span></button>
       <button data-tab="att">등원</button>
+      <button data-tab="study">공부 타이머</button>
       <button data-tab="notes">학생 기록</button>
     </div>
 
@@ -149,6 +155,21 @@
       </div>
       <div class="kpis" id="attKpis"></div>
       <div class="card" id="attList"></div>
+    </div>
+
+    <!-- 공부 타이머 -->
+    <div data-pane="study" class="hidden">
+      <div class="row" style="margin-bottom:10px;">
+        <select class="input" id="studyRange" style="width:auto;">
+          <option value="1">오늘</option><option value="7" selected>최근 7일</option><option value="30">최근 30일</option>
+        </select>
+        <select class="input" id="studyClass" style="width:auto;min-width:130px;"></select>
+        <a class="btn" href="timer.html" target="_blank" rel="noopener">학생 타이머 화면 ↗</a>
+        <button class="btn" id="studyCsv">CSV</button>
+      </div>
+      <p class="muted">학생은 포털 → <b>타이머</b>에서 공부합니다. 1분 이상 한 세션만 기록되고, 집중률 = 순수 집중 ÷ 계획 시간입니다.</p>
+      <div class="kpis" id="studyKpis"></div>
+      <div class="card" id="studyList"></div>
     </div>
 
     <!-- 학생 기록 -->
@@ -241,7 +262,7 @@
     show('vMain');
     await loadRoster();
     const tab = (location.hash || '#clinic').slice(1);
-    selectTab(['clinic','lecture','qna','att','notes'].includes(tab) ? tab : 'clinic');
+    selectTab(['clinic','lecture','qna','att','study','notes'].includes(tab) ? tab : 'clinic');
     refreshQnaBadge();
   });
 
@@ -255,6 +276,7 @@
     $('lClass2').innerHTML = classOpts('전체', '전체 반');
     $('lecClass').innerHTML = classOpts('*', '모든 강의');
     $('attClass').innerHTML = classOpts('*', '전체 반');
+    $('studyClass').innerHTML = classOpts('*', '전체 반');
     $('noteClass').innerHTML = classOpts('', '반 선택');
   }
 
@@ -264,7 +286,7 @@
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === t));
     document.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('hidden', p.dataset.pane !== t));
     history.replaceState(null, '', '#' + t);
-    ({ clinic: loadClinic, lecture: loadLectures, qna: loadQna, att: loadAtt, notes: () => {} })[t]();
+    ({ clinic: loadClinic, lecture: loadLectures, qna: loadQna, att: loadAtt, study: loadStudy, notes: () => {} })[t]();
   }
   $('tabs').onclick = e => { const b = e.target.closest('button'); if (b) selectTab(b.dataset.tab); };
 
@@ -597,6 +619,47 @@
     OMR.downloadCsv(`등원_${$('attDate').value}.csv`, [['이름','반','등원','하원','학부모 연락처','메시지'],
       ...attRows.map(x => [x.s.name, x.s.className, x.r ? OMR.hhmm(x.r.inAt) : '미등원', x.r && x.r.outAt ? OMR.hhmm(x.r.outAt) : '',
         OMR.fmtPhone((phones[x.s.code] || {}).parentPhone), x.r ? attMsg(x) : ''])]);
+  };
+
+  // ═════════ 공부 타이머 ═════════
+  let studyRows = [];
+  const minTxt = sec => { const m = Math.round(sec / 60); return m >= 60 ? `${Math.floor(m/60)}시간 ${m%60}분` : `${m}분`; };
+  const rateCls = r => r >= 85 ? 'ok' : r >= 65 ? 'mid' : 'low';
+  $('studyRange').onchange = $('studyClass').onchange = () => loadStudy();
+  async function loadStudy(){
+    const days = +$('studyRange').value, cf = $('studyClass').value, box = $('studyList');
+    const from = OMR.todayStr(new Date(Date.now() - (days - 1) * 86400000));
+    box.innerHTML = '<div class="muted">불러오는 중…</div>';
+    try {
+      const sess = (await db.collection('studySessions').where('date', '>=', from).get()).docs.map(d => d.data())
+        .filter(x => cf === '*' || x.className === cf);
+      const by = {};
+      sess.forEach(x => { (by[x.code] = by[x.code] || { name:x.name, className:x.className, list:[] }).list.push(x); });
+      const list = roster.filter(s => cf === '*' || s.className === cf);
+      studyRows = list.map(s => {
+        const g = by[s.code], l = g ? g.list.sort((a,b) => (toDate(a.startedAt)||0) - (toDate(b.startedAt)||0)) : [];
+        const planned = l.reduce((a,x) => a + x.plannedSec, 0), focus = l.reduce((a,x) => a + x.focusSec, 0);
+        return { s, l, planned, focus, away: l.reduce((a,x) => a + x.awayCount, 0),
+          rate: planned ? Math.round(100 * focus / planned) : null };
+      }).sort((a,b) => b.focus - a.focus || a.s.name.localeCompare(b.s.name, 'ko'));
+      const active = studyRows.filter(r => r.l.length), totFocus = active.reduce((a,r) => a + r.focus, 0);
+      const totPlan = active.reduce((a,r) => a + r.planned, 0);
+      $('studyKpis').innerHTML = `<div class="stat"><div class="k">사용 학생</div><div class="v">${active.length}<small>/${list.length}</small></div></div>
+        <div class="stat"><div class="k">총 순수 집중</div><div class="v" style="font-size:17px;">${minTxt(totFocus)}</div></div>
+        <div class="stat"><div class="k">평균 집중률</div><div class="v">${totPlan ? Math.round(100 * totFocus / totPlan) : '–'}<small>${totPlan ? '%' : ''}</small></div></div>
+        <div class="stat"><div class="k">세션 수</div><div class="v">${sess.length}<small>회</small></div></div>`;
+      box.innerHTML = studyRows.length ? studyRows.map(r => `
+        <div class="study"><div><b>${esc(r.s.name)}</b> <span class="muted">${esc(r.s.className)}</span></div>
+          <span class="t">${r.l.length ? `${minTxt(r.focus)} · 이탈 ${r.away}회 <span class="rate ${rateCls(r.rate)}">${r.rate}%</span>` : '<span style="color:var(--faint);">기록 없음</span>'}</span>
+          ${r.l.length ? `<div class="ss">${r.l.map(x => `${esc(kDate(x.date))} ${OMR.hhmm(x.startedAt)} · ${minTxt(x.plannedSec)} 중 ${minTxt(x.focusSec)} 집중 · 이탈 ${x.awayCount}회${x.completed ? '' : ' · 중간 종료'}`).join('<br>')}</div>` : ''}</div>`).join('')
+        : '<div class="muted">학생이 없습니다.</div>';
+    } catch(e){ box.innerHTML = '<div class="muted">불러오지 못했습니다. (보안 규칙에 studySessions가 게시됐는지 확인하세요)</div>'; handleErr(e); }
+  }
+  $('studyCsv').onclick = () => {
+    if (!studyRows.length) return toast('불러온 기록이 없습니다');
+    OMR.downloadCsv(`공부타이머_${OMR.todayStr()}.csv`, [['이름','반','날짜','시작','계획(분)','순수 집중(분)','이탈 횟수','이탈(분)','방식','완료'],
+      ...studyRows.flatMap(r => r.l.map(x => [r.s.name, r.s.className, x.date, OMR.hhmm(x.startedAt), Math.round(x.plannedSec/60),
+        Math.round(x.focusSec/60), x.awayCount, Math.round(x.awaySec/60), x.mode === 'pause' ? '일시정지' : '경고', x.completed ? 'O' : '중간 종료']))]);
   };
 
   // ═════════ 학생 기록 ═════════

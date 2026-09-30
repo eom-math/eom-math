@@ -287,6 +287,26 @@
         && request.resource.data.outAt == request.time);
     }
 
+    // ───────── 집중 타이머 ─────────
+    // 학생이 세션을 끝낼 때 한 건씩 추가만 가능. 목록·수정·삭제는 선생님·조교만
+    match /studySessions/{sid} {
+      function sessOk() {
+        let d = request.resource.data;
+        return stuOk(d)
+          && d.keys().hasOnly(['code', 'name', 'className', 'date', 'startedAt', 'endedAt', 'plannedSec',
+                               'elapsedSec', 'focusSec', 'awayCount', 'awaySec', 'mode', 'completed'])
+          && d.date is string && d.date.size() == 10
+          && d.plannedSec is int && d.plannedSec > 0 && d.plannedSec <= 14400
+          && d.elapsedSec is int && d.elapsedSec >= 0 && d.elapsedSec <= d.plannedSec
+          && d.focusSec is int && d.focusSec >= 0 && d.focusSec <= d.elapsedSec
+          && d.awayCount is int && d.awayCount >= 0 && d.awaySec is int && d.awaySec >= 0
+          && d.mode in ['warn', 'pause'] && d.completed is bool
+          && d.endedAt == request.time;
+      }
+      allow create: if sessOk();
+      allow read, update, delete: if omrStaffOrAdmin();
+    }
+
     // ───────── 학생 기록 (상담·특이사항) — 선생님·조교만 ─────────
     match /studentNotes/{id} {
       allow read, write: if omrStaffOrAdmin();

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>집중 타이머 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=5">
+<style>
+  #stage{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:22px 16px;}
+  #stage:fullscreen{background:var(--bg);justify-content:center;padding:24px;border:0;border-radius:0;}
+  .ringbox{position:relative;width:min(280px,100%);aspect-ratio:1;max-width:100%;}
+  .ringbox svg{width:100%;height:100%;transform:rotate(-90deg);}
+  .ringbox circle{fill:none;stroke-width:9;}
+  .ring-bg{stroke:var(--bg2);}
+  .ring-fg{stroke:var(--ink);stroke-linecap:round;transition:stroke-dashoffset .3s linear;}
+  .ring-fg.away{stroke:var(--red);}
+  .readout{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+  .digits{font-weight:900;font-size:clamp(44px,13vw,62px);letter-spacing:-.04em;font-variant-numeric:tabular-nums;}
+  .state{font-size:13px;font-weight:700;color:var(--dim);}
+  .state.run{color:var(--ok);} .state.pause{color:var(--red);}
+  .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;}
+  .chips button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--dim);}
+  .chips button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .chips button small{font-weight:600;opacity:.75;margin-left:2px;}
+  .lbl{font-size:12px;font-weight:800;color:var(--dim);}
+  .confirm{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:700;}
+  .log{list-style:none;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto;}
+  .log li{display:flex;justify-content:space-between;gap:10px;font-size:13px;border-left:3px solid var(--red);background:var(--red-soft);padding:7px 10px;border-radius:0 8px 8px 0;}
+  .log li b{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .alert{background:var(--card);border:2px solid var(--red);border-radius:16px;padding:24px 20px;max-width:360px;width:100%;text-align:center;}
+  .alert .big{font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;margin:6px 0;}
+  .alert h2{color:var(--red);margin-bottom:0;}
+  .alert p{font-size:14px;color:var(--dim);margin-bottom:16px;line-height:1.6;}
+  .ov{position:fixed;inset:0;background:rgba(250,250,248,.9);display:flex;align-items:center;justify-content:center;padding:16px;z-index:60;}
+  .today li{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:8px 0;border-bottom:1px solid var(--line2);}
+  .today li:last-child{border-bottom:0;}
+  .today{list-style:none;}
+  @media (prefers-reduced-motion:reduce){.ring-fg{transition:none;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="index.html">← 엄형국 <span>수학</span></a>
+    <span class="sub" id="whoami"></span>
+  </div>
+  <div class="kicker">FOCUS</div>
+  <h1>집중 타이머</h1>
+  <p class="lead">타이머가 도는 동안 다른 앱·탭으로 가면 이탈로 기록되고, 끝나면 선생님께 공부 기록이 전달돼요.</p>
+
+  <div class="card" id="stage">
+    <div class="ringbox">
+      <svg viewBox="0 0 260 260" aria-hidden="true">
+        <circle class="ring-bg" cx="130" cy="130" r="118"/>
+        <circle class="ring-fg" id="ring" cx="130" cy="130" r="118"/>
+      </svg>
+      <div class="readout">
+        <div class="digits" id="digits">50:00</div>
+        <div class="state" id="state">대기 중</div>
+      </div>
+    </div>
+
+    <div id="setup" class="stack" style="width:100%;">
+      <div class="lbl">공부 시간</div>
+      <div class="chips" id="presets">
+        <button data-min="25">25분</button>
+        <button data-min="50" class="on">50분</button>
+        <button data-min="80">80분</button>
+        <button data-min="100">100분<small>수능 수학</small></button>
+      </div>
+      <div class="lbl" style="margin-top:14px;">화면을 벗어나면</div>
+      <div class="chips" id="modes">
+        <button data-mode="warn" class="on">경고만 띄우기</button>
+        <button data-mode="pause">타이머 일시정지</button>
+      </div>
+    </div>
+
+    <div class="row" style="justify-content:center;">
+      <button class="btn red" id="btnStart" style="min-width:120px;">시작</button>
+      <button class="btn hidden" id="btnPause">일시정지</button>
+      <button class="btn hidden" id="btnStop">종료</button>
+      <button class="btn" id="btnFull">전체 화면</button>
+    </div>
+    <!-- 이탈 경고: 전체 화면에서도 보이도록 stage 안에 둠 -->
+    <div class="ov hidden" id="overlay">
+      <div class="alert" role="alertdialog" aria-labelledby="ovTitle">
+        <h2 id="ovTitle">화면을 벗어났어요</h2>
+        <div class="big" id="ovDur">0:00</div>
+        <p id="ovMsg"></p>
+        <button class="btn primary block" id="ovBtn">계속 집중하기</button>
+      </div>
+    </div>
+    <div class="confirm hidden" id="confirm">
+      아직 시간이 남았어요. 지금 끝낼까요?
+      <button class="btn sm red" id="stopYes">끝내기</button>
+      <button class="btn sm" id="stopNo">계속하기</button>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="k">순수 집중</div><div class="v" id="sFocus">0:00</div></div>
+    <div class="stat"><div class="k">이탈 횟수</div><div class="v" id="sCount">0<small>회</small></div></div>
+    <div class="stat"><div class="k">이탈 시간</div><div class="v" id="sAway">0:00</div></div>
+  </div>
+
+  <div class="card">
+    <h3>이번 세션 이탈 기록</h3>
+    <ul class="log" id="log"><li style="border:0;background:none;padding:0;color:var(--dim);">아직 이탈 기록이 없어요.</li></ul>
+  </div>
+
+  <div class="card">
+    <h3>오늘 공부 기록 <span class="muted" id="todaySum"></span></h3>
+    <ul class="today" id="today"></ul>
+  </div>
+</div>
+
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=6"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const { db, FV, esc, toast } = OMR;
+  const me = await OMR.requireStudent(); if (!me) return;
+  $('whoami').textContent = `${me.name} · ${me.className}`;
+
+  const fmt = ms => { const s = Math.max(0, Math.round(ms/1000)), h = Math.floor(s/3600), m = Math.floor(s%3600/60), r = s%60;
+    return h ? `${h}:${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}` : `${m}:${String(r).padStart(2,'0')}`; };
+  const fmtCeil = ms => fmt(Math.ceil(ms/1000)*1000);
+  const minText = ms => { const m = Math.round(ms/60000); return m >= 60 ? `${Math.floor(m/60)}시간 ${m%60}분` : `${m}분`; };
+
+  // 이 기기의 오늘 기록 (선생님 기록은 Firestore에 따로 저장)
+  const LKEY = 'studyToday_' + me.code;
+  const loadToday = () => { try { const d = JSON.parse(localStorage.getItem(LKEY) || 'null'); return d && d.date === OMR.todayStr() ? d.items : []; } catch(e){ return []; } };
+  const saveToday = items => { try { localStorage.setItem(LKEY, JSON.stringify({ date: OMR.todayStr(), items })); } catch(e){} };
+  let todayItems = loadToday();
+  function renderToday(){
+    const total = todayItems.reduce((a, x) => a + x.focus, 0);
+    $('todaySum').textContent = todayItems.length ? `· 순수 집중 ${minText(total)}` : '';
+    $('today').innerHTML = todayItems.length ? todayItems.slice().reverse().map(x =>
+      `<li><span>${esc(x.time)} · ${minText(x.planned)} 계획${x.completed ? '' : ' (중간 종료)'}</span><b>${minText(x.focus)} · 이탈 ${x.awayCount}회</b></li>`).join('')
+      : '<li class="muted">오늘은 아직 기록이 없어요.</li>';
+  }
+  renderToday();
+
+  // ───────── 타이머 ─────────
+  const T = { duration: 50*60000, mode:'warn', running:false, paused:false, pausedByAway:false,
+    segStart:0, elapsed:0, away:false, awayStart:0, awayType:'', awayMs:0, awayCount:0, log:[], blurTimer:null, startedAt:null };
+  const C = 2*Math.PI*118, ring = $('ring'); ring.style.strokeDasharray = C;
+  const elapsedNow = () => T.elapsed + (T.running && !T.paused ? Date.now() - T.segStart : 0);
+  const awayNow = () => T.awayMs + (T.away ? Date.now() - T.awayStart : 0);
+  const focusNow = el => Math.max(0, el - (T.mode === 'warn' ? awayNow() : 0)); // 경고 모드: 흐른 시간에서 이탈 시간 제외
+
+  function render(){
+    const el = elapsedNow(), left = Math.max(0, T.duration - el);
+    $('digits').textContent = fmtCeil(left);
+    ring.style.strokeDashoffset = C * (1 - Math.min(1, el / T.duration));
+    ring.classList.toggle('away', T.away || T.pausedByAway);
+    const st = $('state');
+    if (T.running){
+      if (T.paused){ st.textContent = T.pausedByAway ? '이탈로 일시정지됨' : '일시정지'; st.className = 'state pause'; }
+      else if (T.away){ st.textContent = '화면 밖에 있음'; st.className = 'state pause'; }
+      else { st.textContent = '집중하는 중'; st.className = 'state run'; }
+    }
+    $('sFocus').textContent = fmt(focusNow(el));
+    $('sCount').innerHTML = `${T.awayCount}<small>회</small>`;
+    $('sAway').textContent = fmt(awayNow());
+    if (T.running && left <= 0) finish(true);
+  }
+  setInterval(render, 250);
+
+  function runningUI(on){
+    $('setup').classList.toggle('hidden', on);
+    $('btnStart').classList.toggle('hidden', on);
+    $('btnPause').classList.toggle('hidden', !on);
+    $('btnStop').classList.toggle('hidden', !on);
+    $('confirm').classList.add('hidden');
+  }
+  const pick = (box, btn) => [...box.children].forEach(b => b.classList.toggle('on', b === btn));
+  $('presets').onclick = e => { const b = e.target.closest('button'); if (!b || T.running) return; pick($('presets'), b); T.duration = +b.dataset.min * 60000; render(); };
+  $('modes').onclick = e => { const b = e.target.closest('button'); if (!b || T.running) return; pick($('modes'), b); T.mode = b.dataset.mode; };
+
+  let wakeLock = null;
+  $('btnStart').onclick = async () => {
+    Object.assign(T, { running:true, paused:false, pausedByAway:false, segStart:Date.now(), elapsed:0, away:false,
+      awayMs:0, awayCount:0, log:[], startedAt:new Date() });
+    renderLog(); runningUI(true); render();
+    try { wakeLock = await navigator.wakeLock?.request('screen'); } catch(e){}
+  };
+  function pause(byAway){ if (!T.running || T.paused) return; T.elapsed += Date.now() - T.segStart; T.paused = true; T.pausedByAway = byAway; $('btnPause').textContent = '이어서 시작'; }
+  function resume(){ if (!T.running || !T.paused) return; T.paused = false; T.pausedByAway = false; T.segStart = Date.now(); $('btnPause').textContent = '일시정지'; }
+  $('btnPause').onclick = () => T.paused ? resume() : pause(false);
+  $('btnStop').onclick = () => { $('confirm').classList.remove('hidden'); $('btnPause').classList.add('hidden'); $('btnStop').classList.add('hidden'); };
+  $('stopNo').onclick = () => { $('confirm').classList.add('hidden'); $('btnPause').classList.remove('hidden'); $('btnStop').classList.remove('hidden'); };
+  $('stopYes').onclick = () => finish(false);
+
+  async function finish(completed){
+    if (!T.running) return;
+    if (T.away) endAway(true);
+    const el = Math.min(T.duration, elapsedNow());
+    const focus = focusNow(el);
+    T.elapsed = el; T.running = false; T.paused = false; T.pausedByAway = false;
+    try { wakeLock?.release(); } catch(e){}
+    runningUI(false); $('btnPause').textContent = '일시정지'; $('overlay').classList.add('hidden'); render();
+    $('state').textContent = completed ? '완료! 수고했어요' : '중간 종료'; $('state').className = 'state';
+
+    const p = n => String(n).padStart(2,'0'), s = T.startedAt;
+    todayItems.push({ time:`${p(s.getHours())}:${p(s.getMinutes())}`, planned:T.duration, focus, awayCount:T.awayCount, completed });
+    saveToday(todayItems); renderToday();
+
+    if (el < 60000) { toast('1분 미만 기록은 선생님께 보내지 않아요'); return; }
+    const sec = ms => Math.round(ms/1000);
+    try {
+      await db.collection('studySessions').add({
+        code: me.code, name: me.name, className: me.className, date: OMR.todayStr(s),
+        startedAt: firebase.firestore.Timestamp.fromDate(s), endedAt: FV.serverTimestamp(),
+        plannedSec: sec(T.duration), elapsedSec: sec(el), focusSec: sec(focus),
+        awayCount: T.awayCount, awaySec: sec(T.awayMs), mode: T.mode, completed,
+      });
+      toast('공부 기록을 선생님께 보냈어요');
+    } catch(e){ console.error(e); toast('기록을 보내지 못했어요. 인터넷 연결을 확인해 주세요.'); }
+  }
+
+  // ───────── 이탈 감지 ─────────
+  function startAway(type){
+    if (!T.running || T.away || (T.paused && !T.pausedByAway)) return;
+    T.away = true; T.awayStart = Date.now(); T.awayType = type;
+    if (T.mode === 'pause') pause(true);
+  }
+  function endAway(silent){
+    if (!T.away) return;
+    const dur = Date.now() - T.awayStart;
+    T.away = false; T.awayMs += dur; T.awayCount++;
+    T.log.unshift({ at:new Date(T.awayStart), type:T.awayType, dur }); renderLog();
+    if (!silent) showOverlay(dur);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden'){ clearTimeout(T.blurTimer); startAway('다른 앱·탭으로 이동'); }
+    else if (document.hasFocus()) endAway();
+  });
+  // PC에서 다른 창을 2초 넘게 누르고 있을 때
+  window.addEventListener('blur', () => {
+    if (!T.running) return; clearTimeout(T.blurTimer);
+    T.blurTimer = setTimeout(() => { if (!document.hasFocus()) startAway('다른 창 클릭'); }, 2000);
+  });
+  window.addEventListener('focus', () => { clearTimeout(T.blurTimer); if (document.visibilityState === 'visible') endAway(); });
+  window.addEventListener('beforeunload', e => { if (T.running){ e.preventDefault(); e.returnValue = ''; } });
+
+  function showOverlay(dur){
+    $('ovDur').textContent = fmt(dur);
+    const nth = `이번 세션 ${T.awayCount}번째 이탈이에요.`;
+    if (T.mode === 'pause'){ $('ovMsg').textContent = `${nth} 타이머를 멈춰 두었어요.`; $('ovBtn').textContent = '이어서 시작'; }
+    else { $('ovMsg').textContent = `${nth} 이 시간은 순수 집중 시간에서 빠져요.`; $('ovBtn').textContent = '계속 집중하기'; }
+    $('overlay').classList.remove('hidden'); $('ovBtn').focus();
+  }
+  $('ovBtn').onclick = () => { $('overlay').classList.add('hidden'); if (T.pausedByAway) resume(); };
+
+  function renderLog(){
+    $('log').innerHTML = T.log.length ? T.log.map(l =>
+      `<li><span>${l.at.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} · ${esc(l.type)}</span><b>${fmt(l.dur)}</b></li>`).join('')
+      : '<li style="border:0;background:none;padding:0;color:var(--dim);">아직 이탈 기록이 없어요.</li>';
+  }
+
+  // ───────── 전체 화면 (아이폰은 미지원) ─────────
+  const stage = $('stage');
+  if (!stage.requestFullscreen) $('btnFull').classList.add('hidden');
+  $('btnFull').onclick = async () => {
+    try { document.fullscreenElement ? await document.exitFullscreen() : await stage.requestFullscreen(); }
+    catch(e){ $('btnFull').classList.add('hidden'); toast('이 기기에서는 전체 화면을 쓸 수 없어요'); }
+  };
+  document.addEventListener('fullscreenchange', () => { $('btnFull').textContent = document.fullscreenElement ? '전체 화면 끄기' : '전체 화면'; });
+
+  render();
+})();
+</script>
+</body>
+</html>

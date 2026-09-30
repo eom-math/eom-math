@@ -16,6 +16,7 @@
 | `/omr/lectures.html`, `/omr/watch.html?id=` | 학생 | 영상 강의 목록·시청(구간별 시청 기록, 이름 워터마크) |
 | `/omr/ask.html` | 학생 | 사진·글로 질문, 답변 확인 |
 | `/omr/checkin.html` | 데스크 태블릿 | 학생 코드로 등원·하원 기록 |
+| `/omr/timer.html` | 학생 | 집중 타이머 (탭 전환·창 최소화·다른 창 클릭 이탈 감지, 경고/일시정지 선택). 1분 이상 세션은 `studySessions`에 저장 → 운영 › 공부 타이머 탭 |
 
 ## 처음 한 번 설정
 1. Firebase 콘솔 → Firestore → 규칙: `firestore.rules` 내용을 기존 규칙 블록 안에 추가, `ADMIN_EMAIL` 교체 후 게시
