@@ -364,27 +364,38 @@
 
 
   /* ---------- slide 1: photo background ---------- */
-  .slide-photo{ position:relative; isolation:isolate; overflow:hidden; background:#111114; color:#fff;
-    padding:52px 26px 30px !important; }
-  .slide-bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:62% 18%;
-    z-index:-2; filter:grayscale(100%) contrast(1.1) brightness(.9); transform:scale(1.04);
+  .slide-photo{ position:relative; isolation:isolate; overflow:hidden; background:#141417; color:#fff;
+    padding:52px 30px 34px !important; }
+  .slide-photo > :not(.slide-bg):not(.slide-shade){ position:relative; max-width:min(56%,480px); }
+  .slide-photo .statement-main{ font-size:clamp(18px,2.3vw,22px); }
+  .slide-photo h1.headline{ max-width:none; }
+  .slide-bg{ position:absolute; top:0; right:0; bottom:0; left:auto; width:54%; height:100%;
+    object-fit:cover; object-position:50% 14%; z-index:-2;
+    filter:grayscale(100%) brightness(1.12) contrast(1.02); transform:scale(1.04);
     animation:bgZoom 9s ease-out forwards; }
   @keyframes bgZoom{ to{ transform:scale(1); } }
   .slide-shade{ position:absolute; inset:0; z-index:-1;
-    background:linear-gradient(90deg, rgba(17,17,20,1) 0%, rgba(17,17,20,1) 38%, rgba(17,17,20,.6) 54%, rgba(17,17,20,.28) 75%, rgba(17,17,20,.2) 100%),
-               linear-gradient(0deg, rgba(10,10,12,.7) 0%, rgba(10,10,12,0) 45%); }
-  @media (max-width:640px){
-    .slide-photo{ padding:44px 22px 26px !important; }
-    .slide-bg{ object-position:24% 15%; }
-    .slide-shade{ background:linear-gradient(180deg, rgba(10,10,12,.55) 0%, rgba(10,10,12,.72) 50%, rgba(10,10,12,.92) 100%); }
-  }
-  @media (min-width:641px){ .slide-bg{ left:auto; width:64%; object-position:50% 12%; } }
+    background:linear-gradient(90deg, #141417 0%, #141417 46%, rgba(20,20,23,.6) 56%, rgba(20,20,23,.12) 72%, rgba(20,20,23,0) 100%),
+               linear-gradient(0deg, rgba(20,20,23,.45) 0%, rgba(20,20,23,0) 30%); }
   .slide-photo h1.headline{ color:#fff; }
-  .slide-photo .role-line{ color:rgba(255,255,255,.72); }
+  .slide-photo .role-line{ color:rgba(255,255,255,.8); font-size:15px; line-height:1.6; }
+  .slide-photo .statement{ border-left-color:#ff6a5b; }
   .slide-photo .statement-main{ color:#fff; }
-  .slide-photo .statement-sub{ color:rgba(255,255,255,.66); }
+  .slide-photo .statement-sub{ color:rgba(255,255,255,.75); }
   .slide-photo .kicker{ color:#ff6a5b; }
   .slide-photo .kicker::before{ background:#ff6a5b; }
+  .slide-photo .headline .accent{ color:#ff4a38; }
+  @media (max-width:640px){
+    /* 휴대폰: 위쪽은 사진(얼굴), 아래쪽은 글 */
+    .slide-photo{ padding:0 22px 28px !important; }
+    .slide-photo > :not(.slide-bg):not(.slide-shade){ max-width:none; }
+    .slide-photo::before{ content:""; display:block; height:330px; }
+    .slide-bg{ left:0; width:100%; height:380px; bottom:auto; object-position:50% 8%; }
+    .slide-shade{ background:linear-gradient(180deg, rgba(20,20,23,0) 0px, rgba(20,20,23,0) 200px,
+      rgba(20,20,23,.55) 250px, rgba(20,20,23,.92) 320px, #141417 378px); }
+    .slide-photo .kicker{ margin-top:-34px; }
+    .slide-photo .role-line{ font-size:14px; }
+  }
 
   /* ---------- hub: one horizontal row ---------- */
   .hub-short{ display:none; }
