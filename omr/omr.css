@@ -1,0 +1,127 @@
+/* 엄형국 수학 · 모바일 OMR 공통 스타일 (메인 사이트 톤과 맞춤) */
+:root{
+  --bg:#FAFAF8; --bg2:#F1F0EC; --card:#FFFFFF;
+  --ink:#111114; --dim:#63636B; --faint:#9A9AA2;
+  --line:rgba(17,17,20,.14); --line2:rgba(17,17,20,.08);
+  --red:#D6301F; --red-soft:rgba(214,48,31,.09);
+  --ok:#1F7A4D; --ok-soft:rgba(31,122,77,.10);
+  --warn:#B7791F; --warn-soft:rgba(183,121,31,.12);
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--bg);}
+body{
+  color:var(--ink);
+  font-family:'Pretendard','Noto Sans KR',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh; line-height:1.5;
+}
+a{color:inherit;}
+button{font:inherit;color:inherit;cursor:pointer;}
+input,select,textarea{font:inherit;color:inherit;}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 64px;}
+.wrap.wide{max-width:1080px;}
+
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:18px 0;border-bottom:1px solid var(--line);margin-bottom:20px;
+}
+.brand{font-weight:800;font-size:15px;letter-spacing:-.01em;text-decoration:none;}
+.brand span{color:var(--red);}
+.topbar .sub{font-size:12.5px;color:var(--dim);}
+
+h1{font-size:24px;font-weight:900;letter-spacing:-.03em;margin-bottom:6px;}
+h2{font-size:17px;font-weight:800;letter-spacing:-.02em;margin-bottom:12px;}
+h3{font-size:14px;font-weight:800;margin-bottom:10px;}
+.lead{color:var(--dim);font-size:14px;margin-bottom:20px;}
+.muted{color:var(--dim);font-size:13px;}
+.kicker{font-size:11.5px;font-weight:800;letter-spacing:.14em;color:var(--red);margin-bottom:8px;}
+
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px;margin-bottom:14px;
+}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.row.between{justify-content:space-between;}
+.grow{flex:1 1 auto;}
+.stack>*+*{margin-top:10px;}
+
+label.f{display:block;font-size:12.5px;font-weight:700;color:var(--dim);margin-bottom:4px;}
+.input,select.input,textarea.input{
+  width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;
+  background:#fff;font-size:15px;outline:none;
+}
+.input:focus{border-color:var(--ink);}
+textarea.input{min-height:110px;resize:vertical;}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:10px 16px;border-radius:8px;border:1px solid var(--line);
+  background:#fff;font-size:14px;font-weight:700;white-space:nowrap;
+  transition:background .15s,border-color .15s,transform .05s;
+}
+.btn:hover{border-color:var(--ink);}
+.btn:active{transform:translateY(1px);}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink);}
+.btn.primary:hover{background:#2a2a30;}
+.btn.red{background:var(--red);color:#fff;border-color:var(--red);}
+.btn.ghost{border-color:transparent;background:transparent;}
+.btn.sm{padding:6px 10px;font-size:12.5px;border-radius:6px;}
+.btn.block{width:100%;padding:14px;font-size:16px;}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+
+.pill{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:99px;
+  background:var(--bg2);color:var(--dim);white-space:nowrap;}
+.pill.open{background:var(--ok-soft);color:var(--ok);}
+.pill.draft{background:var(--bg2);color:var(--dim);}
+.pill.closed{background:var(--warn-soft);color:var(--warn);}
+.pill.published{background:var(--ink);color:#fff;}
+.pill.red{background:var(--red-soft);color:var(--red);}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto;}
+.tabs button{border:0;background:none;padding:10px 14px;font-weight:700;font-size:14px;color:var(--dim);
+  border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--ink);}
+
+table.tbl{width:100%;border-collapse:collapse;font-size:13.5px;}
+.tbl th,.tbl td{padding:9px 8px;border-bottom:1px solid var(--line2);text-align:left;vertical-align:middle;}
+.tbl th{font-size:12px;color:var(--dim);font-weight:700;background:var(--bg2);}
+.tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums;}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:#fff;}
+
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px;}
+.stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;}
+.stat .k{font-size:12px;color:var(--dim);font-weight:700;}
+.stat .v{font-size:22px;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+.stat .v small{font-size:13px;color:var(--dim);font-weight:700;margin-left:2px;}
+
+.empty{padding:28px;text-align:center;color:var(--dim);font-size:14px;}
+.hidden{display:none !important;}
+
+.toast{
+  position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);
+  background:var(--ink);color:#fff;padding:11px 18px;border-radius:99px;font-size:14px;font-weight:600;
+  opacity:0;pointer-events:none;transition:.2s;z-index:100;max-width:90vw;text-align:center;
+}
+.toast.show{opacity:1;transform:translate(-50%,0);}
+
+.modal-bg{position:fixed;inset:0;background:rgba(17,17,20,.45);display:flex;align-items:flex-end;
+  justify-content:center;z-index:50;padding:0;}
+.modal{background:var(--bg);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:22px 18px 26px;
+  max-height:90vh;overflow:auto;}
+@media (min-width:600px){ .modal-bg{align-items:center;padding:20px;} .modal{border-radius:16px;} }
+
+/* 선택지 버블 (OMR / 정답 입력 공용) */
+.bubble{
+  width:42px;height:42px;border-radius:50%;border:1.5px solid rgba(17,17,20,.35);background:#fff;
+  font-weight:800;font-size:15px;color:var(--dim);display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;transition:background .12s,color .12s,border-color .12s,transform .08s;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+}
+.bubble:active{transform:scale(.92);}
+.bubble.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+.bubble.sm{width:32px;height:32px;font-size:13px;}
+.bubble[disabled]{cursor:default;}
+
+.bar{height:8px;border-radius:99px;background:var(--bg2);overflow:hidden;}
+.bar>i{display:block;height:100%;background:var(--ink);border-radius:99px;}

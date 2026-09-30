@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OMR 관리 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=1">
+<style>
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  @media (max-width:600px){ .grid2,.grid3{grid-template-columns:1fr;} }
+  .exam-row{display:flex;align-items:center;gap:12px;padding:13px 16px;background:#fff;border:1px solid var(--line);
+    border-radius:var(--radius);margin-bottom:8px;cursor:pointer;width:100%;text-align:left;}
+  .exam-row:hover{border-color:var(--ink);}
+  .exam-row .t{font-weight:800;}
+  .exam-row .m{font-size:12.5px;color:var(--dim);}
+  .status-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 14px;background:var(--bg2);
+    border-radius:var(--radius);margin-bottom:14px;}
+  .key-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line2);flex-wrap:wrap;}
+  .key-row .no{width:30px;font-weight:900;font-variant-numeric:tabular-nums;}
+  .key-row .choices{display:flex;gap:6px;}
+  .key-row input.pts{width:64px;padding:6px 8px;font-size:14px;}
+  .key-row label.ac{font-size:12px;color:var(--dim);display:flex;gap:4px;align-items:center;}
+  .key-row.multi .no::after{content:" 복수";font-size:10px;color:var(--red);font-weight:800;}
+  .key-cols{columns:2 360px;column-gap:28px;}
+  .key-cols .key-row{break-inside:avoid;}
+  .qstat{display:grid;grid-template-columns:40px 1fr 52px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line2);font-size:13px;}
+  .qstat .dist{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;}
+  .qstat .dist span{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--bg2);color:var(--dim);font-variant-numeric:tabular-nums;}
+  .qstat .dist span.ans{background:var(--ok-soft);color:var(--ok);font-weight:800;}
+  .qstat .dist span.trap{background:var(--red-soft);color:var(--red);font-weight:800;}
+  .bar.low>i{background:var(--red);}
+  .code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;letter-spacing:.08em;}
+  .sub-status.submitted{color:var(--ok);font-weight:800;}
+  .sub-status.draft{color:var(--warn);font-weight:700;}
+  .sub-status.none{color:var(--faint);}
+  .note{font-size:12.5px;color:var(--dim);background:var(--bg2);border-radius:8px;padding:10px 12px;line-height:1.6;}
+  .note b{color:var(--ink);}
+  pre.msg{white-space:pre-wrap;font:inherit;font-size:13px;background:#fff;border:1px dashed var(--line);border-radius:8px;padding:10px 12px;}
+</style>
+</head>
+<body>
+<div class="wrap wide">
+  <div class="topbar">
+    <a class="brand" href="../index.html">엄형국 <span>수학</span> · OMR 관리</a>
+    <div class="row"><span class="sub" id="adminEmail"></span><button class="btn sm hidden" id="logoutBtn">로그아웃</button></div>
+  </div>
+
+  <!-- 로그인 -->
+  <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
+    <h1>관리자 로그인</h1>
+    <p class="lead">메인 사이트 관리자 계정으로 로그인하세요.</p>
+    <div class="card stack">
+      <input class="input" type="email" id="loginEmail" placeholder="이메일" autocomplete="username">
+      <input class="input" type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
+      <button class="btn primary block" id="loginBtn">로그인</button>
+      <p class="muted" id="loginMsg"></p>
+    </div>
+  </section>
+
+  <!-- 메인 -->
+  <section id="vMain" class="hidden">
+    <div class="tabs" id="mainTabs">
+      <button data-tab="exams" class="on">시험</button>
+      <button data-tab="students">학생·코드</button>
+    </div>
+    <div id="permWarn" class="note hidden" style="margin-bottom:14px;border:1px solid var(--red);">
+      <b>Firestore 권한 오류</b> — <code>omr/firestore.rules</code>의 규칙을 Firebase 콘솔에 추가했는지,
+      규칙의 ADMIN_EMAIL이 지금 로그인한 이메일과 같은지 확인하세요.
+    </div>
+
+    <!-- 시험 목록 -->
+    <div id="tabExams">
+      <div class="row between" style="margin-bottom:12px;">
+        <h2 style="margin:0;">시험</h2>
+        <button class="btn primary" id="newExamBtn">+ 새 시험</button>
+      </div>
+      <div id="examList"><div class="empty">불러오는 중…</div></div>
+    </div>
+
+    <!-- 학생 -->
+    <div id="tabStudents" class="hidden">
+      <div class="row between" style="margin-bottom:12px;">
+        <h2 style="margin:0;">학생·코드</h2>
+        <div class="row">
+          <select class="input" id="classFilter" style="width:auto;padding:8px 10px;font-size:14px;"></select>
+          <button class="btn" id="bulkBtn">여러 명 붙여넣기</button>
+          <button class="btn primary" id="addStudentBtn">+ 학생</button>
+        </div>
+      </div>
+      <p class="muted" style="margin-bottom:10px;">학생 코드는 자동 발급됩니다. 학생은 <b>eom-math.github.io/eom-math/omr/</b> 에서 코드로 입장합니다.</p>
+      <div class="tbl-wrap"><table class="tbl" id="studentTbl"></table></div>
+    </div>
+  </section>
+
+  <!-- 시험 상세 -->
+  <section id="vExam" class="hidden">
+    <button class="btn sm ghost" id="examBack" style="padding-left:0;margin-bottom:8px;">← 시험 목록</button>
+    <div class="row between" style="margin-bottom:10px;align-items:flex-start;">
+      <div>
+        <h1 id="exTitle" style="margin-bottom:2px;"></h1>
+        <p class="muted" id="exMeta"></p>
+      </div>
+    </div>
+    <div class="status-bar" id="statusBar"></div>
+    <div class="tabs" id="exTabs">
+      <button data-tab="key" class="on">정답·배점</button>
+      <button data-tab="subs">제출 현황</button>
+      <button data-tab="result">성적</button>
+      <button data-tab="send">성적표 발송</button>
+    </div>
+
+    <div id="exKey">
+      <div class="card">
+        <div class="grid2">
+          <div>
+            <label class="f">정답 빠른 입력 (1번부터 차례로, 예: 35142 21534)</label>
+            <div class="row" style="flex-wrap:nowrap;"><input class="input" id="quickKey" inputmode="numeric" placeholder="35142..."><button class="btn" id="quickKeyBtn">채우기</button></div>
+          </div>
+          <div>
+            <label class="f">배점 일괄 적용</label>
+            <div class="row" style="flex-wrap:nowrap;"><input class="input" id="bulkPts" type="number" step="0.5" min="0.5" value="3"><button class="btn" id="bulkPtsBtn">전체 적용</button></div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top:10px;">번호를 눌러 정답을 고릅니다. 두 개 이상 누르면 <b>복수 정답</b>(둘 중 하나만 골라도 정답). 문항 오류는 <b>전원정답</b>에 체크 후 재채점하세요.</p>
+      </div>
+      <div class="card"><div class="key-cols" id="keyRows"></div></div>
+      <div class="row between">
+        <span class="muted" id="keySum"></span>
+        <button class="btn primary" id="saveKeyBtn">정답 저장</button>
+      </div>
+    </div>
+
+    <div id="exSubs" class="hidden">
+      <div class="stat-grid" id="subStats"></div>
+      <div class="tbl-wrap"><table class="tbl" id="subTbl"></table></div>
+      <p class="muted" style="margin-top:8px;">실시간으로 갱신됩니다. 잘못 제출한 학생은 '잠금 해제'로 다시 제출하게 할 수 있습니다.</p>
+    </div>
+
+    <div id="exResult" class="hidden">
+      <div id="resultEmpty" class="empty">아직 채점하지 않았습니다. 응시를 마감한 뒤 위의 <b>채점하기</b>를 누르세요.</div>
+      <div id="resultBody" class="hidden">
+        <div class="stat-grid" id="resStats"></div>
+        <h3>석차</h3>
+        <div class="tbl-wrap" style="margin-bottom:18px;"><table class="tbl" id="rankTbl"></table></div>
+        <h3>문항별 정답률 <span class="muted" style="font-weight:600;">(초록=정답, 빨강=가장 많이 고른 오답)</span></h3>
+        <div class="card" id="qStats"></div>
+      </div>
+    </div>
+
+    <div id="exSend" class="hidden">
+      <div class="note" style="margin-bottom:14px;">
+        학생·학부모는 링크로 <b>로그인 없이</b> 성적표를 봅니다. 링크는 <b>결과 공개</b> 상태에서만 열립니다.<br>
+        <b>알리고로 보내기:</b> 아래 CSV를 받아 알리고의 알림톡(또는 문자) 대량 발송에 업로드하고, 열을 템플릿 변수(#{학생이름}, #{시험명}, #{링크})에 연결하세요.
+        알림톡은 아래 문구를 알리고에서 템플릿으로 등록·검수 받은 뒤 보낼 수 있습니다.
+      </div>
+      <div class="card">
+        <h3>메시지 문구 (알리고 템플릿 등록용)</h3>
+        <pre class="msg" id="tplText"></pre>
+        <div class="row" style="margin-top:8px;"><button class="btn sm" id="copyTplBtn">문구 복사</button></div>
+      </div>
+      <div class="card">
+        <div class="row between">
+          <div class="row">
+            <label class="row" style="gap:6px;font-weight:700;font-size:14px;"><input type="checkbox" id="toParent" checked> 학부모</label>
+            <label class="row" style="gap:6px;font-weight:700;font-size:14px;"><input type="checkbox" id="toStudent"> 학생</label>
+          </div>
+          <div class="row">
+            <button class="btn" id="copyAllBtn">전체 메시지 복사</button>
+            <button class="btn primary" id="csvBtn">알리고용 CSV 다운로드</button>
+          </div>
+        </div>
+      </div>
+      <div class="tbl-wrap"><table class="tbl" id="sendTbl"></table></div>
+    </div>
+  </section>
+</div>
+
+<!-- 모달들 -->
+<div class="modal-bg hidden" id="examModal">
+  <div class="modal stack">
+    <h2 id="examModalTitle">새 시험</h2>
+    <div><label class="f">시험 제목</label><input class="input" id="fTitle" placeholder="예) 10월 미적분 주간평가 1회"></div>
+    <div class="grid2">
+      <div><label class="f">과목</label><input class="input" id="fSubject" list="subjectList" placeholder="미적분">
+        <datalist id="subjectList"><option>공통수학1</option><option>공통수학2</option><option>대수</option><option>미적분I</option><option>미적분II</option><option>확률과 통계</option><option>기하</option></datalist></div>
+      <div><label class="f">반</label><input class="input" id="fClass" list="classList" placeholder="고2 미적분 A반"><datalist id="classList"></datalist></div>
+    </div>
+    <div class="grid2" id="fCountWrap">
+      <div><label class="f">문항 수</label><input class="input" id="fCount" type="number" min="1" max="100" value="20"></div>
+      <div><label class="f">선지</label><select class="input" id="fChoice"><option value="5">5지선다</option><option value="4">4지선다</option></select></div>
+    </div>
+    <div class="grid2">
+      <div><label class="f">시험일</label><input class="input" id="fDate" type="date"></div>
+      <div><label class="f">제출 마감 (선택)</label><input class="input" id="fDue" type="datetime-local"></div>
+    </div>
+    <p class="muted" id="examModalMsg"></p>
+    <div class="row"><button class="btn grow" data-close>취소</button><button class="btn primary grow" id="examSaveBtn">저장</button></div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="studentModal">
+  <div class="modal stack">
+    <h2 id="studentModalTitle">학생 추가</h2>
+    <div class="grid2">
+      <div><label class="f">이름</label><input class="input" id="sName"></div>
+      <div><label class="f">반</label><input class="input" id="sClass" list="classList"></div>
+    </div>
+    <div class="grid2">
+      <div><label class="f">학생 연락처</label><input class="input" id="sPhone" inputmode="tel" placeholder="010-0000-0000"></div>
+      <div><label class="f">학부모 연락처</label><input class="input" id="sParent" inputmode="tel" placeholder="010-0000-0000"></div>
+    </div>
+    <p class="muted" id="studentModalMsg"></p>
+    <div class="row"><button class="btn grow" data-close>취소</button><button class="btn primary grow" id="studentSaveBtn">저장</button></div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="bulkModal">
+  <div class="modal stack">
+    <h2>여러 명 붙여넣기</h2>
+    <p class="muted">한 줄에 한 명: <b>이름, 반, 학생 연락처, 학부모 연락처</b> (엑셀에서 복사해 붙여넣어도 됩니다)</p>
+    <textarea class="input" id="bulkText" placeholder="김민수, 고2 미적분 A반, 010-1111-2222, 010-3333-4444"></textarea>
+    <p class="muted" id="bulkMsg"></p>
+    <div class="row"><button class="btn grow" data-close>취소</button><button class="btn primary grow" id="bulkSaveBtn">등록</button></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=1"></script>
+<script>
+(function(){
+  const { db, FV, esc, fmtDateTime, toDate, toast, copyText, fmtPhone, normalizePhone } = OMR;
+  const auth = firebase.auth();
+  const $ = id => document.getElementById(id);
+  const STATUS = { draft:['출제 중','draft'], open:['응시 중','open'], closed:['마감','closed'], published:['결과 공개','published'] };
+
+  let students = [];      // [{id, name, className, code, phone, parentPhone}]
+  let exams = [];
+  let ex = null;          // 현재 시험
+  let exKey = null;       // {answers, points, allCorrect}
+  let exSubs = [];        // 현재 시험 제출 목록
+  let unsubSubs = null;
+
+  function handleErr(e, msg){
+    console.error(e);
+    if (e && e.code === 'permission-denied') $('permWarn').classList.remove('hidden');
+    toast(msg || ('오류: ' + (e && e.message || e)), 3500);
+  }
+  function openModal(id){ $(id).classList.remove('hidden'); }
+  function closeModal(id){ $(id).classList.add('hidden'); }
+  document.querySelectorAll('.modal-bg').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m || e.target.hasAttribute('data-close')) m.classList.add('hidden'); });
+  });
+  function show(v){ ['vLogin','vMain','vExam'].forEach(x => $(x).classList.toggle('hidden', x !== v)); window.scrollTo(0,0); }
+  function tabs(barId, map){
+    $(barId).addEventListener('click', e => {
+      const b = e.target.closest('button[data-tab]'); if (!b) return;
+      $(barId).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      Object.entries(map).forEach(([k, id]) => $(id).classList.toggle('hidden', k !== b.dataset.tab));
+    });
+  }
+  tabs('mainTabs', { exams:'tabExams', students:'tabStudents' });
+  tabs('exTabs', { key:'exKey', subs:'exSubs', result:'exResult', send:'exSend' });
+
+  // ───────── 로그인 ─────────
+  $('loginBtn').onclick = async () => {
+    $('loginMsg').textContent = '로그인 중…';
+    try { await auth.signInWithEmailAndPassword($('loginEmail').value.trim(), $('loginPw').value); }
+    catch(e){ $('loginMsg').textContent = '로그인 실패: 이메일 또는 비밀번호를 확인하세요.'; }
+  };
+  $('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
+  $('logoutBtn').onclick = () => auth.signOut();
+  auth.onAuthStateChanged(async user => {
+    $('logoutBtn').classList.toggle('hidden', !user);
+    $('adminEmail').textContent = user ? user.email : '';
+    if (!user){ show('vLogin'); return; }
+    show('vMain');
+    await Promise.all([loadStudents(), loadExams()]);
+  });
+
+  // ═════════ 학생 ═════════
+  async function loadStudents(){
+    try {
+      const qs = await db.collection('omrStudents').get();
+      students = qs.docs.map(d => ({ id:d.id, ...d.data() }))
+        .sort((a,b) => a.className.localeCompare(b.className,'ko') || a.name.localeCompare(b.name,'ko'));
+    } catch(e){ handleErr(e, '학생 명단을 불러오지 못했습니다'); students = []; }
+    const classes = [...new Set(students.map(s => s.className))];
+    $('classList').innerHTML = classes.map(c => `<option value="${esc(c)}">`).join('');
+    const sel = $('classFilter'), prev = sel.value;
+    sel.innerHTML = '<option value="">전체 반</option>' + classes.map(c => `<option>${esc(c)}</option>`).join('');
+    if (classes.includes(prev)) sel.value = prev;
+    renderStudents();
+  }
+  $('classFilter').onchange = renderStudents;
+
+  function renderStudents(){
+    const cf = $('classFilter').value;
+    const list = students.filter(s => !cf || s.className === cf);
+    const t = $('studentTbl');
+    if (!list.length){ t.innerHTML = '<tr><td class="empty">등록된 학생이 없습니다.</td></tr>'; return; }
+    t.innerHTML = `<tr><th>이름</th><th>반</th><th>코드</th><th>학생 연락처</th><th>학부모 연락처</th><th></th></tr>` +
+      list.map(s => `<tr>
+        <td><b>${esc(s.name)}</b></td><td>${esc(s.className)}</td>
+        <td><span class="code">${esc(s.code)}</span></td>
+        <td>${esc(fmtPhone(s.phone))}</td><td>${esc(fmtPhone(s.parentPhone))}</td>
+        <td style="white-space:nowrap;text-align:right;">
+          <button class="btn sm" data-act="copy" data-id="${s.id}">코드 안내 복사</button>
+          <button class="btn sm" data-act="edit" data-id="${s.id}">수정</button>
+          <button class="btn sm ghost" data-act="del" data-id="${s.id}" style="color:var(--red);">삭제</button>
+        </td></tr>`).join('');
+  }
+  $('studentTbl').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const s = students.find(x => x.id === b.dataset.id);
+    if (b.dataset.act === 'copy'){
+      const url = new URL('./', location.href).href;
+      copyText(`[엄형국 수학] ${s.name} 학생의 모바일 OMR 코드는 ${s.code} 입니다.\n${url}?code=${s.code}`);
+    } else if (b.dataset.act === 'edit') editStudent(s);
+    else if (b.dataset.act === 'del'){
+      if (!confirm(`${s.name} 학생을 삭제할까요? 코드도 함께 삭제되어 더 이상 입장할 수 없습니다. (제출·성적 기록은 남습니다)`)) return;
+      try {
+        const batch = db.batch();
+        batch.delete(db.collection('omrStudents').doc(s.id));
+        batch.delete(db.collection('omrCodes').doc(s.code));
+        await batch.commit(); toast('삭제했습니다'); loadStudents();
+      } catch(err){ handleErr(err); }
+    }
+  });
+
+  let editingStudent = null;
+  function editStudent(s){
+    editingStudent = s || null;
+    $('studentModalTitle').textContent = s ? '학생 수정' : '학생 추가';
+    $('sName').value = s ? s.name : '';
+    $('sClass').value = s ? s.className : ($('classFilter').value || '');
+    $('sPhone').value = s ? (s.phone || '') : '';
+    $('sParent').value = s ? (s.parentPhone || '') : '';
+    $('studentModalMsg').textContent = '';
+    openModal('studentModal');
+    setTimeout(() => $('sName').focus(), 50);
+  }
+  $('addStudentBtn').onclick = () => editStudent(null);
+
+  async function uniqueCode(taken){
+    for (let i = 0; i < 20; i++){
+      const c = OMR.genCode();
+      if (taken.has(c)) continue;
+      const snap = await db.collection('omrCodes').doc(c).get();
+      if (!snap.exists){ taken.add(c); return c; }
+    }
+    throw new Error('코드 생성 실패');
+  }
+  function studentFields(name, cls, phone, parent){
+    name = (name||'').trim(); cls = (cls||'').trim();
+    if (!name || !cls) throw new Error('이름과 반은 꼭 입력하세요.');
+    return { name, className: cls, phone: normalizePhone(phone) || (phone||'').trim() || null,
+             parentPhone: normalizePhone(parent) || (parent||'').trim() || null };
+  }
+  $('studentSaveBtn').onclick = async () => {
+    try {
+      const f = studentFields($('sName').value, $('sClass').value, $('sPhone').value, $('sParent').value);
+      const batch = db.batch();
+      if (editingStudent){
+        batch.update(db.collection('omrStudents').doc(editingStudent.id), f);
+        batch.set(db.collection('omrCodes').doc(editingStudent.code), { name:f.name, className:f.className, studentId:editingStudent.id });
+      } else {
+        const code = await uniqueCode(new Set(students.map(s => s.code)));
+        const ref = db.collection('omrStudents').doc();
+        batch.set(ref, { ...f, code, createdAt: FV.serverTimestamp() });
+        batch.set(db.collection('omrCodes').doc(code), { name:f.name, className:f.className, studentId:ref.id });
+      }
+      await batch.commit();
+      closeModal('studentModal'); toast('저장했습니다'); loadStudents();
+    } catch(e){ $('studentModalMsg').textContent = e.message; if (e.code) handleErr(e); }
+  };
+
+  $('bulkBtn').onclick = () => { $('bulkText').value=''; $('bulkMsg').textContent=''; openModal('bulkModal'); };
+  $('bulkSaveBtn').onclick = async () => {
+    const lines = $('bulkText').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return;
+    try {
+      const rows = lines.map((l, i) => {
+        const p = l.split(/\t|,/).map(x => x.trim());
+        try { return studentFields(p[0], p[1], p[2], p[3]); }
+        catch(e){ throw new Error(`${i+1}번째 줄: ${e.message}`); }
+      });
+      $('bulkMsg').textContent = `${rows.length}명 등록 중…`;
+      const taken = new Set(students.map(s => s.code));
+      for (let i = 0; i < rows.length; i += 200){
+        const batch = db.batch();
+        for (const f of rows.slice(i, i + 200)){
+          const code = await uniqueCode(taken);
+          const ref = db.collection('omrStudents').doc();
+          batch.set(ref, { ...f, code, createdAt: FV.serverTimestamp() });
+          batch.set(db.collection('omrCodes').doc(code), { name:f.name, className:f.className, studentId:ref.id });
+        }
+        await batch.commit();
+      }
+      closeModal('bulkModal'); toast(`${rows.length}명을 등록했습니다`); loadStudents();
+    } catch(e){ $('bulkMsg').textContent = e.message; if (e.code) handleErr(e); }
+  };
+
+  // ═════════ 시험 목록 ═════════
+  async function loadExams(){
+    try {
+      const qs = await db.collection('omrExams').get();
+      exams = qs.docs.map(d => ({ id:d.id, ...d.data() }))
+        .sort((a,b) => (toDate(b.createdAt)||0) - (toDate(a.createdAt)||0));
+    } catch(e){ handleErr(e); exams = []; }
+    const box = $('examList');
+    if (!exams.length){ box.innerHTML = '<div class="empty">아직 시험이 없습니다. <b>+ 새 시험</b>으로 시작하세요.</div>'; return; }
+    box.innerHTML = '';
+    exams.forEach(e => {
+      const [label, cls] = STATUS[e.status] || [e.status, 'draft'];
+      const b = document.createElement('button');
+      b.className = 'exam-row';
+      b.innerHTML = `<div><div class="t">${esc(e.title)}</div>
+        <div class="m">${esc(e.className)} · ${esc(e.subject)} · ${e.questionCount}문항${e.examDate ? ' · ' + esc(e.examDate) : ''}
+        ${e.stats && e.stats.n ? ` · 응시 ${e.stats.n}명 평균 ${e.stats.avg}` : ''}</div></div>
+        <span class="pill ${cls}" style="margin-left:auto;">${label}</span>`;
+      b.onclick = () => openExam(e.id);
+      box.appendChild(b);
+    });
+  }
+
+  // 새 시험 / 시험 설정 수정
+  let editingExam = null;
+  function examModal(e){
+    editingExam = e || null;
+    $('examModalTitle').textContent = e ? '시험 설정' : '새 시험';
+    $('fTitle').value = e ? e.title : '';
+    $('fSubject').value = e ? e.subject : '';
+    $('fClass').value = e ? e.className : '';
+    $('fCount').value = e ? e.questionCount : 20;
+    $('fChoice').value = e ? e.choiceCount : 5;
+    // 제출이 생긴 뒤에는 문항 수·선지를 바꾸지 않음
+    const locked = e && e.status !== 'draft';
+    $('fCount').disabled = $('fChoice').disabled = !!locked;
+    $('fDate').value = e ? (e.examDate || '') : new Date(Date.now() + 9*3600e3).toISOString().slice(0,10);
+    const d = e && toDate(e.dueAt);
+    $('fDue').value = d ? new Date(d.getTime() - d.getTimezoneOffset()*60e3).toISOString().slice(0,16) : '';
+    $('examModalMsg').textContent = locked ? '응시가 시작된 시험은 문항 수·선지를 바꿀 수 없습니다.' : '';
+    openModal('examModal');
+  }
+  $('newExamBtn').onclick = () => examModal(null);
+  $('examSaveBtn').onclick = async () => {
+    const title = $('fTitle').value.trim(), subject = $('fSubject').value.trim(), className = $('fClass').value.trim();
+    const questionCount = parseInt($('fCount').value, 10), choiceCount = parseInt($('fChoice').value, 10);
+    if (!title || !subject || !className){ $('examModalMsg').textContent = '제목·과목·반을 입력하세요.'; return; }
+    if (!(questionCount >= 1 && questionCount <= 100)){ $('examModalMsg').textContent = '문항 수는 1~100입니다.'; return; }
+    const due = $('fDue').value ? firebase.firestore.Timestamp.fromDate(new Date($('fDue').value)) : null;
+    const data = { title, subject, className, examDate: $('fDate').value || null, dueAt: due };
+    try {
+      if (editingExam){
+        if (editingExam.status === 'draft'){
+          data.questionCount = questionCount; data.choiceCount = choiceCount;
+        }
+        await db.collection('omrExams').doc(editingExam.id).update(data);
+        closeModal('examModal'); toast('저장했습니다'); openExam(editingExam.id);
+      } else {
+        const points = {}; for (let n = 1; n <= questionCount; n++) points[n] = 3;
+        const ref = await db.collection('omrExams').add({ ...data, questionCount, choiceCount, points,
+          maxScore: questionCount * 3, status:'draft', createdAt: FV.serverTimestamp() });
+        await db.collection('omrKeys').doc(ref.id).set({ answers:{}, points, allCorrect:[] });
+        closeModal('examModal'); toast('시험을 만들었습니다. 정답을 입력하세요.'); openExam(ref.id);
+      }
+      loadExams();
+    } catch(e){ handleErr(e); }
+  };
+
+  // ═════════ 시험 상세 ═════════
+  $('examBack').onclick = () => { if (unsubSubs) unsubSubs(); unsubSubs = null; show('vMain'); loadExams(); };
+
+  async function openExam(id){
+    try {
+      const [es, ks] = await Promise.all([db.collection('omrExams').doc(id).get(), db.collection('omrKeys').doc(id).get()]);
+      ex = { id, ...es.data() };
+      exKey = ks.exists ? ks.data() : { answers:{}, points: ex.points || {}, allCorrect:[] };
+    } catch(e){ handleErr(e); return; }
+    show('vExam');
+    renderHeader();
+    renderKey();
+    if (unsubSubs) unsubSubs();
+    unsubSubs = db.collection('omrSubmissions').where('examId','==',id).onSnapshot(qs => {
+      exSubs = qs.docs.map(d => ({ id:d.id, ...d.data() }));
+      renderSubs(); renderResult(); renderSend();
+    }, e => handleErr(e));
+  }
+
+  function renderHeader(){
+    $('exTitle').textContent = ex.title;
+    const due = toDate(ex.dueAt);
+    $('exMeta').textContent = `${ex.className} · ${ex.subject} · ${ex.questionCount}문항 ${ex.choiceCount}지선다 · 만점 ${ex.maxScore ?? ''}` +
+      (ex.examDate ? ` · ${ex.examDate}` : '') + (due ? ` · 마감 ${fmtDateTime(due)}` : '');
+    const [label, cls] = STATUS[ex.status] || [ex.status, 'draft'];
+    const sb = $('statusBar');
+    const graded = !!ex.gradedAt;
+    let btns = '';
+    if (ex.status === 'draft') btns += `<button class="btn sm primary" data-st="open">응시 열기</button>`;
+    if (ex.status === 'open') btns += `<button class="btn sm primary" data-st="close-grade">마감하고 채점</button><button class="btn sm" data-st="closed">응시 마감</button>`;
+    if (ex.status === 'closed') btns += `<button class="btn sm primary" data-st="grade">${graded ? '다시 채점' : '채점하기'}</button>` +
+      (graded ? `<button class="btn sm red" data-st="published">결과 공개</button>` : '') + `<button class="btn sm" data-st="open">응시 다시 열기</button>`;
+    if (ex.status === 'published') btns += `<button class="btn sm" data-st="grade">다시 채점</button><button class="btn sm" data-st="closed">공개 취소</button>`;
+    btns += `<button class="btn sm ghost" data-st="edit">시험 설정</button><button class="btn sm ghost" data-st="delete" style="color:var(--red);">삭제</button>`;
+    sb.innerHTML = `<span class="pill ${cls}">${label}</span>` +
+      (graded ? `<span class="muted">채점 ${fmtDateTime(ex.gradedAt)}</span>` : '') +
+      `<span class="grow"></span>${btns}`;
+  }
+
+  $('statusBar').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-st]'); if (!b) return;
+    const st = b.dataset.st;
+    try {
+      if (st === 'edit') return examModal(ex);
+      if (st === 'delete'){
+        if (!confirm(`'${ex.title}' 시험을 삭제할까요? 제출 답안·성적표도 모두 삭제됩니다.`)) return;
+        const refs = [db.collection('omrExams').doc(ex.id), db.collection('omrKeys').doc(ex.id)];
+        exSubs.forEach(s => { refs.push(db.collection('omrSubmissions').doc(s.id)); if (s.reportToken) refs.push(db.collection('omrReports').doc(s.reportToken)); });
+        if (unsubSubs) unsubSubs(); unsubSubs = null;
+        for (let i = 0; i < refs.length; i += 400){ const bt = db.batch(); refs.slice(i, i+400).forEach(r => bt.delete(r)); await bt.commit(); }
+        toast('삭제했습니다'); show('vMain'); loadExams(); return;
+      }
+      if (st === 'open'){
+        if (!keyComplete()){ toast('정답을 먼저 모두 입력·저장하세요', 3000); return; }
+        await setStatus('open'); toast('응시를 열었습니다. 학생들이 제출할 수 있습니다.');
+      } else if (st === 'closed'){ await setStatus('closed'); }
+      else if (st === 'published'){
+        await setStatus('published'); toast('결과를 공개했습니다. 성적표 링크가 열립니다.');
+      } else if (st === 'grade' || st === 'close-grade'){
+        if (st === 'close-grade'){
+          if (!confirm('응시를 마감하고 채점할까요? 마감 후에는 학생이 제출할 수 없습니다.')) return;
+          await setStatus('closed');
+        }
+        await gradeAll();
+      }
+    } catch(err){ handleErr(err); }
+  });
+
+  async function setStatus(status){
+    await db.collection('omrExams').doc(ex.id).update({ status });
+    ex.status = status; renderHeader(); renderSend();
+  }
+
+  // ───────── 정답·배점 ─────────
+  function keyComplete(){
+    const ac = exKey.allCorrect || [];
+    for (let n = 1; n <= ex.questionCount; n++)
+      if (!ac.includes(n) && !((exKey.answers[n] || []).length)) return false;
+    return true;
+  }
+  function renderKey(){
+    const rows = $('keyRows');
+    let html = '';
+    for (let n = 1; n <= ex.questionCount; n++){
+      const ans = (exKey.answers[n] || []).map(Number);
+      const ac = (exKey.allCorrect || []).includes(n);
+      html += `<div class="key-row${ans.length > 1 ? ' multi' : ''}" data-n="${n}"><span class="no">${n}</span><div class="choices">`;
+      for (let c = 1; c <= ex.choiceCount; c++) html += `<button class="bubble sm${ans.includes(c) ? ' on' : ''}" data-c="${c}">${c}</button>`;
+      html += `</div><input class="input pts" type="number" step="0.5" min="0.5" value="${exKey.points[n] ?? 3}" aria-label="${n}번 배점">
+        <label class="ac"><input type="checkbox" ${ac ? 'checked' : ''}> 전원정답</label></div>`;
+    }
+    rows.innerHTML = html;
+    updateKeySum();
+  }
+  function readKeyFromUI(){
+    const answers = {}, points = {}, allCorrect = [];
+    $('keyRows').querySelectorAll('.key-row').forEach(r => {
+      const n = +r.dataset.n;
+      answers[n] = [...r.querySelectorAll('.bubble.on')].map(b => +b.dataset.c);
+      points[n] = parseFloat(r.querySelector('.pts').value) || 0;
+      if (r.querySelector('.ac input').checked) allCorrect.push(n);
+    });
+    return { answers, points, allCorrect };
+  }
+  function updateKeySum(){
+    const k = readKeyFromUI();
+    const total = Object.values(k.points).reduce((a,b) => a + b, 0);
+    const filled = Object.entries(k.answers).filter(([n, a]) => a.length || k.allCorrect.includes(+n)).length;
+    $('keySum').textContent = `정답 ${filled}/${ex.questionCount} 입력 · 총점 ${OMR.round(total, 1)}점`;
+  }
+  $('keyRows').addEventListener('click', e => {
+    const b = e.target.closest('.bubble'); if (!b) return;
+    b.classList.toggle('on');
+    const r = b.closest('.key-row');
+    r.classList.toggle('multi', r.querySelectorAll('.bubble.on').length > 1);
+    updateKeySum();
+  });
+  $('keyRows').addEventListener('input', updateKeySum);
+  $('quickKeyBtn').onclick = () => {
+    const digits = $('quickKey').value.replace(/[^0-9]/g, '').split('').map(Number);
+    const bad = digits.find(d => d < 1 || d > ex.choiceCount);
+    if (bad !== undefined){ toast(`1~${ex.choiceCount} 숫자만 입력하세요`); return; }
+    $('keyRows').querySelectorAll('.key-row').forEach((r, i) => {
+      if (i >= digits.length) return;
+      r.querySelectorAll('.bubble').forEach(b => b.classList.toggle('on', +b.dataset.c === digits[i]));
+      r.classList.remove('multi');
+    });
+    updateKeySum();
+    toast(`${Math.min(digits.length, ex.questionCount)}문항 채웠습니다`);
+  };
+  $('bulkPtsBtn').onclick = () => {
+    const v = parseFloat($('bulkPts').value); if (!(v > 0)) return;
+    $('keyRows').querySelectorAll('.pts').forEach(i => { i.value = v; });
+    updateKeySum();
+  };
+  $('saveKeyBtn').onclick = async () => {
+    const k = readKeyFromUI();
+    const missing = Object.entries(k.answers).filter(([n, a]) => !a.length && !k.allCorrect.includes(+n)).map(([n]) => n);
+    if (Object.values(k.points).some(p => !(p > 0))){ toast('배점은 0보다 커야 합니다'); return; }
+    if (missing.length && !confirm(`${missing.join(', ')}번 정답이 비어 있습니다. 그래도 저장할까요? (응시를 열려면 모두 입력해야 합니다)`)) return;
+    const maxScore = OMR.round(Object.values(k.points).reduce((a,b) => a + b, 0), 2);
+    try {
+      const batch = db.batch();
+      batch.set(db.collection('omrKeys').doc(ex.id), k);
+      batch.update(db.collection('omrExams').doc(ex.id), { points: k.points, maxScore });
+      await batch.commit();
+      exKey = k; ex.points = k.points; ex.maxScore = maxScore;
+      renderHeader();
+      toast(ex.gradedAt ? '저장했습니다. 반영하려면 다시 채점하세요.' : '정답을 저장했습니다');
+    } catch(e){ handleErr(e); }
+  };
+
+  // ───────── 제출 현황 ─────────
+  function classStudents(){ return students.filter(s => s.className === ex.className); }
+  function renderSubs(){
+    const byCode = Object.fromEntries(exSubs.map(s => [s.code, s]));
+    const roster = classStudents();
+    // 명단에 없지만 제출한 학생(삭제·반 이동)도 표시
+    exSubs.forEach(s => { if (!roster.find(r => r.code === s.code)) roster.push({ name:s.name, code:s.code, className:s.className, _gone:true }); });
+    const sub = roster.filter(r => byCode[r.code] && byCode[r.code].status === 'submitted').length;
+    const dr = roster.filter(r => byCode[r.code] && byCode[r.code].status === 'draft').length;
+    $('subStats').innerHTML = `
+      <div class="stat"><div class="k">제출</div><div class="v">${sub}<small>/ ${roster.length}</small></div></div>
+      <div class="stat"><div class="k">푸는 중</div><div class="v">${dr}</div></div>
+      <div class="stat"><div class="k">미응시</div><div class="v">${roster.length - sub - dr}</div></div>`;
+    const order = { submitted:0, draft:1 };
+    roster.sort((a,b) => (order[(byCode[a.code]||{}).status] ?? 2) - (order[(byCode[b.code]||{}).status] ?? 2) || a.name.localeCompare(b.name,'ko'));
+    $('subTbl').innerHTML = `<tr><th>이름</th><th>상태</th><th class="num">마킹</th><th>시각</th><th class="num">점수</th><th></th></tr>` +
+      roster.map(r => {
+        const s = byCode[r.code];
+        const marked = s ? Object.values(s.answers || {}).filter(a => a && a.length).length : 0;
+        const status = !s ? '<span class="sub-status none">미응시</span>'
+          : s.status === 'submitted' ? '<span class="sub-status submitted">제출</span>' : '<span class="sub-status draft">푸는 중</span>';
+        return `<tr><td><b>${esc(r.name)}</b>${r._gone ? ' <span class="pill">명단 외</span>' : ''}</td><td>${status}</td>
+          <td class="num">${s ? `${marked}/${ex.questionCount}` : ''}</td>
+          <td class="muted">${s ? fmtDateTime(s.submittedAt || s.savedAt) : ''}</td>
+          <td class="num">${s && s.score != null ? `<b>${s.score}</b>` : ''}</td>
+          <td style="text-align:right;">${s && s.status === 'submitted' ? `<button class="btn sm ghost" data-unlock="${s.id}">잠금 해제</button>` : ''}</td></tr>`;
+      }).join('');
+  }
+  $('subTbl').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-unlock]'); if (!b) return;
+    const s = exSubs.find(x => x.id === b.dataset.unlock);
+    if (!confirm(`${s.name} 학생의 제출을 잠금 해제할까요? 학생이 답안을 고쳐 다시 제출할 수 있게 됩니다. (응시 중 상태에서만 가능)`)) return;
+    try {
+      await db.collection('omrSubmissions').doc(s.id).update({ status:'draft', submittedAt:null });
+      toast('잠금을 해제했습니다');
+    } catch(err){ handleErr(err); }
+  });
+
+  // ───────── 채점 ─────────
+  async function gradeAll(){
+    if (!keyComplete()){ toast('정답이 모두 입력되지 않았습니다', 3000); return; }
+    const subs = exSubs.filter(s => s.status === 'submitted');
+    if (!subs.length){ toast('제출된 답안이 없습니다'); return; }
+    toast('채점 중…', 1500);
+    const { results, stats } = OMR.gradeExam(ex, exKey, subs);
+    const now = FV.serverTimestamp();
+    const ops = [];
+    results.forEach(r => {
+      const sub = subs.find(s => s.code === r.code);
+      const token = sub.reportToken || OMR.genToken();
+      const wrong = r.questions.filter(q => !q.ok).map(q => q.n);
+      ops.push(['set', db.collection('omrReports').doc(token), {
+        examId: ex.id, examTitle: ex.title, subject: ex.subject, className: ex.className, examDate: ex.examDate || null,
+        code: r.code, name: r.name, score: r.score, maxScore: stats.maxScore, correctCount: r.correctCount,
+        questionCount: ex.questionCount, rank: r.rank, n: stats.n, percentile: r.percentile,
+        avg: stats.avg, high: stats.high, low: stats.low, wrong, questions: r.questions, gradedAt: now,
+      }]);
+      ops.push(['update', db.collection('omrSubmissions').doc(sub.id), {
+        score: r.score, correctCount: r.correctCount, rank: r.rank, percentile: r.percentile,
+        wrong, reportToken: token, gradedAt: now,
+      }]);
+    });
+    ops.push(['update', db.collection('omrExams').doc(ex.id), { stats, gradedAt: now }]);
+    for (let i = 0; i < ops.length; i += 400){
+      const bt = db.batch();
+      ops.slice(i, i + 400).forEach(([op, ref, data]) => bt[op](ref, data));
+      await bt.commit();
+    }
+    const es = await db.collection('omrExams').doc(ex.id).get();
+    ex = { id: ex.id, ...es.data() };
+    renderHeader(); renderResult();
+    toast(`${results.length}명 채점 완료${ex.status === 'published' ? '' : ' · 확인 후 결과 공개를 누르세요'}`, 3200);
+  }
+
+  // ───────── 성적 ─────────
+  function gradedSubs(){
+    return exSubs.filter(s => s.status === 'submitted' && s.score != null)
+      .sort((a,b) => a.rank - b.rank || a.name.localeCompare(b.name,'ko'));
+  }
+  function renderResult(){
+    const st = ex.stats, list = gradedSubs();
+    const has = !!(ex.gradedAt && st && st.n);
+    $('resultEmpty').classList.toggle('hidden', has);
+    $('resultBody').classList.toggle('hidden', !has);
+    if (!has) return;
+    $('resStats').innerHTML = [
+      ['응시', `${st.n}<small>명</small>`], ['평균', `${st.avg}<small>/ ${st.maxScore}</small>`],
+      ['최고', st.high], ['최저', st.low], ['표준편차', st.std],
+    ].map(([k,v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+    $('rankTbl').innerHTML = `<tr><th class="num">석차</th><th>이름</th><th class="num">점수</th><th class="num">맞은 수</th><th class="num">백분위</th><th>틀린 문항</th><th></th></tr>` +
+      list.map(s => `<tr><td class="num"><b>${s.rank}</b></td><td><b>${esc(s.name)}</b></td>
+        <td class="num"><b>${s.score}</b></td><td class="num">${s.correctCount}/${ex.questionCount}</td>
+        <td class="num">${s.percentile}</td><td class="muted">${(s.wrong || []).join(', ') || '없음'}</td>
+        <td style="white-space:nowrap;text-align:right;">
+          <a class="btn sm" href="report.html?t=${encodeURIComponent(s.reportToken)}" target="_blank">성적표</a>
+          <button class="btn sm" data-link="${esc(s.reportToken)}">링크 복사</button></td></tr>`).join('');
+    const key = exKey.answers || {};
+    $('qStats').innerHTML = (st.questionStats || []).map(q => {
+      const ans = (key[q.n] || []).map(Number);
+      const wrongs = Object.entries(q.dist).filter(([c]) => !ans.includes(+c)).sort((a,b) => b[1]-a[1]);
+      const trap = wrongs.length && wrongs[0][1] > 0 ? +wrongs[0][0] : null;
+      const distHtml = Object.entries(q.dist).map(([c, cnt]) =>
+        `<span class="${ans.includes(+c) ? 'ans' : (+c === trap ? 'trap' : '')}">${c}번 ${cnt}</span>`).join('') +
+        (q.blank ? `<span>미응답 ${q.blank}</span>` : '');
+      return `<div class="qstat"><b>${q.n}번</b>
+        <div><div class="bar ${q.rate < 50 ? 'low' : ''}"><i style="width:${q.rate}%"></i></div><div class="dist">${distHtml}</div></div>
+        <b class="num" style="text-align:right;">${q.rate}%</b></div>`;
+    }).join('');
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button[data-link]'); if (!b) return;
+    if (ex.status !== 'published') toast('결과 공개 전에는 링크가 열리지 않습니다', 2600);
+    copyText(OMR.reportUrl(b.dataset.link));
+  });
+
+  // ───────── 성적표 발송 ─────────
+  $('tplText').textContent = OMR.MESSAGE_TEMPLATE;
+  $('copyTplBtn').onclick = () => copyText(OMR.MESSAGE_TEMPLATE);
+  $('toParent').onchange = $('toStudent').onchange = renderSend;
+
+  function recipients(){
+    const byCode = Object.fromEntries(students.map(s => [s.code, s]));
+    const out = [];
+    gradedSubs().forEach(sub => {
+      const st = byCode[sub.code] || {};
+      const link = OMR.reportUrl(sub.reportToken);
+      const msg = OMR.renderMessage({ '학생이름': sub.name, '시험명': ex.title, '링크': link });
+      if ($('toParent').checked) out.push({ sub, type:'학부모', phone: normalizePhone(st.parentPhone), raw: st.parentPhone, link, msg });
+      if ($('toStudent').checked) out.push({ sub, type:'학생', phone: normalizePhone(st.phone), raw: st.phone, link, msg });
+    });
+    return out;
+  }
+  function renderSend(){
+    const list = recipients();
+    const t = $('sendTbl');
+    const warn = ex.status !== 'published'
+      ? `<tr><td colspan="5" style="background:var(--warn-soft);color:var(--warn);font-weight:700;">아직 결과 공개 전입니다. 공개해야 링크가 열립니다.</td></tr>` : '';
+    if (!list.length){ t.innerHTML = warn + '<tr><td class="empty" colspan="5">채점된 학생이 없습니다.</td></tr>'; return; }
+    t.innerHTML = warn + `<tr><th>이름</th><th>받는 사람</th><th>번호</th><th></th></tr>` +
+      list.map((r, i) => `<tr><td><b>${esc(r.sub.name)}</b></td><td>${r.type}</td>
+        <td>${r.phone ? esc(fmtPhone(r.phone)) : `<span class="pill red">번호 없음${r.raw ? ' · ' + esc(r.raw) : ''}</span>`}</td>
+        <td style="text-align:right;white-space:nowrap;"><button class="btn sm" data-msg="${i}">메시지 복사</button></td></tr>`).join('');
+    t._list = list;
+  }
+  $('sendTbl').addEventListener('click', e => {
+    const b = e.target.closest('button[data-msg]'); if (!b) return;
+    copyText($('sendTbl')._list[+b.dataset.msg].msg);
+  });
+  $('copyAllBtn').onclick = () => {
+    const list = recipients();
+    if (!list.length) return;
+    copyText(list.map(r => `▶ ${r.sub.name} ${r.type} ${r.phone ? fmtPhone(r.phone) : '(번호 없음)'}\n${r.msg}`).join('\n\n'));
+  };
+  $('csvBtn').onclick = () => {
+    const list = recipients().filter(r => r.phone);
+    const skipped = recipients().length - list.length;
+    if (!list.length){ toast('보낼 번호가 없습니다'); return; }
+    OMR.downloadCsv(`${ex.title}_성적표발송.csv`, [
+      ['수신번호', '학생이름', '시험명', '링크', '구분', '메시지'],
+      ...list.map(r => [r.phone, r.sub.name, ex.title, r.link, r.type, r.msg]),
+    ]);
+    toast(`${list.length}건 CSV 저장${skipped ? ` · 번호 없는 ${skipped}건 제외` : ''}`, 3000);
+  };
+})();
+</script>
+</body>
+</html>

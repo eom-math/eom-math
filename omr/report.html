@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>성적표 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=1">
+<style>
+  .hero{background:var(--ink);color:#fff;border-radius:14px;padding:22px 20px;margin-bottom:14px;}
+  .hero .who{font-size:13px;opacity:.7;}
+  .hero .title{font-size:18px;font-weight:900;letter-spacing:-.02em;margin:2px 0 16px;}
+  .hero .score{font-size:56px;font-weight:900;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;}
+  .hero .score small{font-size:20px;opacity:.6;font-weight:800;margin-left:4px;}
+  .hero .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  .hero .chips span{background:rgba(255,255,255,.12);padding:6px 11px;border-radius:99px;font-size:13px;font-weight:700;}
+  .hero .chips b{color:#fff;}
+
+  .scale{position:relative;height:56px;margin:26px 6px 6px;}
+  .scale .track{position:absolute;left:0;right:0;top:26px;height:6px;border-radius:99px;background:var(--bg2);}
+  .scale .range{position:absolute;top:26px;height:6px;border-radius:99px;background:rgba(17,17,20,.2);}
+  .scale .mk{position:absolute;top:0;transform:translateX(-50%);text-align:center;font-size:11px;color:var(--dim);white-space:nowrap;}
+  .scale .mk i{display:block;width:2px;height:14px;background:var(--dim);margin:3px auto 0;}
+  .scale .mk.me{color:var(--red);font-weight:900;font-size:12px;top:-6px;}
+  .scale .mk.me i{width:14px;height:14px;border-radius:50%;background:var(--red);border:3px solid #fff;box-shadow:0 0 0 1px var(--red);margin-top:6px;}
+  .scale .ends{position:absolute;top:38px;left:0;right:0;display:flex;justify-content:space-between;font-size:11px;color:var(--faint);}
+
+  .qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px;}
+  .qc{border-radius:8px;padding:7px 4px 6px;text-align:center;border:1px solid var(--line);background:#fff;}
+  .qc .n{font-size:11px;color:var(--dim);font-weight:700;}
+  .qc .r{font-size:18px;font-weight:900;line-height:1.1;}
+  .qc .d{font-size:10.5px;color:var(--dim);font-variant-numeric:tabular-nums;}
+  .qc.ok .r{color:var(--ok);}
+  .qc.no{background:var(--red-soft);border-color:rgba(214,48,31,.25);}
+  .qc.no .r{color:var(--red);}
+
+  .wl{display:grid;grid-template-columns:44px 1fr 88px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line2);font-size:13.5px;}
+  .wl:last-child{border-bottom:0;}
+  .wl .ans{font-size:12.5px;color:var(--dim);}
+  .wl .rate{font-size:12px;color:var(--dim);text-align:right;}
+  .legend{display:flex;gap:12px;font-size:12px;color:var(--dim);margin-bottom:10px;flex-wrap:wrap;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="../index.html">엄형국 <span>수학</span></a>
+    <span class="sub">성적표</span>
+  </div>
+  <div id="root"><div class="empty">성적표를 불러오는 중…</div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=1"></script>
+<script>
+(async function(){
+  const { db, esc } = OMR;
+  const root = document.getElementById('root');
+  const token = new URLSearchParams(location.search).get('t');
+  const fail = msg => { root.innerHTML = `<div class="empty">${msg}</div>`; };
+  if (!token) return fail('잘못된 링크입니다.');
+
+  let r;
+  try {
+    const snap = await db.collection('omrReports').doc(token).get();
+    if (!snap.exists) return fail('성적표를 찾을 수 없습니다. 링크를 다시 확인해 주세요.');
+    r = snap.data();
+  } catch(e){
+    console.error(e);
+    return fail(e.code === 'permission-denied'
+      ? '아직 공개되지 않은 성적표입니다.<br>선생님이 결과를 공개하면 볼 수 있어요.'
+      : '불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  }
+  document.title = `${r.name} · ${r.examTitle} 성적표`;
+
+  const pct = x => r.maxScore ? Math.max(0, Math.min(100, x / r.maxScore * 100)) : 0;
+  const wrong = r.questions.filter(q => !q.ok);
+  const hardRight = r.questions.filter(q => q.ok && !q.allCorrect && q.rate < 50);
+  const ansText = a => a && a.length ? a.join('·') : '—';
+
+  root.innerHTML = `
+    <div class="hero">
+      <div class="who">${esc(r.name)} · ${esc(r.className)}${r.examDate ? ' · ' + esc(r.examDate) : ''}</div>
+      <div class="title">${esc(r.examTitle)} <span style="opacity:.6;font-weight:700;font-size:14px;">${esc(r.subject)}</span></div>
+      <div class="score">${r.score}<small>/ ${r.maxScore}점</small></div>
+      <div class="chips">
+        <span>석차 <b>${r.rank}</b> / ${r.n}명</span>
+        <span>백분위 <b>${r.percentile}</b></span>
+        <span>맞은 문항 <b>${r.correctCount}</b> / ${r.questionCount}</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>반 전체와 비교</h3>
+      <div class="stat-grid" style="margin-bottom:4px;">
+        <div class="stat"><div class="k">내 점수</div><div class="v" style="color:var(--red);">${r.score}</div></div>
+        <div class="stat"><div class="k">반 평균</div><div class="v">${r.avg}</div></div>
+        <div class="stat"><div class="k">최고</div><div class="v">${r.high}</div></div>
+        <div class="stat"><div class="k">최저</div><div class="v">${r.low}</div></div>
+      </div>
+      <div class="scale" aria-hidden="true">
+        <div class="track"></div>
+        <div class="range" style="left:${pct(r.low)}%;width:${pct(r.high) - pct(r.low)}%;"></div>
+        <div class="mk" style="left:${pct(r.avg)}%;">평균<i></i></div>
+        <div class="mk me" style="left:${pct(r.score)}%;">나<i></i></div>
+        <div class="ends"><span>0</span><span>${r.maxScore}</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>문항별 정오답</h3>
+      <div class="legend"><span>○ 정답</span><span style="color:var(--red);">✕ 오답</span><span>아래 숫자 = 반 정답률</span></div>
+      <div class="qgrid">
+        ${r.questions.map(q => `
+          <div class="qc ${q.ok ? 'ok' : 'no'}" title="내 답 ${ansText(q.marked)} / 정답 ${ansText(q.correct)}">
+            <div class="n">${q.n}번</div><div class="r">${q.ok ? '○' : '✕'}</div><div class="d">${Math.round(q.rate)}%</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>틀린 문항 ${wrong.length ? `<span class="pill red">${wrong.length}개</span>` : ''}</h3>
+      ${wrong.length ? wrong.map(q => `
+        <div class="wl">
+          <b>${q.n}번</b>
+          <div>
+            <div class="ans">내 답 <b style="color:var(--red);">${q.blank ? '미응답' : ansText(q.marked)}</b> · 정답 <b style="color:var(--ok);">${ansText(q.correct)}</b> · ${q.points}점</div>
+          </div>
+          <div class="rate">반 정답률 ${Math.round(q.rate)}%<div class="bar" style="margin-top:4px;"><i style="width:${q.rate}%"></i></div></div>
+        </div>`).join('') : '<p class="muted">모든 문항을 맞혔습니다. 👏</p>'}
+    </div>
+
+    ${hardRight.length ? `<div class="card"><h3>잘한 문항</h3>
+      <p class="muted">반 정답률 50% 미만인데 맞힌 문항: <b style="color:var(--ink);">${hardRight.map(q => q.n + '번').join(', ')}</b></p></div>` : ''}
+
+    <p class="muted" style="text-align:center;margin-top:18px;">엄형국 수학 · 내신성공의 방정식</p>`;
+})();
+</script>
+</body>
+</html>

@@ -200,6 +200,9 @@
   .monster-cta{ margin-top:10px; background:#2E5C38; }
   .penguin-cta{ margin-top:10px; background:#1B6FA8; }
   .monster-badge{ background:#c98a3b; }
+  .omr-cta{ margin-top:10px; background:#fff; color:var(--ink); border:1.5px solid var(--ink); }
+  .omr-cta .tower-cta-sub{ color:var(--dim); }
+  .omr-admin-link{ font-size:12px; color:var(--dim); text-decoration:underline; }
 
   section.curriculum{ padding:64px 0 0; }
   .curri-list{ border-top:1px solid var(--line); }
@@ -401,6 +404,14 @@
     </span>
   </a>
 
+  <a class="tower-cta omr-cta" href="omr/">
+    <span class="tower-cta-badge">OMR</span>
+    <span class="tower-cta-body">
+      <span class="tower-cta-title">모바일 OMR 답안 제출</span>
+      <span class="tower-cta-sub">학생 코드로 입장해 시험 답안을 제출하고 성적표를 확인하세요 →</span>
+    </span>
+  </a>
+
   <section class="curriculum">
     <div class="section-head"><h2>Curriculum</h2><span>03</span></div>
     <div class="curri-list">
@@ -510,6 +521,7 @@
   <footer>
     <span>© 2026 엄형국 수학</span>
     <span>내신성공의 방정식</span>
+    <a class="omr-admin-link admin-upload" href="omr/admin.html" hidden>OMR 관리</a>
     <button class="admin-link" id="adminBtn" type="button">관리자</button>
   </footer>
 
