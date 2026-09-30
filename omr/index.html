@@ -18,6 +18,23 @@
   .exam-item .m{font-size:12.5px;color:var(--dim);}
   .sec-h{font-size:13px;font-weight:800;color:var(--dim);letter-spacing:.04em;margin:22px 0 8px;}
   .exam-item .go{margin-left:auto;font-weight:800;color:var(--dim);}
+  .wk{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:4px 14px;margin-top:4px;}
+  .wk a{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line2);text-decoration:none;font-size:14px;}
+  .wk a:last-child{border-bottom:0;}
+  .wk .d{flex:0 0 auto;min-width:46px;text-align:center;font-size:11px;font-weight:900;padding:4px 6px;border-radius:6px;background:var(--bg2);color:var(--dim);font-variant-numeric:tabular-nums;}
+  .wk .d.red{background:var(--red-soft);color:var(--red);} .wk .d.ok{background:var(--ok-soft);color:var(--ok);} .wk .d.ink{background:var(--ink);color:#fff;}
+  .wk .t{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .wk .m{margin-left:auto;flex:0 0 auto;font-size:12px;color:var(--dim);}
+  .wk .none{padding:14px 0;font-size:13.5px;color:var(--dim);}
+  .trend{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin:4px 0 8px;}
+  .trend .top{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;}
+  .trend .top b{font-size:26px;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums;}
+  .trend .top small{font-size:12.5px;color:var(--dim);}
+  .trend .chg{margin-left:auto;font-size:12px;font-weight:800;padding:2px 8px;border-radius:99px;}
+  .trend .chg.up{background:var(--ok-soft);color:var(--ok);} .trend .chg.down{background:var(--red-soft);color:var(--red);}
+  .trend svg{width:100%;height:auto;display:block;}
+  .trend .lg{display:flex;gap:12px;justify-content:flex-end;font-size:11px;color:var(--dim);margin-top:2px;}
+  .trend .lg i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:4px;}
   .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 6px;}
   .quick a{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px 10px;background:#fff;border:1px solid var(--line);
     border-radius:14px;text-decoration:none;font-size:12.5px;font-weight:800;}
@@ -86,8 +103,9 @@
       <a href="ask.html"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A1.5 1.5 0 0 1 4 14.5z"/><path d="M10.2 8.4a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3"/></svg></span>질문하기</a>
       <a href="#dailyList"><span class="qi"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5A.5.5 0 0 1 6.5 20V4a.5.5 0 0 1 .5-.5z"/><path d="M9.5 12h5M9.5 15.5h5"/></svg></span>리포트</a>
     </nav>
-    <div id="todoList"></div>
+    <div id="weekBox"></div>
     <div id="dailyList"></div>
+    <div id="todoList"></div>
     <h2 class="sec-h">시험 OMR</h2>
     <div id="examList"><div class="empty">불러오는 중…</div></div>
   </section>
@@ -180,6 +198,7 @@
     $('helloClass').textContent = me.className;
     loadTodos();
     loadDaily();
+    loadWeek();
     const box = $('examList');
     box.innerHTML = '<div class="empty">불러오는 중…</div>';
     const qs = await db.collection('omrExams').where('className','==',me.className).get();
@@ -221,6 +240,10 @@
       const d = await db.collection('dailyReportLinks').doc(me.code).get();
       const items = d.exists ? (d.data().items || []).slice().sort((a,b) => (b.date||'').localeCompare(a.date||'')) : [];
       if (!items.length) return;
+      const scored = items.filter(x => x.score != null && !x.absent).slice(0, 5).reverse();
+      if (scored.length){
+        box.insertAdjacentHTML('beforeend', '<h2 class="sec-h">복습 테스트 추이</h2>' + trendCard(scored));
+      }
       box.insertAdjacentHTML('beforeend', '<h2 class="sec-h">데일리 리포트</h2>');
       items.slice(0, 5).forEach((x, i) => {
         const a = document.createElement('a');
@@ -233,6 +256,102 @@
     } catch(e){ console.warn(e); }
   }
 
+  // 최근 5회 복습 테스트 (내 점수 막대 + 반 평균 점선, 백분율)
+  function trendCard(list){
+    const pct = x => x.max ? x.score / x.max * 100 : x.score;
+    const last = list[list.length - 1], prev = list[list.length - 2];
+    const diff = prev ? Math.round((pct(last) - pct(prev)) * 10) / 10 : null;
+    const W = 320, H = 132, pl = 4, pr = 4, pt = 20, pb = 22, n = list.length;
+    const bw = Math.min(38, (W - pl - pr) / n * 0.5);
+    const cx = i => pl + (i + 0.5) * (W - pl - pr) / n;
+    const y = v => pt + (1 - Math.max(0, Math.min(100, v)) / 100) * (H - pt - pb);
+    const avgPts = list.map((x, i) => x.avg != null ? `${cx(i).toFixed(1)},${y(x.max ? x.avg / x.max * 100 : x.avg).toFixed(1)}` : null).filter(Boolean);
+    const lab = d => { const t = new Date(d + 'T00:00:00'); return isNaN(t) ? '' : `${t.getMonth()+1}/${t.getDate()}`; };
+    const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 복습 테스트 점수">
+      <line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" stroke="rgba(17,17,20,.12)"/>
+      ${list.map((x, i) => { const v = pct(x), on = i === n - 1;
+        return `<rect x="${(cx(i) - bw / 2).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0) - y(v)).toFixed(1)}" rx="4" fill="${on ? '#D6301F' : '#111114'}" opacity="${on ? 1 : .82}"/>
+          <text x="${cx(i).toFixed(1)}" y="${(y(v) - 6).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="800" fill="${on ? '#D6301F' : '#111114'}">${x.score}</text>
+          <text x="${cx(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="10" fill="#63636B">${lab(x.date)}</text>`; }).join('')}
+      ${avgPts.length > 1 ? `<polyline points="${avgPts.join(' ')}" fill="none" stroke="#D6301F" stroke-width="1.5" stroke-dasharray="4 4" opacity=".75"/>` : ''}
+      ${avgPts.map(p => `<circle cx="${p.split(',')[0]}" cy="${p.split(',')[1]}" r="2.5" fill="#fff" stroke="#D6301F" stroke-width="1.5"/>`).join('')}
+    </svg>`;
+    return `<a class="trend" href="daily-report.html?t=${encodeURIComponent(last.token)}" style="display:block;text-decoration:none;">
+      <div class="top"><b>${last.score}</b><small>/ ${last.max}점 · ${esc(OMR.fmtKDate(last.date))}</small>
+        ${diff != null && diff !== 0 ? `<span class="chg ${diff > 0 ? 'up' : 'down'}">${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)}%p</span>` : ''}</div>
+      ${svg}
+      <div class="lg"><span><i style="background:#111114;height:6px;width:8px;border-radius:2px;"></i>내 점수</span><span><i style="background:repeating-linear-gradient(90deg,#D6301F 0 3px,transparent 3px 6px);"></i>반 평균</span></div></a>`;
+  }
+
+  // ───────── 이번 주 할 일 (과제 기한 · 클리닉 예약 · 안 본 영상 · 추가학습 · 열린 시험) ─────────
+  async function loadWeek(){
+    const box = $('weekBox');
+    const now = new Date(), in7 = new Date(now.getTime() + 7 * 864e5), today = OMR.todayStr();
+    const rows = [];
+    const dLabel = d => { const days = Math.ceil((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
+      return days < 0 ? '지남' : days === 0 ? '오늘' : 'D-' + days; };
+    const safe = p => p.catch(e => { console.warn(e); return null; });
+    const [as, slots, lecs, links, exams] = await Promise.all([
+      safe(db.collection('omrAssignments').where('className','==',me.className).get()),
+      safe(db.collection('clinicSlots').get()),
+      safe(db.collection('lectures').get()),
+      safe(db.collection('dailyReportLinks').doc(me.code).get()),
+      safe(db.collection('omrExams').where('className','==',me.className).get()),
+    ]);
+    // 과제: 열려 있고 아직 안 낸 것(또는 보완 요청) 중 기한이 7일 안이거나 지난 것
+    if (as){
+      const list = as.docs.map(d => ({ id:d.id, ...d.data() })).filter(a => a.status === 'open');
+      const subs = await Promise.all(list.map(a => db.collection('omrAssignSubs').doc(`${a.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
+      list.forEach((a, i) => {
+        const st = subs[i] ? subs[i].status : 'none', due = toDate(a.dueAt);
+        if (!['none','in_progress','revise'].includes(st)) return;
+        if (due && due > in7) return;
+        rows.push({ sort: due ? due.getTime() : in7.getTime(), d: due ? dLabel(due) : '과제', cls: !due || due - now < 2 * 864e5 ? 'red' : '',
+          t: a.title, m: st === 'revise' ? '보완 필요' : '과제', href: 'hw.html?id=' + encodeURIComponent(a.id) });
+      });
+    }
+    // 클리닉: 앞으로 7일 안에 예약한 시간
+    if (slots){
+      const up = slots.docs.map(d => ({ id:d.id, ...d.data() }))
+        .filter(s => s.date >= today && s.date <= OMR.todayStr(in7) && (s.className === '전체' || s.className === me.className));
+      const got = await Promise.all(up.map(s => db.collection('clinicBookings').doc(`${s.id}_${me.code}`).get().then(x => x.exists).catch(() => false)));
+      up.forEach((s, i) => { if (!got[i]) return;
+        const t = new Date(`${s.date}T${s.start}:00`);
+        rows.push({ sort: t.getTime(), d: `${t.getMonth()+1}/${t.getDate()}`, cls:'ink', t: `클리닉 ${s.start}–${s.end}`, m: s.place || '클리닉', href: 'book.html' }); });
+    }
+    // 추가학습: 가장 최근 리포트에서 추가학습이 필요하다고 했을 때
+    if (links && links.exists){
+      const last = (links.data().items || []).slice().sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
+      if (last && last.date >= OMR.todayStr(new Date(now.getTime() - 7 * 864e5))){
+        const r = await db.collection('dailyReports').doc(last.token).get().then(x => x.exists ? x.data() : null).catch(() => null);
+        if (r && r.extra && r.extra.needed) rows.push({ sort: now.getTime() - 1, d: '추가학습', cls:'red', t: r.extra.reason || '추가학습이 필요해요', m: r.extra.when || '', href: 'daily-report.html?t=' + encodeURIComponent(last.token) });
+      }
+    }
+    // 열린 시험 OMR
+    if (exams){
+      const open = exams.docs.map(d => ({ id:d.id, ...d.data() })).filter(e => e.status === 'open');
+      const subs = await Promise.all(open.map(e => db.collection('omrSubmissions').doc(`${e.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
+      open.forEach((e, i) => { if (subs[i] && subs[i].status === 'submitted') return;
+        const due = toDate(e.dueAt);
+        rows.push({ sort: due ? due.getTime() : now.getTime(), d: due ? dLabel(due) : 'OMR', cls:'red', t: e.title, m: '시험 OMR', href: null, exam: e, sub: subs[i] }); });
+    }
+    // 아직 완강하지 않은 영상 (최근 것 3개)
+    if (lecs){
+      const mine = lecs.docs.map(d => ({ id:d.id, ...d.data() })).filter(l => l.status === 'open' && (l.className === '전체' || l.className === me.className))
+        .sort((a,b) => (toDate(b.createdAt)||0) - (toDate(a.createdAt)||0)).slice(0, 6);
+      const vs = await Promise.all(mine.map(l => db.collection('lectureViews').doc(`${l.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
+      mine.filter((l, i) => !(vs[i] && vs[i].completed)).slice(0, 3).forEach(l => {
+        const v = vs[mine.indexOf(l)];
+        rows.push({ sort: in7.getTime() + 1, d: '영상', cls: '', t: l.title, m: v ? Math.round(v.percent) + '% 시청' : '안 봤어요', href: 'watch.html?id=' + encodeURIComponent(l.id) });
+      });
+    }
+    rows.sort((a,b) => a.sort - b.sort);
+    box.innerHTML = `<h2 class="sec-h">이번 주 할 일${rows.length ? ` <span class="pill red" style="margin-left:4px;">${rows.length}</span>` : ''}</h2>
+      <div class="wk">${rows.length ? rows.map((r, i) => `<a href="${r.href ? esc(r.href) : '#'}" data-i="${i}"><span class="d ${r.cls}">${esc(r.d)}</span>
+        <span class="t">${esc(r.t)}</span><span class="m">${esc(r.m)}</span></a>`).join('') : '<div class="none">이번 주에 남은 할 일이 없어요. 👏</div>'}</div>`;
+    box.querySelectorAll('a[data-i]').forEach(a => { const r = rows[+a.dataset.i]; if (r.exam) a.onclick = e => { e.preventDefault(); openExam(r.exam, r.sub); }; });
+  }
+
   // ───────── 과제 · 클리닉 학습지 ─────────
   function item(href, title, meta, pill, pillCls){
     const a = document.createElement('a');
@@ -241,9 +360,10 @@
       <span class="pill ${pillCls}" style="margin-left:auto;">${pill}</span>`;
     return a;
   }
+  let todoSeq = 0;
   async function loadTodos(){
-    const box = $('todoList');
-    box.innerHTML = '';
+    const seq = ++todoSeq;
+    const box = document.createElement('div');   // 다 만든 뒤 한 번에 교체 (중복 표시 방지)
     try {
       const [cs, as] = await Promise.all([db.collection('omrCodes').doc(me.code).get(),
         db.collection('omrAssignments').where('className','==',me.className).get()]);
@@ -258,7 +378,8 @@
       // 과제: 마감됐고 이미 끝난 과제는 최근 5개만
       const aRows = assigns.map((a, i) => ({ a, s: aSubs[i] }))
         .filter(({a, s}) => a.status === 'open' || (s && s.status === 'revise'));
-      const doneRows = assigns.map((a, i) => ({ a, s: aSubs[i] })).filter(r => !aRows.includes(r)).slice(0, 5);
+      const openIds = new Set(aRows.map(r => r.a.id));
+      const doneRows = assigns.map((a, i) => ({ a, s: aSubs[i] })).filter(r => !openIds.has(r.a.id)).slice(0, 5);
       if (aRows.length || doneRows.length){
         box.insertAdjacentHTML('beforeend', '<h2 class="sec-h">과제</h2>');
         [...aRows, ...doneRows].forEach(({a, s}) => {
@@ -281,6 +402,7 @@
         });
       }
     } catch(e){ console.error(e); }
+    if (seq === todoSeq) $('todoList').replaceChildren(...box.childNodes);
   }
 
   // ───────── OMR ─────────
