@@ -363,40 +363,6 @@
   .hub + footer{ margin-top:48px; }
 
 
-  /* ---------- slide 1: photo background ---------- */
-  .slide-photo{ position:relative; isolation:isolate; overflow:hidden; background:#141417; color:#fff;
-    padding:52px 30px 34px !important; }
-  .slide-photo > :not(.slide-bg):not(.slide-shade){ position:relative; max-width:min(56%,480px); }
-  .slide-photo .statement-main{ font-size:clamp(18px,2.3vw,22px); }
-  .slide-photo h1.headline{ max-width:none; }
-  .slide-bg{ position:absolute; top:0; right:0; bottom:0; left:auto; width:54%; height:100%;
-    object-fit:cover; object-position:50% 14%; z-index:-2;
-    filter:grayscale(100%) brightness(1.12) contrast(1.02); transform:scale(1.04);
-    animation:bgZoom 9s ease-out forwards; }
-  @keyframes bgZoom{ to{ transform:scale(1); } }
-  .slide-shade{ position:absolute; inset:0; z-index:-1;
-    background:linear-gradient(90deg, #141417 0%, #141417 46%, rgba(20,20,23,.6) 56%, rgba(20,20,23,.12) 72%, rgba(20,20,23,0) 100%),
-               linear-gradient(0deg, rgba(20,20,23,.45) 0%, rgba(20,20,23,0) 30%); }
-  .slide-photo h1.headline{ color:#fff; }
-  .slide-photo .role-line{ color:rgba(255,255,255,.8); font-size:15px; line-height:1.6; }
-  .slide-photo .statement{ border-left-color:#ff6a5b; }
-  .slide-photo .statement-main{ color:#fff; }
-  .slide-photo .statement-sub{ color:rgba(255,255,255,.75); }
-  .slide-photo .kicker{ color:#ff6a5b; }
-  .slide-photo .kicker::before{ background:#ff6a5b; }
-  .slide-photo .headline .accent{ color:#ff4a38; }
-  @media (max-width:640px){
-    /* 휴대폰: 위쪽은 사진(얼굴), 아래쪽은 글 */
-    .slide-photo{ padding:0 22px 28px !important; }
-    .slide-photo > :not(.slide-bg):not(.slide-shade){ max-width:none; }
-    .slide-photo::before{ content:""; display:block; height:330px; }
-    .slide-bg{ left:0; width:100%; height:380px; bottom:auto; object-position:50% 8%; }
-    .slide-shade{ background:linear-gradient(180deg, rgba(20,20,23,0) 0px, rgba(20,20,23,0) 200px,
-      rgba(20,20,23,.55) 250px, rgba(20,20,23,.92) 320px, #141417 378px); }
-    .slide-photo .kicker{ margin-top:-34px; }
-    .slide-photo .role-line{ font-size:14px; }
-  }
-
   /* ---------- hub: one horizontal row ---------- */
   .hub-short{ display:none; }
   @media (max-width:640px){
@@ -492,9 +458,7 @@
 
   <section class="hero-slider" id="intro" aria-roledescription="carousel" aria-label="메인 소식">
     <div class="slides" id="slides">
-  <header class="hero slide slide-photo" aria-roledescription="slide" aria-label="1 / 4">
-    <img class="slide-bg" id="slideBg" alt="" aria-hidden="true">
-    <div class="slide-shade" aria-hidden="true"></div>
+  <header class="hero slide" aria-roledescription="slide" aria-label="1 / 4">
     <p class="kicker">고등수학 · 내신 · 수능</p>
     <h1 class="headline">엄형국<br>수학<span class="accent">.</span></h1>
     <p class="role-line">메가스터디학원 · 메가스터디 러셀 · 대치 상상학원 · 대치 SNT학원 출신</p>
@@ -1078,10 +1042,6 @@
   });
   if(location.hash){ var t=document.querySelector(location.hash); if(t) window.openHubFor(t); }
 })();
-</script>
-<script>
-(function(){ var src=document.querySelector('.photo-block img'), bg=document.getElementById('slideBg');
-  if(src && bg) bg.src=src.getAttribute('src'); })();
 </script>
 </body>
 </html>
