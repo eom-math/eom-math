@@ -368,6 +368,9 @@
       if (s.exists) return { uid: user.uid, name: s.data().name || '조교', role: 'ta' };
     } catch (e) { /* 무시 */ }
     try { await db.collection('omrStaff').limit(1).get(); return { uid: user.uid, name: '엄형국 선생님', role: 'admin' }; }
+    catch (e) { /* 새 규칙이 아직 게시되지 않았을 수 있음 */ }
+    // 예전 OMR 규칙에서도 선생님만 읽을 수 있는 학생 명단으로 한 번 더 확인
+    try { await db.collection('omrStudents').limit(1).get(); return { uid: user.uid, name: '엄형국 선생님', role: 'admin', rulesMissing: true }; }
     catch (e) { return null; }
   }
   function staffNav(current, role) {

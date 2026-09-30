@@ -115,6 +115,10 @@
   <!-- 메인 -->
   <section id="vMain" class="hidden">
     <div class="row" id="adminNav" style="margin-bottom:12px;gap:4px;"></div>
+    <div class="card hidden" id="rulesWarn" style="border-color:var(--red);background:var(--red-soft);">
+      <b>Firebase 규칙을 새로 게시해야 저장할 수 있어요.</b>
+      <p class="muted" style="margin-top:6px;line-height:1.6;">Firebase 콘솔 → Firestore → 규칙에서 OMR 부분을 GitHub의 <b>omr/firestore.rules</b> 전체로 바꾸고, ADMIN_EMAIL을 선생님 로그인 이메일로 고친 뒤 게시하세요. Storage 규칙도 <b>omr/storage.rules</b>로 바꿔 게시하세요.</p>
+    </div>
     <div class="tabs" id="mainTabs">
       <button class="on" data-tab="lessons">수업 기록</button>
       <button data-tab="staff" class="admin-only hidden">조교 계정</button>
@@ -233,7 +237,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=5"></script>
+<script src="common.js?v=6"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, genToken, round } = OMR;
@@ -252,7 +256,7 @@
   let lesson = null;      // {id, ...}
   let entries = {};       // code -> entry
 
-  function handleErr(e){
+  function handleErr(e){ if (e && e.code === 'permission-denied'){ const w = document.getElementById('rulesWarn'); if (w) w.classList.remove('hidden'); }
     console.error(e);
     toast(e && e.code === 'permission-denied' ? '권한이 없습니다 (보안 규칙을 확인하세요)' : '오류: ' + (e.message || e));
   }
@@ -271,7 +275,8 @@
     $('adminEmail').textContent = user ? OMR.staffIdFromEmail(user.email) : '';
     $('whoBadge').classList.add('hidden');
     if (!user){ me = null; show('vLogin'); return; }
-    me = await detectRole(user);
+    me = await OMR.detectStaff(user);
+    document.getElementById('rulesWarn').classList.toggle('hidden', !(me && me.rulesMissing));
     if (!me){ show('vDenied'); return; }
     $('whoBadge').textContent = me.role === 'admin' ? '선생님' : '조교 · ' + me.name;
     $('whoBadge').className = 'who-badge' + (me.role === 'admin' ? ' admin' : '');
