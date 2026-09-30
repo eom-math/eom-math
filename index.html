@@ -362,6 +362,43 @@
   .hub-close:hover{ color:var(--ink); border-color:var(--ink); }
   .hub + footer{ margin-top:48px; }
 
+
+  /* ---------- slide 1: photo background ---------- */
+  .slide-photo{ position:relative; isolation:isolate; overflow:hidden; background:#111114; color:#fff;
+    padding:52px 26px 30px !important; }
+  .slide-bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:62% 18%;
+    z-index:-2; filter:grayscale(100%) contrast(1.1) brightness(.9); transform:scale(1.04);
+    animation:bgZoom 9s ease-out forwards; }
+  @keyframes bgZoom{ to{ transform:scale(1); } }
+  .slide-shade{ position:absolute; inset:0; z-index:-1;
+    background:linear-gradient(90deg, rgba(17,17,20,1) 0%, rgba(17,17,20,1) 38%, rgba(17,17,20,.6) 54%, rgba(17,17,20,.28) 75%, rgba(17,17,20,.2) 100%),
+               linear-gradient(0deg, rgba(10,10,12,.7) 0%, rgba(10,10,12,0) 45%); }
+  @media (max-width:640px){
+    .slide-photo{ padding:44px 22px 26px !important; }
+    .slide-bg{ object-position:24% 15%; }
+    .slide-shade{ background:linear-gradient(180deg, rgba(10,10,12,.55) 0%, rgba(10,10,12,.72) 50%, rgba(10,10,12,.92) 100%); }
+  }
+  @media (min-width:641px){ .slide-bg{ left:auto; width:64%; object-position:50% 12%; } }
+  .slide-photo h1.headline{ color:#fff; }
+  .slide-photo .role-line{ color:rgba(255,255,255,.72); }
+  .slide-photo .statement-main{ color:#fff; }
+  .slide-photo .statement-sub{ color:rgba(255,255,255,.66); }
+  .slide-photo .kicker{ color:#ff6a5b; }
+  .slide-photo .kicker::before{ background:#ff6a5b; }
+
+  /* ---------- hub: one horizontal row ---------- */
+  .hub-short{ display:none; }
+  @media (max-width:640px){
+    .hub-grid{ grid-template-columns:repeat(4,1fr) !important; gap:8px; }
+    .hub-card{ min-height:0; padding:14px 6px 12px; align-items:center; text-align:center; }
+    .hub-top{ justify-content:center; margin-bottom:0; }
+    .hub-no, .hub-en, .hub-m{ display:none; }
+    .hub-ic{ width:44px; height:44px; }
+    .hub-t{ margin-top:10px; font-size:13px; font-weight:800; line-height:1.2; }
+    .hub-full{ display:none; } .hub-short{ display:inline; }
+    .hub-card::after{ height:3px; }
+  }
+
   /* ---------- hero slider ---------- */
   .hero-slider{ position:relative; }
   .slides{ display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth;
@@ -376,7 +413,7 @@
     transition:background .2s; }
   .slide .statement{ margin-bottom:26px; }
   .slide-cta:hover{ background:var(--red); }
-  .slider-ctrl{ display:flex; align-items:center; gap:14px; padding-bottom:36px; }
+  .slider-ctrl{ display:flex; align-items:center; gap:14px; padding:16px 0 36px; }
   .slider-count{ font-size:12.5px; font-weight:600; color:var(--dim); font-variant-numeric:tabular-nums; }
   .slider-count b{ color:var(--ink); font-weight:800; }
   .slider-bar{ flex:1; height:2px; background:var(--line); position:relative; overflow:hidden; }
@@ -398,8 +435,8 @@
   .toc-btn .bars i{ display:block; height:1.6px; background:currentColor; border-radius:2px; }
   .toc-btn .bars i:nth-child(2){ width:70%; }
   .toc-dim{ position:fixed; inset:0; z-index:90; background:rgba(17,17,20,.38);
-    opacity:0; pointer-events:none; transition:opacity .28s; }
-  .toc-dim.open{ opacity:1; pointer-events:auto; }
+    opacity:0; pointer-events:none; visibility:hidden; transition:opacity .28s, visibility .28s; }
+  .toc-dim.open{ opacity:1; pointer-events:auto; visibility:visible; }
   .toc{ position:fixed; top:0; right:0; bottom:0; z-index:100; width:min(340px,86vw);
     background:var(--bg); border-left:1px solid var(--line); display:flex; flex-direction:column;
     transform:translateX(100%); transition:transform .32s cubic-bezier(.2,.8,.2,1);
@@ -444,7 +481,9 @@
 
   <section class="hero-slider" id="intro" aria-roledescription="carousel" aria-label="메인 소식">
     <div class="slides" id="slides">
-  <header class="hero slide" aria-roledescription="slide" aria-label="1 / 4">
+  <header class="hero slide slide-photo" aria-roledescription="slide" aria-label="1 / 4">
+    <img class="slide-bg" id="slideBg" alt="" aria-hidden="true">
+    <div class="slide-shade" aria-hidden="true"></div>
     <p class="kicker">고등수학 · 내신 · 수능</p>
     <h1 class="headline">엄형국<br>수학<span class="accent">.</span></h1>
     <p class="role-line">메가스터디학원 · 메가스터디 러셀 · 대치 상상학원 · 대치 SNT학원 출신</p>
@@ -509,25 +548,25 @@
       <button class="hub-card" id="tab-games" type="button" role="tab" aria-selected="false" aria-controls="games" data-hub="games">
         <span class="hub-top"><span class="hub-no">01</span><span class="hub-ic"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.3" r=".9" class="f"/><circle cx="17.8" cy="13.7" r=".9" class="f"/></svg></span></span>
         <span class="hub-en">Game</span>
-        <span class="hub-t">개념 퀴즈 게임</span>
+        <span class="hub-t"><span class="hub-full">개념 퀴즈 게임</span><span class="hub-short">게임</span></span>
         <span class="hub-m"><span>게임 3종</span><i class="hub-arrow">↓</i></span>
       </button>
       <button class="hub-card" id="tab-omr" type="button" role="tab" aria-selected="false" aria-controls="omr" data-hub="omr">
         <span class="hub-top"><span class="hub-no">02</span><span class="hub-ic"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17.5" rx="2"/><path d="M9 3.5h6v2.5H9z"/><path d="M8.5 13l2.3 2.3 4.7-4.8"/></svg></span></span>
         <span class="hub-en">Test</span>
-        <span class="hub-t">시험 · 성적</span>
+        <span class="hub-t"><span class="hub-full">시험 · 성적</span><span class="hub-short">시험·성적</span></span>
         <span class="hub-m"><span>모바일 OMR</span><i class="hub-arrow">↓</i></span>
       </button>
       <button class="hub-card" id="tab-materials" type="button" role="tab" aria-selected="false" aria-controls="materials" data-hub="materials">
         <span class="hub-top"><span class="hub-no">03</span><span class="hub-ic"><svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"/><path d="M6.5 8h2M15.5 8h2M15.5 11h2"/></svg></span></span>
         <span class="hub-en">Library</span>
-        <span class="hub-t">자료실</span>
+        <span class="hub-t"><span class="hub-full">자료실</span><span class="hub-short">자료실</span></span>
         <span class="hub-m"><span>커리큘럼 · 학원 자료</span><i class="hub-arrow">↓</i></span>
       </button>
       <button class="hub-card" id="tab-channel" type="button" role="tab" aria-selected="false" aria-controls="channel" data-hub="channel">
         <span class="hub-top"><span class="hub-no">04</span><span class="hub-ic"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z"/><path d="M8 9h8M8 12h5"/></svg></span></span>
         <span class="hub-en">Channel</span>
-        <span class="hub-t">소식 · 상담</span>
+        <span class="hub-t"><span class="hub-full">소식 · 상담</span><span class="hub-short">소식·상담</span></span>
         <span class="hub-m"><span>인스타 · 카톡 · 블로그</span><i class="hub-arrow">↓</i></span>
       </button>
     </div>
@@ -1028,6 +1067,10 @@
   });
   if(location.hash){ var t=document.querySelector(location.hash); if(t) window.openHubFor(t); }
 })();
+</script>
+<script>
+(function(){ var src=document.querySelector('.photo-block img'), bg=document.getElementById('slideBg');
+  if(src && bg) bg.src=src.getAttribute('src'); })();
 </script>
 </body>
 </html>
