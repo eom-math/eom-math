@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>데일리 리포트 입력 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=4">
+<style>
+  :root{ --hl:#FFE45C; --hl-soft:#FFF6BF; }
+  .who-badge{font-size:12px;font-weight:800;padding:4px 9px;border-radius:99px;background:var(--bg2);}
+  .who-badge.admin{background:var(--ink);color:#fff;}
+
+  /* 수업 목록 */
+  .lesson-item{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:#fff;
+    border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;}
+  .lesson-item:hover{border-color:var(--ink);}
+  .lesson-item .d{flex:0 0 52px;text-align:center;border-right:1px solid var(--line2);padding-right:12px;}
+  .lesson-item .d b{display:block;font-size:20px;font-weight:900;letter-spacing:-.03em;line-height:1.1;}
+  .lesson-item .d span{font-size:11px;color:var(--dim);font-weight:700;}
+  .lesson-item .t{font-weight:800;font-size:15px;}
+  .lesson-item .m{font-size:12.5px;color:var(--dim);}
+  .lesson-item .r{margin-left:auto;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+
+  /* 수업 편집 */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  @media (max-width:560px){ .grid2,.grid3{grid-template-columns:1fr;} }
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 11px;font-size:13px;font-weight:700;
+    color:var(--dim);display:inline-flex;align-items:center;gap:6px;}
+  .chip.on{background:var(--hl);border-color:#E8C62E;color:var(--ink);}
+  .chip .x{font-size:14px;line-height:1;opacity:.55;}
+  .chip.add{border-style:dashed;}
+  .files{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+  .file{position:relative;width:84px;height:84px;border-radius:8px;border:1px solid var(--line);background:var(--bg2);
+    overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--dim);text-align:center;padding:4px;}
+  .file img{width:100%;height:100%;object-fit:cover;}
+  .file .del{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(17,17,20,.75);
+    color:#fff;font-size:13px;line-height:1;}
+  .file.up{border-style:dashed;background:#fff;cursor:pointer;flex-direction:column;gap:2px;}
+  .file.up b{font-size:22px;color:var(--ink);}
+
+  .stu{background:#fff;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;}
+  .stu-h{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line2);}
+  .stu-h .nm{font-weight:900;font-size:16px;white-space:nowrap;}
+  .stu-h .seg{margin-left:auto;flex:0 0 auto;}
+  .stu-h .st{position:absolute;right:14px;top:-9px;font-size:10.5px;color:var(--faint);font-weight:700;background:#fff;padding:0 4px;
+    max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .stu-h{position:relative;}
+  .stu{overflow:visible;margin-top:14px;}
+  .stu-h .st.saving{color:var(--warn);} .stu-h .st.err{color:var(--red);}
+  .stu-h .done{width:8px;height:8px;border-radius:50%;background:var(--line);}
+  .stu.filled .stu-h .done{background:var(--ok);}
+  .stu-b{padding:12px 14px 14px;display:grid;gap:12px;}
+  .stu.absent .stu-b .hide-absent{opacity:.35;pointer-events:none;}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .seg button{border:0;background:#fff;padding:6px 11px;font-size:12.5px;font-weight:700;color:var(--dim);}
+  .seg button+button{border-left:1px solid var(--line);}
+  .seg button.on{background:var(--ink);color:#fff;}
+  .seg button.on.late{background:var(--warn);} .seg button.on.absent{background:var(--red);}
+  .fl{font-size:12px;font-weight:800;color:var(--dim);margin-bottom:5px;display:flex;justify-content:space-between;gap:8px;}
+  .score-in{display:flex;align-items:center;gap:6px;}
+  .score-in .input{width:90px;font-size:18px;font-weight:800;text-align:center;padding:8px;}
+  .hw-quick{display:flex;gap:4px;flex-wrap:wrap;}
+  .hw-quick button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 8px;font-size:12px;font-weight:700;}
+  .hw-quick button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .extra-box{background:var(--red-soft);border-radius:8px;padding:10px;display:grid;gap:8px;}
+  textarea.input.cm{min-height:72px;font-size:14px;}
+  .toggle{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;cursor:pointer;}
+  .toggle input{width:18px;height:18px;accent-color:var(--red);}
+
+  .pub-bar{position:sticky;bottom:0;z-index:20;background:linear-gradient(transparent,var(--bg) 28%);
+    padding:22px 0 calc(12px + env(safe-area-inset-bottom));}
+  .pub-bar .inner{background:var(--ink);color:#fff;border-radius:12px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:10px;}
+  .pub-bar .s{font-size:12.5px;opacity:.8;} .pub-bar .s b{color:#fff;opacity:1;font-size:14px;}
+  .pub-bar .btn{margin-left:auto;}
+
+  .res-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line2);flex-wrap:wrap;}
+  .res-row:last-child{border-bottom:0;}
+  .res-row .nm{font-weight:800;min-width:64px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="../index.html">엄형국 <span>수학</span></a>
+    <div class="row" style="gap:8px;">
+      <span class="who-badge hidden" id="whoBadge"></span>
+      <span class="sub" id="adminEmail"></span>
+      <button class="btn sm hidden" id="logoutBtn">로그아웃</button>
+    </div>
+  </div>
+
+  <!-- 로그인 -->
+  <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
+    <div class="kicker">DAILY REPORT</div>
+    <h1>데일리 리포트 입력</h1>
+    <p class="lead">선생님 이메일 또는 조교 아이디로 로그인하세요.</p>
+    <div class="card stack">
+      <input class="input" id="loginEmail" placeholder="이메일 또는 조교 아이디" autocomplete="username" autocapitalize="none">
+      <input class="input" type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
+      <button class="btn primary block" id="loginBtn">로그인</button>
+      <p class="muted" id="loginMsg"></p>
+    </div>
+  </section>
+
+  <section id="vDenied" class="hidden">
+    <div class="empty">이 계정은 리포트 입력 권한이 없습니다.<br>선생님께 조교 계정을 받아 로그인하세요.</div>
+  </section>
+
+  <!-- 메인 -->
+  <section id="vMain" class="hidden">
+    <div class="row" id="adminNav" style="margin-bottom:12px;gap:4px;"></div>
+    <div class="tabs" id="mainTabs">
+      <button class="on" data-tab="lessons">수업 기록</button>
+      <button data-tab="staff" class="admin-only hidden">조교 계정</button>
+    </div>
+
+    <div id="tabLessons">
+      <div class="row between" style="margin-bottom:12px;">
+        <select class="input" id="classFilter" style="width:auto;min-width:140px;"></select>
+        <button class="btn primary" id="newLessonBtn">+ 새 수업 기록</button>
+      </div>
+      <div id="lessonList"><div class="empty">불러오는 중…</div></div>
+    </div>
+
+    <div id="tabStaff" class="hidden">
+      <div class="card">
+        <h2>조교 계정 만들기</h2>
+        <p class="muted" style="margin-bottom:12px;">아이디와 비밀번호를 정해 조교에게 전달하세요. 조교는 이 페이지에서 아이디로 로그인해 학생별 리포트를 입력할 수 있습니다. (학부모 연락처는 볼 수 없습니다)</p>
+        <div class="grid3">
+          <div><label class="f">이름</label><input class="input" id="taName" placeholder="김조교"></div>
+          <div><label class="f">아이디 (영문·숫자)</label><input class="input" id="taId" placeholder="ta01" autocapitalize="none"></div>
+          <div><label class="f">비밀번호 (6자 이상)</label><input class="input" id="taPw" placeholder="••••••"></div>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <button class="btn primary" id="taCreateBtn">계정 만들기</button>
+          <span class="muted" id="taMsg"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>조교 목록</h2>
+        <div id="staffList"><div class="empty">불러오는 중…</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 수업 편집 -->
+  <section id="vLesson" class="hidden">
+    <div class="row between" style="margin-bottom:12px;">
+      <button class="btn sm ghost" id="backBtn" style="padding-left:0;">← 수업 목록</button>
+      <div class="row" style="gap:6px;">
+        <span class="pill" id="lessonStatus"></span>
+        <button class="btn sm" id="previewBtn">리포트 미리보기</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="kicker" id="lessonKicker">수업 정보</div>
+      <div class="grid3">
+        <div><label class="f">반</label><select class="input" id="lClass"></select></div>
+        <div><label class="f">수업 날짜</label><input class="input" type="date" id="lDate"></div>
+        <div><label class="f">회차 / 제목</label><input class="input" id="lTitle" placeholder="예: 12회차"></div>
+      </div>
+      <div class="grid2" style="margin-top:10px;">
+        <div><label class="f">오늘 진도</label><input class="input" id="lProgress" placeholder="예: 공통수학2 명제 — 필요·충분조건"></div>
+        <div><label class="f">다음 과제 범위</label><input class="input" id="lNext" placeholder="예: 쎈 B단계 212~240번"></div>
+      </div>
+      <div class="grid2" style="margin-top:10px;">
+        <div><label class="f">복습 테스트 이름</label><input class="input" id="lTest" placeholder="예: 명제 복습테스트"></div>
+        <div><label class="f">만점</label><input class="input" type="number" id="lMax" min="1" placeholder="100"></div>
+      </div>
+      <div style="margin-top:14px;">
+        <div class="fl"><span>보완 유형 목록 <span style="font-weight:600;">— 학생 카드에서 눌러 표시합니다</span></span></div>
+        <div class="chips" id="typeChips"></div>
+      </div>
+      <div style="margin-top:14px;">
+        <div class="fl"><span>공통 분석지 · 자료 <span style="font-weight:600;">— 반 전체 리포트에 첨부 (사진·PDF)</span></span></div>
+        <div class="files" id="lessonFiles"></div>
+      </div>
+      <p class="muted" id="lessonSaveMsg" style="margin-top:10px;font-size:12px;"></p>
+    </div>
+
+    <div class="row between" style="margin:18px 0 10px;">
+      <h2 style="margin:0;">학생별 입력</h2>
+      <span class="muted" id="entryCount"></span>
+    </div>
+    <div id="stuList"></div>
+
+    <div class="card hidden" id="pubResult">
+      <h2>발송용 링크</h2>
+      <p class="muted" style="margin-bottom:8px;">링크를 복사해 카톡으로 보내거나, CSV를 받아 알리고 대량 발송에 올리세요.</p>
+      <div class="row" style="margin-bottom:8px;gap:6px;">
+        <button class="btn sm" id="csvBtn">CSV 받기</button>
+        <button class="btn sm" id="copyAllBtn">전체 메시지 복사</button>
+      </div>
+      <div id="pubList"></div>
+    </div>
+
+    <div class="pub-bar">
+      <div class="inner">
+        <div class="s">입력 <b id="barFilled">0</b>/<span id="barTotal">0</span> · 반 평균 <b id="barAvg">–</b></div>
+        <button class="btn red" id="publishBtn">리포트 발행</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- 새 수업 -->
+<div class="modal-bg hidden" id="newModal">
+  <div class="modal">
+    <h2>새 수업 기록</h2>
+    <div class="stack">
+      <div><label class="f">반</label><select class="input" id="nClass"></select></div>
+      <div><label class="f">수업 날짜</label><input class="input" type="date" id="nDate"></div>
+      <div><label class="f">회차 / 제목</label><input class="input" id="nTitle" placeholder="예: 12회차"></div>
+      <label class="toggle"><input type="checkbox" id="nCopyTypes" checked> 지난 수업의 보완 유형 목록 가져오기</label>
+    </div>
+    <p class="muted" id="newMsg" style="margin-top:8px;"></p>
+    <div class="row" style="margin-top:16px;">
+      <button class="btn grow" data-close="newModal">취소</button>
+      <button class="btn primary grow" id="newCreateBtn">만들기</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="common.js?v=4"></script>
+<script>
+(function(){
+  const { db, FV, esc, toast, copyText, toDate, genToken, round } = OMR;
+  const $ = id => document.getElementById(id);
+  const auth = firebase.auth();
+  const VIEWS = ['vLogin','vDenied','vMain','vLesson'];
+  const show = v => { VIEWS.forEach(x => $(x).classList.toggle('hidden', x !== v)); window.scrollTo(0,0); };
+  const openModal = id => $(id).classList.remove('hidden');
+  const closeModal = id => $(id).classList.add('hidden');
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeModal(b.dataset.close));
+  const ATT = { present:'출석', late:'지각', absent:'결석' };
+
+  let me = null;          // {uid, name, role:'admin'|'ta'}
+  let roster = [];        // [{code, name, className}]
+  let classes = [];
+  let lesson = null;      // {id, ...}
+  let entries = {};       // code -> entry
+
+  function handleErr(e){
+    console.error(e);
+    toast(e && e.code === 'permission-denied' ? '권한이 없습니다 (보안 규칙을 확인하세요)' : '오류: ' + (e.message || e));
+  }
+
+  // ───────── 로그인 · 권한 ─────────
+  $('loginBtn').onclick = async () => {
+    $('loginMsg').textContent = '로그인 중…';
+    try { await auth.signInWithEmailAndPassword(OMR.staffEmail($('loginEmail').value), $('loginPw').value); }
+    catch(e){ $('loginMsg').textContent = '로그인 실패: 아이디(이메일) 또는 비밀번호를 확인하세요.'; }
+  };
+  $('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
+  $('logoutBtn').onclick = () => auth.signOut();
+
+  auth.onAuthStateChanged(async user => {
+    $('logoutBtn').classList.toggle('hidden', !user);
+    $('adminEmail').textContent = user ? OMR.staffIdFromEmail(user.email) : '';
+    $('whoBadge').classList.add('hidden');
+    if (!user){ me = null; show('vLogin'); return; }
+    me = await detectRole(user);
+    if (!me){ show('vDenied'); return; }
+    $('whoBadge').textContent = me.role === 'admin' ? '선생님' : '조교 · ' + me.name;
+    $('whoBadge').className = 'who-badge' + (me.role === 'admin' ? ' admin' : '');
+    document.querySelectorAll('.admin-only').forEach(el => el.classList.toggle('hidden', me.role !== 'admin'));
+    $('adminNav').innerHTML = me.role === 'admin' ? OMR.adminNav('daily.html') : '';
+    $('mainTabs').querySelector('[data-tab="lessons"]').click();
+    show('vMain');
+    await loadRoster();
+    const q = new URLSearchParams(location.search).get('lesson');
+    if (q) openLesson(q); else loadLessons();
+  });
+
+  async function detectRole(user){
+    try {
+      const s = await db.collection('omrStaff').doc(user.uid).get();
+      if (s.exists) return { uid:user.uid, name:s.data().name || '조교', role:'ta' };
+    } catch(e){ /* 조교가 아니면 권한 오류가 날 수 있음 */ }
+    try { await db.collection('omrStaff').limit(1).get(); return { uid:user.uid, name:'엄형국 선생님', role:'admin' }; }
+    catch(e){ return null; }
+  }
+
+  // ───────── 명단 ─────────
+  async function loadRoster(){
+    try {
+      const qs = await db.collection('omrCodes').get();
+      roster = qs.docs.map(d => ({ code:d.id, name:d.data().name, className:d.data().className }))
+        .filter(s => s.name && s.className)
+        .sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+    } catch(e){ roster = []; handleErr(e); }
+    classes = [...new Set(roster.map(s => s.className))].sort((a,b) => a.localeCompare(b, 'ko'));
+    const opts = classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    $('classFilter').innerHTML = `<option value="">전체 반</option>` + opts;
+    $('nClass').innerHTML = opts || '<option value="">등록된 반 없음</option>';
+    $('lClass').innerHTML = opts;
+  }
+  $('classFilter').onchange = () => loadLessons();
+
+  // ───────── 탭 ─────────
+  $('mainTabs').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    [...$('mainTabs').children].forEach(x => x.classList.toggle('on', x === b));
+    $('tabLessons').classList.toggle('hidden', b.dataset.tab !== 'lessons');
+    $('tabStaff').classList.toggle('hidden', b.dataset.tab !== 'staff');
+    if (b.dataset.tab === 'staff' && me && me.role === 'admin') loadStaff();
+  };
+
+  // ───────── 수업 목록 ─────────
+  async function loadLessons(){
+    const box = $('lessonList');
+    box.innerHTML = '<div class="empty">불러오는 중…</div>';
+    try {
+      let q = db.collection('dailyLessons');
+      const cf = $('classFilter').value;
+      if (cf) q = q.where('className', '==', cf);
+      const qs = await q.get();
+      const list = qs.docs.map(d => ({ id:d.id, ...d.data() }))
+        .sort((a,b) => (b.date || '').localeCompare(a.date || '') || (toDate(b.createdAt)||0) - (toDate(a.createdAt)||0))
+        .slice(0, 120);
+      if (!list.length){ box.innerHTML = '<div class="empty">아직 수업 기록이 없습니다.<br>‘새 수업 기록’으로 시작하세요.</div>'; return; }
+      box.innerHTML = '';
+      list.forEach(l => {
+        const d = new Date((l.date || '') + 'T00:00:00');
+        const total = roster.filter(s => s.className === l.className).length;
+        const b = document.createElement('button');
+        b.className = 'lesson-item';
+        b.innerHTML = `
+          <div class="d"><b>${isNaN(d) ? '–' : d.getDate()}</b><span>${isNaN(d) ? '' : (d.getMonth()+1) + '월 ' + '일월화수목금토'[d.getDay()]}</span></div>
+          <div><div class="t">${esc(l.className)} · ${esc(l.title || '수업')}</div>
+            <div class="m">${esc(l.progress || '진도 미입력')}</div></div>
+          <div class="r"><span class="pill ${l.status === 'published' ? 'published' : 'draft'}">${l.status === 'published' ? '발행됨' : '작성 중'}</span>
+            <span class="muted" style="font-size:11.5px;">입력 ${l.filledCount || 0}/${total}</span></div>`;
+        b.onclick = () => openLesson(l.id);
+        box.appendChild(b);
+      });
+    } catch(e){ box.innerHTML = '<div class="empty">불러오지 못했습니다.</div>'; handleErr(e); }
+  }
+
+  // ───────── 새 수업 ─────────
+  $('newLessonBtn').onclick = () => {
+    if (!classes.length){ toast('먼저 시험·OMR 관리에서 학생을 등록하세요'); return; }
+    $('nDate').value = OMR.todayStr(); $('nTitle').value = ''; $('newMsg').textContent = '';
+    if ($('classFilter').value) $('nClass').value = $('classFilter').value;
+    openModal('newModal');
+  };
+  $('newCreateBtn').onclick = async () => {
+    const className = $('nClass').value, date = $('nDate').value;
+    if (!className || !date){ $('newMsg').textContent = '반과 날짜를 입력하세요.'; return; }
+    $('newCreateBtn').disabled = true;
+    try {
+      let types = [], maxScore = 100, prevTitle = '';
+      const prev = (await db.collection('dailyLessons').where('className','==',className).get()).docs
+        .map(d => d.data()).sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
+      if (prev){ maxScore = prev.maxScore || 100; prevTitle = prev.title || ''; if ($('nCopyTypes').checked) types = prev.types || []; }
+      let title = $('nTitle').value.trim();
+      if (!title){ const m = prevTitle.match(/(\d+)\s*회차/); title = m ? `${+m[1] + 1}회차` : ''; }
+      const ref = await db.collection('dailyLessons').add({
+        className, date, title, progress:'', nextHomework:'', testName:'', maxScore, types, files:[],
+        status:'draft', filledCount:0,
+        createdAt: FV.serverTimestamp(), updatedAt: FV.serverTimestamp(),
+        createdBy: { uid:me.uid, name:me.name }, updatedBy: { uid:me.uid, name:me.name },
+      });
+      closeModal('newModal');
+      openLesson(ref.id);
+    } catch(e){ handleErr(e); }
+    $('newCreateBtn').disabled = false;
+  };
+
+  // ───────── 수업 편집 ─────────
+  $('backBtn').onclick = () => { history.replaceState(null, '', 'daily.html'); show('vMain'); loadLessons(); };
+
+  async function openLesson(id){
+    try {
+      const s = await db.collection('dailyLessons').doc(id).get();
+      if (!s.exists){ toast('수업을 찾을 수 없습니다'); show('vMain'); loadLessons(); return; }
+      lesson = { id, ...s.data() };
+      const es = await db.collection('dailyEntries').where('lessonId','==',id).get();
+      entries = {};
+      es.docs.forEach(d => { entries[d.data().code] = d.data(); });
+    } catch(e){ handleErr(e); return; }
+    history.replaceState(null, '', 'daily.html?lesson=' + id);
+    show('vLesson');
+    renderLessonForm();
+    renderStudents();
+    renderPublished();
+  }
+
+  function students(){ return roster.filter(s => s.className === lesson.className); }
+
+  function renderLessonForm(){
+    $('lClass').value = lesson.className;
+    $('lDate').value = lesson.date || '';
+    $('lTitle').value = lesson.title || '';
+    $('lProgress').value = lesson.progress || '';
+    $('lNext').value = lesson.nextHomework || '';
+    $('lTest').value = lesson.testName || '';
+    $('lMax').value = lesson.maxScore || '';
+    $('lessonKicker').textContent = `${lesson.className} · ${OMR.fmtKDate(lesson.date)}`;
+    const pub = lesson.status === 'published';
+    $('lessonStatus').textContent = pub ? '발행됨' : '작성 중';
+    $('lessonStatus').className = 'pill ' + (pub ? 'published' : 'draft');
+    $('publishBtn').textContent = pub ? '수정 내용 다시 발행' : '리포트 발행';
+    renderTypeChips(); renderFiles($('lessonFiles'), lesson.files || [], 'lesson');
+  }
+
+  let lessonTimer = null;
+  function saveLesson(fields){
+    Object.assign(lesson, fields);
+    $('lessonSaveMsg').textContent = '저장 중…';
+    clearTimeout(lessonTimer);
+    lessonTimer = setTimeout(async () => {
+      try {
+        await db.collection('dailyLessons').doc(lesson.id).update({ ...fields, updatedAt: FV.serverTimestamp(), updatedBy:{ uid:me.uid, name:me.name } });
+        $('lessonSaveMsg').textContent = '저장됨 ✓';
+      } catch(e){ $('lessonSaveMsg').textContent = '저장 실패'; handleErr(e); }
+    }, 500);
+  }
+  [['lDate','date'],['lTitle','title'],['lProgress','progress'],['lNext','nextHomework'],['lTest','testName']].forEach(([id,k]) => {
+    $(id).addEventListener('change', () => { saveLesson({ [k]: $(id).value.trim() }); if (k === 'date') $('lessonKicker').textContent = `${lesson.className} · ${OMR.fmtKDate(lesson.date)}`; });
+  });
+  $('lMax').addEventListener('change', () => { const v = Number($('lMax').value); saveLesson({ maxScore: v > 0 ? v : 100 }); renderStudents(); });
+  $('lClass').addEventListener('change', () => {
+    if (!confirm('반을 바꾸면 학생 목록이 바뀝니다. 계속할까요?')){ $('lClass').value = lesson.className; return; }
+    saveLesson({ className: $('lClass').value }); renderLessonForm(); renderStudents();
+  });
+
+  function renderTypeChips(){
+    const box = $('typeChips');
+    box.innerHTML = (lesson.types || []).map((t,i) =>
+      `<span class="chip on">${esc(t)}<button class="x" data-i="${i}" aria-label="삭제" style="border:0;background:none;">×</button></span>`).join('')
+      + `<button class="chip add" id="addTypeBtn">+ 유형 추가</button>`;
+    box.querySelectorAll('.x').forEach(b => b.onclick = () => {
+      const types = (lesson.types || []).slice(); types.splice(+b.dataset.i, 1);
+      saveLesson({ types }); renderTypeChips(); renderStudents();
+    });
+    $('addTypeBtn').onclick = () => {
+      const v = prompt('보완 유형 이름 (쉼표로 여러 개)\n예: 필요충분조건 판별, 대우 증명');
+      if (!v) return;
+      const add = v.split(/[,\n]/).map(x => x.trim()).filter(Boolean);
+      const types = [...new Set([...(lesson.types || []), ...add])];
+      saveLesson({ types }); renderTypeChips(); renderStudents();
+    };
+  }
+
+  // ───────── 첨부 파일 ─────────
+  function renderFiles(box, files, scope, code){
+    box.innerHTML = files.map((f,i) => `
+      <div class="file">${f.type && f.type.startsWith('image/') ? `<img src="${esc(f.url)}" alt="">` : `📄<br>${esc(f.name).slice(0,18)}`}
+        <button class="del" data-i="${i}" aria-label="삭제">×</button></div>`).join('')
+      + `<label class="file up"><b>+</b>사진·PDF<input type="file" accept="image/*,application/pdf" multiple hidden></label>`;
+    box.querySelectorAll('.del').forEach(b => b.onclick = async () => {
+      if (!confirm('첨부를 삭제할까요?')) return;
+      const f = files[+b.dataset.i];
+      const next = files.filter((_, i) => i !== +b.dataset.i);
+      try { await firebase.storage().ref(f.path).delete(); } catch(e){ console.warn(e); }
+      if (scope === 'lesson'){ saveLesson({ files: next }); renderFiles(box, next, scope); }
+      else { saveEntry(code, { files: next }, true); renderFiles(box, next, scope, code); }
+    });
+    box.querySelector('input').onchange = async e => {
+      const list = [...e.target.files]; if (!list.length) return;
+      const up = box.querySelector('.file.up'); up.innerHTML = '<b>…</b>올리는 중';
+      const added = [];
+      for (const file of list){
+        if (file.size > 15 * 1024 * 1024){ toast(`${file.name}: 15MB 이하만 올릴 수 있어요`); continue; }
+        const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g,'');
+        const path = `dailyFiles/${lesson.id}/${OMR.genToken().slice(0,16)}.${ext}`;
+        try {
+          const snap = await firebase.storage().ref(path).put(file, { contentType: file.type });
+          added.push({ name:file.name, path, type:file.type, url: await snap.ref.getDownloadURL() });
+        } catch(err){ handleErr(err); }
+      }
+      const next = [...files, ...added];
+      if (scope === 'lesson'){ saveLesson({ files: next }); renderFiles(box, next, scope); }
+      else { saveEntry(code, { files: next }, true); renderFiles(box, next, scope, code); }
+    };
+  }
+
+  // ───────── 학생 카드 ─────────
+  function isFilled(en){ return !!en && (en.attendance === 'absent' || en.score != null || en.homework != null || (en.comment||'').trim()); }
+
+  function renderStudents(){
+    const list = students();
+    const box = $('stuList');
+    if (!list.length){ box.innerHTML = '<div class="empty">이 반에 등록된 학생이 없습니다.</div>'; updateBar(); return; }
+    box.innerHTML = '';
+    list.forEach(s => box.appendChild(studentCard(s)));
+    updateBar();
+  }
+
+  function studentCard(s){
+    const en = entries[s.code] || {};
+    const el = document.createElement('div');
+    el.className = 'stu' + (isFilled(en) ? ' filled' : '') + (en.attendance === 'absent' ? ' absent' : '');
+    el.dataset.code = s.code;
+    const att = en.attendance || 'present';
+    const max = lesson.maxScore || 100;
+    const types = [...new Set([...(lesson.types || []), ...(en.weak || [])])];
+    el.innerHTML = `
+      <div class="stu-h"><span class="done"></span><span class="nm">${esc(s.name)}</span>
+        <div class="seg" data-k="attendance">${Object.entries(ATT).map(([k,v]) => `<button class="${k} ${att === k ? 'on' : ''}" data-v="${k}">${v}</button>`).join('')}</div>
+        <span class="st" data-st>${en.updatedBy ? esc(en.updatedBy.name) : ''}</span></div>
+      <div class="stu-b">
+        <div class="grid2 hide-absent">
+          <div><div class="fl"><span>복습 테스트 점수</span></div>
+            <div class="score-in"><input class="input" type="number" inputmode="decimal" data-k="score" min="0" max="${max}" value="${en.score ?? ''}"><span class="muted">/ ${max}점</span></div></div>
+          <div><div class="fl"><span>과제 이행률</span><span data-hwv>${en.homework != null ? en.homework + '%' : ''}</span></div>
+            <div class="hw-quick">${[100,90,80,70,50,30,0].map(v => `<button data-hw="${v}" class="${en.homework === v ? 'on' : ''}">${v}</button>`).join('')}
+              <input class="input" type="number" inputmode="numeric" data-k="homework" min="0" max="100" placeholder="직접" value="${en.homework != null && ![100,90,80,70,50,30,0].includes(en.homework) ? en.homework : ''}" style="width:64px;padding:5px 6px;font-size:13px;"></div></div>
+        </div>
+        <div class="hide-absent"><div class="fl"><span>보완할 유형 <span style="font-weight:600;">(노란색으로 표시됨)</span></span></div>
+          <div class="chips" data-weak>${types.map(t => `<button class="chip ${(en.weak||[]).includes(t) ? 'on' : ''}" data-t="${esc(t)}">${esc(t)}</button>`).join('')}
+            <button class="chip add" data-addweak>+ 직접 입력</button></div></div>
+        <div><div class="fl"><span>선생님 코멘트</span></div>
+          <textarea class="input cm" data-k="comment" placeholder="오늘 수업 태도, 잘한 점, 보완할 점 등">${esc(en.comment || '')}</textarea></div>
+        <div>
+          <label class="toggle"><input type="checkbox" data-extra ${en.extra && en.extra.needed ? 'checked' : ''}> 추가학습 필요</label>
+          <div class="extra-box ${en.extra && en.extra.needed ? '' : 'hidden'}" data-extrabox style="margin-top:8px;">
+            <div class="grid2">
+              <input class="input" data-ek="when" placeholder="일시 (예: 10/4 토 2시)" value="${esc((en.extra && en.extra.when) || '')}">
+              <input class="input" data-ek="reason" placeholder="사유 (예: 대우 증명 재학습)" value="${esc((en.extra && en.extra.reason) || '')}">
+            </div>
+          </div>
+        </div>
+        <div><div class="fl"><span>개인 분석지 · 첨부</span></div><div class="files" data-files></div></div>
+      </div>`;
+
+    const code = s.code;
+    el.querySelector('[data-k="attendance"]').onclick = e => {
+      const b = e.target.closest('button'); if (!b) return;
+      el.querySelectorAll('.seg button').forEach(x => x.classList.toggle('on', x === b));
+      el.classList.toggle('absent', b.dataset.v === 'absent');
+      saveEntry(code, { attendance: b.dataset.v });
+    };
+    el.querySelector('[data-k="score"]').addEventListener('input', e => {
+      const v = e.target.value === '' ? null : Number(e.target.value);
+      saveEntry(code, { score: v != null && !isNaN(v) ? v : null });
+    });
+    const hwv = el.querySelector('[data-hwv]');
+    el.querySelectorAll('[data-hw]').forEach(b => b.onclick = () => {
+      const v = +b.dataset.hw, cur = (entries[code] || {}).homework;
+      const nv = cur === v ? null : v;
+      el.querySelectorAll('[data-hw]').forEach(x => x.classList.toggle('on', x === b && nv != null));
+      el.querySelector('[data-k="homework"]').value = '';
+      hwv.textContent = nv != null ? nv + '%' : '';
+      saveEntry(code, { homework: nv });
+    });
+    el.querySelector('[data-k="homework"]').addEventListener('input', e => {
+      let v = e.target.value === '' ? null : Math.max(0, Math.min(100, Math.round(Number(e.target.value))));
+      if (v != null && isNaN(v)) v = null;
+      el.querySelectorAll('[data-hw]').forEach(x => x.classList.remove('on'));
+      hwv.textContent = v != null ? v + '%' : '';
+      saveEntry(code, { homework: v });
+    });
+    el.querySelector('[data-weak]').onclick = e => {
+      const b = e.target.closest('button'); if (!b) return;
+      let weak = ((entries[code] || {}).weak || []).slice();
+      if (b.hasAttribute('data-addweak')){
+        const v = prompt(`${s.name} 학생의 보완 유형 (쉼표로 여러 개)`); if (!v) return;
+        v.split(/[,\n]/).map(x => x.trim()).filter(Boolean).forEach(t => { if (!weak.includes(t)) weak.push(t); });
+        saveEntry(code, { weak }, true);
+        el.replaceWith(studentCard(s)); return;
+      }
+      const t = b.dataset.t;
+      weak = weak.includes(t) ? weak.filter(x => x !== t) : [...weak, t];
+      b.classList.toggle('on', weak.includes(t));
+      saveEntry(code, { weak });
+    };
+    el.querySelector('[data-k="comment"]').addEventListener('input', e => saveEntry(code, { comment: e.target.value }));
+    const exBox = el.querySelector('[data-extrabox]');
+    const extraNow = () => ({ needed: el.querySelector('[data-extra]').checked,
+      when: el.querySelector('[data-ek="when"]').value.trim(), reason: el.querySelector('[data-ek="reason"]').value.trim() });
+    el.querySelector('[data-extra]').onchange = e => { exBox.classList.toggle('hidden', !e.target.checked); saveEntry(code, { extra: extraNow() }); };
+    el.querySelectorAll('[data-ek]').forEach(i => i.addEventListener('input', () => saveEntry(code, { extra: extraNow() })));
+    renderFiles(el.querySelector('[data-files]'), en.files || [], 'entry', code);
+    return el;
+  }
+
+  const entryTimers = {}, pending = {};
+  function saveEntry(code, fields, immediate){
+    const s = roster.find(x => x.code === code);
+    entries[code] = { ...(entries[code] || { lessonId: lesson.id, code, name: s ? s.name : '', attendance:'present' }), ...fields };
+    pending[code] = { ...(pending[code] || {}), ...fields };
+    const card = document.querySelector(`.stu[data-code="${code}"]`);
+    const st = card && card.querySelector('[data-st]');
+    if (st){ st.textContent = '저장 중…'; st.className = 'st saving'; }
+    if (card) card.classList.toggle('filled', isFilled(entries[code]));
+    updateBar();
+    clearTimeout(entryTimers[code]);
+    entryTimers[code] = setTimeout(() => flushEntry(code), immediate ? 0 : 700);
+  }
+  async function flushEntry(code){
+    const fields = pending[code]; if (!fields) return;
+    delete pending[code];
+    const en = entries[code];
+    const card = document.querySelector(`.stu[data-code="${code}"]`);
+    const st = card && card.querySelector('[data-st]');
+    try {
+      await db.collection('dailyEntries').doc(`${lesson.id}_${code}`).set({
+        lessonId: lesson.id, code, name: en.name, attendance: en.attendance || 'present', ...fields,
+        updatedAt: FV.serverTimestamp(), updatedBy: { uid:me.uid, name:me.name },
+      }, { merge: true });
+      entries[code].updatedBy = { uid:me.uid, name:me.name };
+      if (st){ st.textContent = '✓ 저장됨 · ' + me.name; st.className = 'st'; }
+      const filled = students().filter(s => isFilled(entries[s.code])).length;
+      if (filled !== lesson.filledCount){ lesson.filledCount = filled; db.collection('dailyLessons').doc(lesson.id).update({ filledCount: filled }).catch(() => {}); }
+    } catch(e){
+      pending[code] = { ...fields, ...(pending[code] || {}) };
+      if (st){ st.textContent = '저장 실패 — 다시 시도'; st.className = 'st err'; }
+      handleErr(e);
+    }
+  }
+  async function flushAll(){ await Promise.all(Object.keys(pending).map(c => { clearTimeout(entryTimers[c]); return flushEntry(c); })); }
+  window.addEventListener('beforeunload', e => { if (Object.keys(pending).length){ e.preventDefault(); e.returnValue = ''; } });
+
+  function classStats(){
+    const sc = students().map(s => entries[s.code]).filter(en => en && en.attendance !== 'absent' && typeof en.score === 'number').map(en => en.score);
+    const hw = students().map(s => entries[s.code]).filter(en => en && en.attendance !== 'absent' && typeof en.homework === 'number').map(en => en.homework);
+    return {
+      n: sc.length,
+      avg: sc.length ? round(sc.reduce((a,b) => a+b, 0) / sc.length, 1) : null,
+      high: sc.length ? Math.max(...sc) : null,
+      hwAvg: hw.length ? Math.round(hw.reduce((a,b) => a+b, 0) / hw.length) : null,
+    };
+  }
+  function updateBar(){
+    if (!lesson) return;
+    const list = students(), st = classStats();
+    const filled = list.filter(s => isFilled(entries[s.code])).length;
+    $('barFilled').textContent = filled; $('barTotal').textContent = list.length;
+    $('barAvg').textContent = st.avg != null ? st.avg + '점' : '–';
+    $('entryCount').textContent = `${filled}/${list.length}명 입력`;
+  }
+
+  // ───────── 발행 ─────────
+  function buildReport(s, en, st, trend){
+    return {
+      lessonId: lesson.id, code: s.code, name: s.name, className: lesson.className,
+      date: lesson.date, title: lesson.title || '', progress: lesson.progress || '', nextHomework: lesson.nextHomework || '',
+      testName: lesson.testName || '', maxScore: lesson.maxScore || 100,
+      attendance: en.attendance || 'present',
+      score: typeof en.score === 'number' ? en.score : null,
+      homework: typeof en.homework === 'number' ? en.homework : null,
+      weak: en.weak || [], comment: (en.comment || '').trim(),
+      extra: en.extra && en.extra.needed ? { needed:true, when: en.extra.when || '', reason: en.extra.reason || '' } : { needed:false },
+      avg: st.avg, high: st.high, n: st.n, hwAvg: st.hwAvg,
+      files: [...(lesson.files || []), ...(en.files || [])],
+      trend, author: (en.updatedBy && en.updatedBy.name) || me.name,
+      publishedAt: FV.serverTimestamp(),
+    };
+  }
+
+  $('publishBtn').onclick = async () => {
+    await flushAll();
+    const list = students().filter(s => entries[s.code] && isFilled(entries[s.code]));
+    if (!list.length){ toast('입력된 학생이 없습니다'); return; }
+    const missing = students().length - list.length;
+    if (!confirm(`${list.length}명의 리포트를 발행할까요?${missing ? `\n(입력하지 않은 ${missing}명은 제외됩니다)` : ''}\n발행하면 링크를 받은 학생·학부모가 볼 수 있습니다.`)) return;
+    $('publishBtn').disabled = true; $('publishBtn').textContent = '발행 중…';
+    try {
+      const st = classStats();
+      const links = await Promise.all(list.map(s => db.collection('dailyReportLinks').doc(s.code).get().then(d => d.exists ? (d.data().items || []) : []).catch(() => [])));
+      const ops = [];
+      list.forEach((s, i) => {
+        const en = entries[s.code];
+        const token = en.token || genToken();
+        const me2 = { lessonId: lesson.id, token, date: lesson.date, title: lesson.title || '',
+          score: typeof en.score === 'number' ? en.score : null, max: lesson.maxScore || 100, avg: st.avg,
+          absent: en.attendance === 'absent' };
+        const items = links[i].filter(x => x.lessonId !== lesson.id).concat(me2)
+          .sort((a,b) => (a.date || '').localeCompare(b.date || '')).slice(-60);
+        const trend = items.filter(x => (x.date || '') <= (lesson.date || '') && x.score != null && !x.absent).slice(-5)
+          .map(x => ({ date:x.date, title:x.title, score:x.score, max:x.max, avg:x.avg }));
+        ops.push(['set', db.collection('dailyReports').doc(token), buildReport(s, en, st, trend)]);
+        ops.push(['set', db.collection('dailyReportLinks').doc(s.code), { code:s.code, name:s.name, items, updatedAt: FV.serverTimestamp() }]);
+        ops.push(['set', db.collection('dailyEntries').doc(`${lesson.id}_${s.code}`), { token }, { merge:true }]);
+        en.token = token;
+      });
+      ops.push(['update', db.collection('dailyLessons').doc(lesson.id), { status:'published', publishedAt: FV.serverTimestamp(), avg: st.avg,
+        publishedBy: { uid:me.uid, name:me.name } }]);
+      await OMR.commitOps(ops);
+      lesson.status = 'published';
+      renderLessonForm(); renderPublished();
+      toast(`${list.length}명 리포트를 발행했습니다`);
+      $('pubResult').scrollIntoView({ behavior:'smooth', block:'start' });
+    } catch(e){ handleErr(e); }
+    $('publishBtn').disabled = false;
+    $('publishBtn').textContent = lesson.status === 'published' ? '수정 내용 다시 발행' : '리포트 발행';
+  };
+
+  function publishedRows(){
+    return students().filter(s => entries[s.code] && entries[s.code].token).map(s => {
+      const url = OMR.dailyReportUrl(entries[s.code].token);
+      return { s, url, msg: OMR.renderDailyMessage({ 학생이름: s.name, 날짜: OMR.fmtKDate(lesson.date), 링크: url }) };
+    });
+  }
+  function renderPublished(){
+    const rows = publishedRows();
+    $('pubResult').classList.toggle('hidden', !rows.length);
+    $('pubList').innerHTML = rows.map((r, i) => `
+      <div class="res-row"><span class="nm">${esc(r.s.name)}</span>
+        <a class="btn sm" href="${esc(r.url)}" target="_blank" rel="noopener">열기</a>
+        <button class="btn sm" data-copy="${i}">링크 복사</button>
+        <button class="btn sm" data-msg="${i}">메시지 복사</button></div>`).join('');
+    $('pubList').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copyText(rows[+b.dataset.copy].url));
+    $('pubList').querySelectorAll('[data-msg]').forEach(b => b.onclick = () => copyText(rows[+b.dataset.msg].msg));
+  }
+  $('copyAllBtn').onclick = () => copyText(publishedRows().map(r => r.msg).join('\n\n────────\n\n'));
+  $('csvBtn').onclick = async () => {
+    const rows = publishedRows();
+    let phones = {};
+    if (me.role === 'admin'){
+      try { (await db.collection('omrStudents').where('className','==',lesson.className).get()).docs
+        .forEach(d => { phones[d.data().code] = d.data(); }); } catch(e){ console.warn(e); }
+    }
+    OMR.downloadCsv(`데일리리포트_${lesson.className}_${lesson.date}.csv`, [
+      ['이름','반','학생 연락처','학부모 연락처','링크','메시지'],
+      ...rows.map(r => [r.s.name, lesson.className, OMR.fmtPhone((phones[r.s.code]||{}).phone), OMR.fmtPhone((phones[r.s.code]||{}).parentPhone), r.url, r.msg]),
+    ]);
+  };
+
+  $('previewBtn').onclick = async () => {
+    await flushAll();
+    const s = students().find(x => entries[x.code] && isFilled(entries[x.code]));
+    if (!s){ toast('입력된 학생이 있어야 미리볼 수 있어요'); return; }
+    const en = entries[s.code];
+    const st = classStats();
+    const data = buildReport(s, en, st, typeof en.score === 'number' ? [{ date: lesson.date, title: lesson.title, score: en.score, max: lesson.maxScore || 100, avg: st.avg }] : []);
+    delete data.publishedAt;
+    try { sessionStorage.setItem('dailyPreview', JSON.stringify(data)); } catch(e){}
+    window.open('daily-report.html?preview=1', '_blank');
+  };
+
+  // ───────── 조교 계정 (선생님 전용) ─────────
+  async function loadStaff(){
+    const box = $('staffList');
+    try {
+      const qs = await db.collection('omrStaff').get();
+      const list = qs.docs.map(d => ({ uid:d.id, ...d.data() })).sort((a,b) => (a.name||'').localeCompare(b.name||'', 'ko'));
+      if (!list.length){ box.innerHTML = '<div class="empty">아직 조교 계정이 없습니다.</div>'; return; }
+      box.innerHTML = `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>이름</th><th>아이디</th><th>만든 날</th><th></th></tr></thead><tbody>
+        ${list.map(t => `<tr><td><b>${esc(t.name)}</b></td><td>${esc(t.loginId || OMR.staffIdFromEmail(t.email))}</td>
+          <td class="muted">${t.createdAt ? OMR.fmtDateTime(t.createdAt) : ''}</td>
+          <td class="num"><button class="btn sm" data-del="${esc(t.uid)}">권한 해제</button></td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="muted" style="margin-top:8px;font-size:12px;">권한을 해제하면 그 아이디로 로그인해도 리포트를 보거나 입력할 수 없습니다.</p>`;
+      box.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+        if (!confirm('이 조교의 권한을 해제할까요?')) return;
+        try { await db.collection('omrStaff').doc(b.dataset.del).delete(); toast('해제했습니다'); loadStaff(); } catch(e){ handleErr(e); }
+      });
+    } catch(e){ box.innerHTML = '<div class="empty">불러오지 못했습니다.</div>'; handleErr(e); }
+  }
+
+  $('taCreateBtn').onclick = async () => {
+    const name = $('taName').value.trim(), id = $('taId').value.trim().toLowerCase(), pw = $('taPw').value;
+    if (!name || !/^[a-z0-9._-]{3,20}$/.test(id)){ $('taMsg').textContent = '이름과 아이디(영문·숫자 3~20자)를 입력하세요.'; return; }
+    if (pw.length < 6){ $('taMsg').textContent = '비밀번호는 6자 이상이어야 합니다.'; return; }
+    $('taCreateBtn').disabled = true; $('taMsg').textContent = '만드는 중…';
+    // 선생님 로그인을 유지한 채 계정을 만들기 위해 보조 앱 인스턴스를 사용
+    const sec = firebase.apps.find(a => a.name === 'staffCreator') || firebase.initializeApp(firebase.app().options, 'staffCreator');
+    try {
+      const cred = await sec.auth().createUserWithEmailAndPassword(OMR.staffEmail(id), pw);
+      await db.collection('omrStaff').doc(cred.user.uid).set({ name, loginId:id, email: OMR.staffEmail(id), role:'ta', createdAt: FV.serverTimestamp() });
+      await sec.auth().signOut();
+      $('taMsg').textContent = '';
+      $('taName').value = $('taId').value = $('taPw').value = '';
+      copyText(`[엄형국 수학 데일리 리포트 입력]\n주소: ${new URL('daily.html', location.href).href}\n아이디: ${id}\n비밀번호: ${pw}`);
+      toast('계정을 만들고 로그인 정보를 복사했습니다', 3200);
+      loadStaff();
+    } catch(e){
+      $('taMsg').textContent = e.code === 'auth/email-already-in-use' ? '이미 쓰는 아이디입니다.' : '실패: ' + (e.message || e.code);
+      console.error(e);
+    }
+    $('taCreateBtn').disabled = false;
+  };
+})();
+</script>
+</body>
+</html>

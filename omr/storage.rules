@@ -28,3 +28,15 @@
       allow read: if true;
       allow write: if omrAdmin();
     }
+
+    // 데일리 리포트 첨부(분석지 사진·PDF): dailyFiles/{수업ID}/{파일}
+    // 리포트 링크를 받은 학생·학부모가 볼 수 있게 읽기 공개(파일 이름은 무작위), 쓰기는 선생님·조교만
+    match /dailyFiles/{lessonId}/{file} {
+      allow read: if true;
+      allow delete: if omrAdmin() || (request.auth != null
+        && firestore.exists(/databases/(default)/documents/omrStaff/$(request.auth.uid)));
+      allow create: if request.resource.size < 15 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*') || request.resource.contentType == 'application/pdf')
+        && (omrAdmin() || (request.auth != null
+        && firestore.exists(/databases/(default)/documents/omrStaff/$(request.auth.uid))));
+    }

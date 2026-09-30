@@ -74,6 +74,7 @@
       <button class="btn sm" id="logoutBtn">코드 변경</button>
     </div>
     <div id="todoList"></div>
+    <div id="dailyList"></div>
     <h2 class="sec-h">시험 OMR</h2>
     <div id="examList"><div class="empty">불러오는 중…</div></div>
   </section>
@@ -111,7 +112,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=3"></script>
+<script src="common.js?v=4"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast } = OMR;
@@ -163,6 +164,7 @@
     $('helloName').textContent = `${me.name} 학생`;
     $('helloClass').textContent = me.className;
     loadTodos();
+    loadDaily();
     const box = $('examList');
     box.innerHTML = '<div class="empty">불러오는 중…</div>';
     const qs = await db.collection('omrExams').where('className','==',me.className).get();
@@ -194,6 +196,26 @@
         <span class="pill ${pillCls}" style="margin-left:auto;">${pill}</span>`;
       box.appendChild(el);
     });
+  }
+
+  // ───────── 데일리 리포트 (최근 5개) ─────────
+  async function loadDaily(){
+    const box = $('dailyList');
+    box.innerHTML = '';
+    try {
+      const d = await db.collection('dailyReportLinks').doc(me.code).get();
+      const items = d.exists ? (d.data().items || []).slice().sort((a,b) => (b.date||'').localeCompare(a.date||'')) : [];
+      if (!items.length) return;
+      box.insertAdjacentHTML('beforeend', '<h2 class="sec-h">데일리 리포트</h2>');
+      items.slice(0, 5).forEach((x, i) => {
+        const a = document.createElement('a');
+        a.className = 'exam-item'; a.href = 'daily-report.html?t=' + encodeURIComponent(x.token);
+        a.innerHTML = `<div><div class="t">${esc(OMR.fmtKDate(x.date))}${x.title ? ' · ' + esc(x.title) : ''}</div>
+          <div class="m">${x.absent ? '결석' : x.score != null ? `복습 테스트 ${x.score}/${x.max}점` + (x.avg != null ? ` · 반 평균 ${x.avg}` : '') : '수업 리포트'}</div></div>
+          <span class="pill ${i === 0 ? 'published' : 'draft'}" style="margin-left:auto;">${i === 0 ? 'NEW' : '보기'}</span>`;
+        box.appendChild(a);
+      });
+    } catch(e){ console.warn(e); }
   }
 
   // ───────── 과제 · 클리닉 학습지 ─────────

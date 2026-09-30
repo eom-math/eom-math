@@ -280,7 +280,7 @@
   }
 
   // ───────── 관리자 공통: 로그인·상단 메뉴 ─────────
-  const ADMIN_PAGES = [['admin.html', '시험·OMR'], ['clinic.html', '오답 클리닉'], ['assign.html', '과제']];
+  const ADMIN_PAGES = [['admin.html', '시험·OMR'], ['clinic.html', '오답 클리닉'], ['assign.html', '과제'], ['daily.html', '데일리 리포트']];
   function adminNav(current) {
     return ADMIN_PAGES.map(([href, label]) =>
       `<a class="btn sm ${href === current ? 'primary' : 'ghost'}" href="${href}">${label}</a>`).join('');
@@ -311,6 +311,36 @@
     }
   }
 
+  // ───────── 데일리 리포트 ─────────
+  const DAILY_MESSAGE_TEMPLATE =
+    '[엄형국 수학] #{학생이름} 학생의 #{날짜} 수업 리포트입니다.\n\n' +
+    '오늘 테스트 결과, 과제 이행률, 보완할 유형과 선생님 코멘트를 아래 링크에서 확인하실 수 있습니다.\n#{링크}';
+  function renderDailyMessage(vars) {
+    return DAILY_MESSAGE_TEMPLATE.replace(/#\{([^}]+)\}/g, (_, k) => vars[k] ?? '');
+  }
+  function dailyReportUrl(token) {
+    return new URL('daily-report.html?t=' + encodeURIComponent(token), location.href).href;
+  }
+  // 조교 아이디 → 로그인용 이메일 (아이디만 입력해도 로그인되게)
+  const STAFF_DOMAIN = 'ta.eom-math.app';
+  function staffEmail(id) {
+    id = String(id || '').trim();
+    return id.includes('@') ? id : id.toLowerCase() + '@' + STAFF_DOMAIN;
+  }
+  function staffIdFromEmail(email) {
+    return String(email || '').endsWith('@' + STAFF_DOMAIN) ? email.split('@')[0] : email;
+  }
+  function todayStr(d = new Date()) {
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+  function fmtKDate(s) {
+    if (!s) return '';
+    const d = new Date(s + 'T00:00:00');
+    if (isNaN(d)) return s;
+    return `${d.getMonth() + 1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]})`;
+  }
+
   function reportUrl(token) {
     return new URL('report.html?t=' + encodeURIComponent(token), location.href).href;
   }
@@ -334,5 +364,6 @@
     normalizePhone, fmtPhone, round, toast, copyText, normalizeAnswers, gradeOne, gradeExam,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
+    DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

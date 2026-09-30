@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>데일리 리포트 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&family=EB+Garamond:ital,wght@1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=4">
+<style>
+  :root{ --hl:#FFE45C; --hl-soft:#FFF7C7; }
+  body{background:#ECEBE6;}
+  .wrap{max-width:560px;padding-top:18px;}
+  .paper{background:var(--bg);border-radius:18px;overflow:hidden;box-shadow:0 20px 50px rgba(17,17,20,.10);}
+
+  /* 머리 */
+  .rh{background:var(--ink);color:#fff;padding:22px 22px 26px;position:relative;overflow:hidden;}
+  .rh::after{content:"";position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;
+    border:28px solid rgba(214,48,31,.22);}
+  .rh-top{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;font-weight:800;letter-spacing:.16em;}
+  .rh-top .b{letter-spacing:0;font-size:13px;} .rh-top .b span{color:#ff6a5b;}
+  .rh-top .k{color:#ff6a5b;}
+  .rh h1{font-size:30px;font-weight:900;letter-spacing:-.03em;margin:22px 0 4px;color:#fff;position:relative;z-index:1;}
+  .rh h1 small{font-size:16px;font-weight:700;opacity:.7;margin-left:4px;}
+  .rh .meta{font-size:13.5px;opacity:.72;position:relative;z-index:1;}
+  .att{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.14);opacity:1;}
+  .att.late{background:#B7791F;} .att.absent{background:var(--red);}
+
+  .body{padding:18px 18px 8px;}
+  .sec{background:#fff;border:1px solid var(--line2);border-radius:14px;padding:16px;margin-bottom:12px;}
+  .sec-t{font-size:11.5px;font-weight:800;letter-spacing:.12em;color:var(--dim);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .sec-t::before{content:"";width:14px;height:2px;background:var(--red);}
+
+  /* 점수 · 과제 */
+  .kpi{display:grid;grid-template-columns:1.25fr 1fr;gap:12px;}
+  .kpi .box{background:#fff;border:1px solid var(--line2);border-radius:14px;padding:16px;}
+  .kpi .lbl{font-size:12px;font-weight:800;color:var(--dim);}
+  .kpi .big{font-size:46px;font-weight:900;letter-spacing:-.04em;line-height:1;margin-top:10px;font-variant-numeric:tabular-nums;}
+  .kpi .big small{font-size:16px;color:var(--faint);font-weight:800;margin-left:3px;letter-spacing:0;}
+  .kpi .sub{font-size:12.5px;color:var(--dim);margin-top:8px;}
+  .kpi .sub b{color:var(--ink);}
+  .kpi .sub .nw{white-space:nowrap;}
+  .diff{display:inline-block;font-size:12px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:4px;}
+  .diff.up{background:var(--ok-soft);color:var(--ok);} .diff.down{background:var(--red-soft);color:var(--red);}
+  .scale{position:relative;height:30px;margin-top:14px;}
+  .scale .tr{position:absolute;left:0;right:0;top:12px;height:6px;border-radius:99px;background:var(--bg2);}
+  .scale .fill{position:absolute;left:0;top:12px;height:6px;border-radius:99px;background:var(--ink);}
+  .scale .avg{position:absolute;top:4px;width:2px;height:22px;background:var(--red);}
+  .scale .avg span{position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;color:var(--red);white-space:nowrap;}
+  .ring{position:relative;width:96px;height:96px;margin:10px auto 0;}
+  .ring svg{width:100%;height:100%;transform:rotate(-90deg);}
+  .ring .v{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;
+    font-size:20px;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums;}
+  .ring .v small{font-size:10.5px;color:var(--dim);font-weight:700;letter-spacing:0;}
+
+  /* 보완 유형 (노란 형광펜) */
+  .hl{display:flex;flex-wrap:wrap;gap:8px;}
+  .hl span{font-weight:800;font-size:14.5px;padding:3px 4px;background:linear-gradient(transparent 45%, var(--hl) 45%, var(--hl) 92%, transparent 92%);}
+  .none{font-size:13.5px;color:var(--dim);}
+
+  .comment{font-size:15px;line-height:1.75;white-space:pre-wrap;word-break:keep-all;}
+  .comment-by{font-size:12px;color:var(--dim);margin-top:10px;text-align:right;}
+  .quote-mark{font-family:'EB Garamond',serif;font-style:italic;font-size:44px;line-height:.6;color:var(--red);height:18px;}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .two .sec{margin-bottom:0;}
+  .info{font-size:14.5px;font-weight:700;line-height:1.5;word-break:keep-all;}
+  .extra{background:var(--red);color:#fff;border-radius:14px;padding:16px;margin-bottom:12px;}
+  .extra .sec-t{color:rgba(255,255,255,.85);} .extra .sec-t::before{background:#fff;}
+  .extra .row2{display:grid;grid-template-columns:52px 1fr;gap:6px 10px;font-size:14px;}
+  .extra .row2 b{opacity:.75;font-weight:700;}
+
+  .chart svg{width:100%;height:auto;display:block;overflow:visible;}
+  .legend{display:flex;gap:14px;font-size:11.5px;color:var(--dim);margin-top:6px;justify-content:flex-end;}
+  .legend i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:5px;}
+
+  .att-img{display:grid;gap:10px;}
+  .att-img img{width:100%;border-radius:10px;border:1px solid var(--line2);display:block;background:var(--bg2);}
+  .att-img a.pdf{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;
+    text-decoration:none;font-weight:700;font-size:14px;background:#fff;}
+
+  .foot{text-align:center;font-size:12px;color:var(--dim);padding:10px 0 24px;}
+  .foot b{color:var(--ink);}
+  .preview-flag{background:var(--hl);text-align:center;font-size:12.5px;font-weight:800;padding:8px;border-radius:10px;margin-bottom:10px;}
+  @media (max-width:400px){ .kpi .big{font-size:40px;} .two{grid-template-columns:1fr;} }
+  @media print{ body{background:#fff;} .paper{box-shadow:none;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="root"><div class="empty">리포트를 불러오는 중…</div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=4"></script>
+<script>
+(async function(){
+  const { db, esc } = OMR;
+  const root = document.getElementById('root');
+  const qs = new URLSearchParams(location.search);
+  const fail = msg => { root.innerHTML = `<div class="empty">${msg}</div>`; };
+  let r, preview = false;
+
+  if (qs.get('preview')){
+    try { r = JSON.parse(sessionStorage.getItem('dailyPreview')); preview = true; } catch(e){}
+    if (!r) return fail('미리볼 내용이 없습니다.');
+  } else {
+    const token = qs.get('t');
+    if (!token) return fail('잘못된 링크입니다.');
+    try {
+      const snap = await db.collection('dailyReports').doc(token).get();
+      if (!snap.exists) return fail('리포트를 찾을 수 없습니다. 링크를 다시 확인해 주세요.');
+      r = snap.data();
+    } catch(e){ console.error(e); return fail('불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); }
+  }
+  document.title = `${r.name} · ${OMR.fmtKDate(r.date)} 데일리 리포트`;
+
+  const absent = r.attendance === 'absent';
+  const max = r.maxScore || 100;
+  const pct = x => Math.max(0, Math.min(100, x / max * 100));
+  const ATT = { present:'출석', late:'지각', absent:'결석' };
+  const trend = (r.trend || []).filter(t => t.score != null);
+  const prev = trend.length >= 2 ? trend[trend.length - 2] : null;
+  const diff = (prev && r.score != null) ? Math.round((r.score / max - prev.score / (prev.max || max)) * 1000) / 10 : null;
+
+  // 과제 이행률 링
+  function ring(v){
+    const R = 40, C = 2 * Math.PI * R, p = Math.max(0, Math.min(100, v || 0));
+    const color = p >= 80 ? 'var(--ink)' : p >= 50 ? '#B7791F' : 'var(--red)';
+    return `<div class="ring"><svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="${R}" fill="none" stroke="var(--bg2)" stroke-width="10"/>
+      <circle cx="48" cy="48" r="${R}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"
+        stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - p / 100)}"/></svg>
+      <div class="v">${v != null ? v + '%' : '–'}<small>이행률</small></div></div>`;
+  }
+
+  // 최근 5회 점수 추이 (내 점수 = 실선, 반 평균 = 점선)
+  function chart(){
+    if (trend.length < 2) return '';
+    const W = 320, H = 160, pl = 26, pr = 14, pt = 22, pb = 30;
+    const n = trend.length;
+    const x = i => n === 1 ? (pl + W - pr) / 2 : pl + i * (W - pl - pr) / (n - 1);
+    const my = trend.map(t => t.score / (t.max || max) * 100);
+    const av = trend.map(t => t.avg != null ? t.avg / (t.max || max) * 100 : null);
+    const lo = Math.max(0, Math.floor((Math.min(...my, ...av.filter(v => v != null)) - 10) / 10) * 10);
+    const y = v => pt + (1 - (Math.max(lo, Math.min(100, v)) - lo) / (100 - lo)) * (H - pt - pb);
+    const path = arr => arr.map((v, i) => v == null ? '' : `${i && arr[i-1] != null ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+    const grid = [lo, Math.round((lo + 100) / 2), 100].map(g => `<line x1="${pl}" x2="${W - pr}" y1="${y(g)}" y2="${y(g)}" stroke="rgba(17,17,20,.08)"/>
+      <text x="${pl - 6}" y="${y(g) + 3.5}" text-anchor="end" font-size="9" fill="#9A9AA2">${g}</text>`).join('');
+    const label = t => { const d = new Date(t.date + 'T00:00:00'); return isNaN(d) ? '' : `${d.getMonth()+1}/${d.getDate()}`; };
+    return `<div class="sec chart"><div class="sec-t">최근 ${n}회 점수 추이</div>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 점수 추이">
+        ${grid}
+        <path d="${path(av)}" fill="none" stroke="#D6301F" stroke-width="1.6" stroke-dasharray="4 4" opacity=".7"/>
+        <path d="${path(my)}" fill="none" stroke="#111114" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+        ${my.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="${i === n - 1 ? 5 : 3.5}" fill="${i === n - 1 ? '#D6301F' : '#111114'}" stroke="#fff" stroke-width="2"/>
+          <text x="${x(i)}" y="${y(v) - 10}" text-anchor="middle" font-size="10.5" font-weight="800" fill="${i === n - 1 ? '#D6301F' : '#111114'}">${trend[i].score}</text>
+          <text x="${x(i)}" y="${H - 10}" text-anchor="middle" font-size="9.5" fill="#63636B">${label(trend[i])}</text>`).join('')}
+      </svg>
+      <div class="legend"><span><i style="background:#111114;height:2.4px;"></i>내 점수(%)</span><span><i style="background:repeating-linear-gradient(90deg,#D6301F 0 4px,transparent 4px 8px);"></i>반 평균</span></div>
+    </div>`;
+  }
+
+  const files = r.files || [];
+  const imgs = files.filter(f => (f.type || '').startsWith('image/'));
+  const pdfs = files.filter(f => !(f.type || '').startsWith('image/'));
+
+  root.innerHTML = `
+    ${preview ? '<div class="preview-flag">미리보기 — 아직 발행되지 않은 화면입니다</div>' : ''}
+    <article class="paper">
+      <header class="rh">
+        <div class="rh-top"><span class="b">엄형국 <span>수학</span></span><span class="k">DAILY REPORT</span></div>
+        <h1>${esc(r.name)}<small>학생</small></h1>
+        <div class="meta">${esc(r.className)} · ${esc(OMR.fmtKDate(r.date))}${r.title ? ' · ' + esc(r.title) : ''}
+          <span class="att ${r.attendance}">${ATT[r.attendance] || '출석'}</span></div>
+      </header>
+
+      <div class="body">
+        ${absent ? `<div class="sec"><div class="sec-t">출결</div><div class="info">오늘 수업에 결석했습니다. 아래 진도와 과제를 확인해 주세요.</div></div>` : `
+        <div class="kpi" style="margin-bottom:12px;">
+          <div class="box">
+            <div class="lbl">${esc(r.testName || '복습 테스트')}</div>
+            <div class="big">${r.score != null ? r.score : '–'}<small>/ ${max}</small></div>
+            ${r.score != null && r.avg != null ? `
+              <div class="scale"><div class="tr"></div><div class="fill" style="width:${pct(r.score)}%"></div>
+                <div class="avg" style="left:${pct(r.avg)}%"><span>평균</span></div></div>
+              <div class="sub"><span class="nw">반 평균 <b>${r.avg}</b>점</span> · <span class="nw">최고 <b>${r.high}</b>점</span>${diff != null && diff !== 0 ? `<span class="diff ${diff > 0 ? 'up' : 'down'}">지난번보다 ${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)}%p</span>` : ''}</div>`
+              : `<div class="sub">${r.score == null ? '오늘은 테스트 점수가 없습니다.' : ''}</div>`}
+          </div>
+          <div class="box" style="text-align:center;">
+            <div class="lbl" style="text-align:left;">과제 이행률</div>
+            ${ring(r.homework)}
+            ${r.hwAvg != null ? `<div class="sub">반 평균 <b>${r.hwAvg}%</b></div>` : ''}
+          </div>
+        </div>
+
+        <div class="sec"><div class="sec-t">보완할 유형</div>
+          ${r.weak && r.weak.length ? `<div class="hl">${r.weak.map(t => `<span>${esc(t)}</span>`).join('')}</div>
+            <p class="muted" style="margin-top:10px;font-size:12.5px;">점수와 관계없이 부분 실점한 유형입니다. 다음 수업 전까지 다시 풀어 보세요.</p>`
+            : '<div class="none">오늘은 따로 보완할 유형이 없습니다. 👏</div>'}
+        </div>`}
+
+        ${r.comment ? `<div class="sec"><div class="sec-t">선생님 코멘트</div><div class="quote-mark">“</div>
+          <div class="comment">${esc(r.comment)}</div><div class="comment-by">— ${esc(r.author || '엄형국 선생님')}</div></div>` : ''}
+
+        ${r.extra && r.extra.needed ? `<div class="extra"><div class="sec-t">추가학습 필요</div>
+          <div class="row2">${r.extra.when ? `<b>일시</b><span>${esc(r.extra.when)}</span>` : ''}${r.extra.reason ? `<b>사유</b><span>${esc(r.extra.reason)}</span>` : ''}</div></div>` : ''}
+
+        <div class="two" style="margin-bottom:12px;">
+          <div class="sec"><div class="sec-t">오늘 진도</div><div class="info">${esc(r.progress || '—')}</div></div>
+          <div class="sec"><div class="sec-t">다음 과제</div><div class="info">${esc(r.nextHomework || '—')}</div></div>
+        </div>
+
+        ${absent ? '' : chart()}
+
+        ${files.length ? `<div class="sec"><div class="sec-t">분석지 · 첨부</div><div class="att-img">
+          ${imgs.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><img src="${esc(f.url)}" alt="${esc(f.name)}" loading="lazy"></a>`).join('')}
+          ${pdfs.map(f => `<a class="pdf" href="${esc(f.url)}" target="_blank" rel="noopener">📄 ${esc(f.name)}<span style="margin-left:auto;color:var(--dim);">열기 →</span></a>`).join('')}
+        </div></div>` : ''}
+      </div>
+    </article>
+    <div class="foot"><b>엄형국 수학</b> · 내신성공의 방정식<br>궁금한 점은 카카오톡으로 편하게 문의해 주세요.</div>`;
+})();
+</script>
+</body>
+</html>
