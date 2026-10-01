@@ -64,6 +64,19 @@
   .qt.short{background:#e7eefc;color:#1d4ed8;} .qt.essay{background:#fdf0e1;color:#b45309;}
   .key-row input.sans{width:184px;padding:6px 8px;font-size:14px;}
   .key-row .essay-note{width:184px;font-size:12px;color:#b45309;font-weight:700;}
+  .aud-h{font-size:12px;font-weight:800;color:var(--dim);margin:4px 0 6px;}
+  .aud-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .aud-chips button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer;}
+  .aud-chips button small{font-weight:600;color:var(--dim);margin-left:4px;}
+  .aud-chips button.on{background:var(--ink);border-color:var(--ink);color:#fff;} .aud-chips button.on small{color:rgba(255,255,255,.7);}
+  .aud-chips button.part{border-color:var(--ink);}
+  .aud-list{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff;}
+  .aud-g{font-size:12px;font-weight:800;color:var(--dim);background:var(--bg2);padding:6px 12px;position:sticky;top:0;}
+  .aud-list label{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:14px;border-top:1px solid var(--line2);cursor:pointer;}
+  .aud-list label.cls{color:var(--dim);}
+  .aud-list label .m{margin-left:auto;font-size:11.5px;color:var(--faint);}
+  .aud-sum{background:var(--ink);color:#fff;border-radius:10px;padding:10px 14px;font-size:14px;font-weight:700;}
+  .tpl-box{background:var(--bg2);border-radius:10px;padding:12px;}
   .seg{display:grid;grid-template-columns:44px 14px 72px 22px 1fr 34px;align-items:center;gap:6px;margin-bottom:6px;}
   .seg .from{font-weight:800;text-align:right;font-variant-numeric:tabular-nums;}
   .seg .input{padding:8px 8px;font-size:14px;}
@@ -293,6 +306,14 @@
 <div class="modal-bg hidden" id="examModal">
   <div class="modal stack">
     <h2 id="examModalTitle">새 시험</h2>
+    <div class="tpl-box" id="tplBox">
+      <label class="f">이전 시험 양식 불러오기 <span class="muted" style="font-weight:600;">— 문항 구성·배점을 그대로 가져와요</span></label>
+      <select class="input" id="fFrom"><option value="">새로 만들기</option></select>
+      <div class="row hidden" id="tplOpts" style="gap:14px;margin-top:8px;">
+        <label class="row" style="gap:6px;font-size:13px;font-weight:700;"><input type="checkbox" id="fCopyMeta" checked> 단원·난이도·출제 포인트</label>
+        <label class="row" style="gap:6px;font-size:13px;font-weight:700;"><input type="checkbox" id="fCopyKey"> 정답까지 (같은 시험지 재사용)</label>
+      </div>
+    </div>
     <div><label class="f">시험 제목</label><input class="input" id="fTitle" placeholder="예) 10월 미적분 주간평가 1회"></div>
     <div class="grid2">
       <div><label class="f">과목</label><input class="input" id="fSubject" list="subjectList" placeholder="미적분">
@@ -324,6 +345,22 @@
     </div>
     <p class="muted" id="examModalMsg"></p>
     <div class="row"><button class="btn grow" data-close>취소</button><button class="btn primary grow" id="examSaveBtn">저장</button></div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="audModal">
+  <div class="modal stack" style="max-width:640px;">
+    <h2>응시 대상 고르기</h2>
+    <p class="muted" id="audLead">이 시험을 볼 반이나 학생을 고르세요. 고른 학생만 시험 목록에 나타나고 답안을 낼 수 있어요.</p>
+    <div><div class="aud-h">반 전체</div><div class="aud-chips" id="audClasses"></div></div>
+    <div id="audQuickWrap"><div class="aud-h">학원·학년으로 한꺼번에 고르기</div><div class="aud-chips" id="audQuick"></div></div>
+    <div>
+      <div class="row between" style="margin-bottom:6px;"><div class="aud-h" style="margin:0;">학생 개별 선택</div>
+        <input class="input" id="audQ" placeholder="이름 검색" style="width:160px;padding:6px 10px;font-size:13px;"></div>
+      <div class="aud-list" id="audList"></div>
+    </div>
+    <div class="aud-sum" id="audSum"></div>
+    <div class="row"><button class="btn grow" data-close>취소</button><button class="btn primary grow" id="audSave">저장</button></div>
   </div>
 </div>
 
@@ -376,7 +413,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=12"></script>
+<script src="common.js?v=13"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast, copyText, fmtPhone, normalizePhone } = OMR;
@@ -571,7 +608,7 @@
       const b = document.createElement('button');
       b.className = 'exam-row';
       b.innerHTML = `<div><div class="t">${esc(e.title)}</div>
-        <div class="m">${esc(e.className)} · ${esc(e.subject)} · ${e.questionCount}문항${e.examDate ? ' · ' + esc(e.examDate) : ''}
+        <div class="m">${esc(OMR.audienceText(e))} · ${esc(e.subject)} · ${e.questionCount}문항${e.examDate ? ' · ' + esc(e.examDate) : ''}
         ${e.stats && e.stats.n ? ` · 응시 ${e.stats.n}명 평균 ${e.stats.avg}` : ''}</div></div>
         <span class="pill ${cls}" style="margin-left:auto;">${label}</span>`;
       b.onclick = () => openExam(e.id);
@@ -649,13 +686,32 @@
   document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { segs = PRESETS[b.dataset.preset].map(x => ({ ...x })); renderSegs(false); });
 
   // 새 시험 / 시험 설정 수정
-  let editingExam = null;
+  let editingExam = null, tplSrc = null;
+  $('fFrom').onchange = () => {
+    tplSrc = exams.find(x => x.id === $('fFrom').value) || null;
+    $('tplOpts').classList.toggle('hidden', !tplSrc);
+    if (!tplSrc){ segs = segsFromExam(null); renderSegs(false); return; }
+    $('fSubject').value = tplSrc.subject || '';
+    $('fClass').value = tplSrc.className || '';
+    $('fPass').value = tplSrc.passScore != null ? tplSrc.passScore : '';
+    $('fGrade').value = tplSrc.gradeSystem !== undefined ? (tplSrc.gradeSystem || '') : '5';
+    segs = segsFromExam(tplSrc); renderSegs(false);
+    const pts = Object.values(tplSrc.points || {});
+    $('examModalMsg').textContent = `「${tplSrc.title}」 양식: ${OMR.layoutText(tplSrc)} · 만점 ${tplSrc.maxScore ?? OMR.round(pts.reduce((a, b) => a + b, 0), 1)}점. 제목과 시험일만 바꾸면 돼요.`;
+    if (!$('fTitle').value.trim()) $('fTitle').focus();
+  };
   function examModal(e){
     editingExam = e || null;
     $('examModalTitle').textContent = e ? '시험 설정' : '새 시험';
     $('fTitle').value = e ? e.title : '';
     $('fSubject').value = e ? e.subject : '';
     $('fClass').value = e ? e.className : '';
+    // 이전 시험 양식 (새 시험일 때만)
+    tplSrc = null;
+    $('tplBox').classList.toggle('hidden', !!e);
+    $('tplOpts').classList.add('hidden');
+    $('fFrom').innerHTML = '<option value="">새로 만들기</option>' + exams.map(x =>
+      `<option value="${esc(x.id)}">${esc(x.title)} · ${esc(x.className)}${x.examDate ? ' · ' + esc(x.examDate) : ''} · ${x.questionCount}문항</option>`).join('');
     // 제출이 생긴 뒤에는 문항 구성을 바꾸지 않음
     const locked = e && e.status !== 'draft';
     segs = segsFromExam(e); renderSegs(!!locked);
@@ -694,14 +750,104 @@
         closeModal('examModal'); toast('저장했습니다'); openExam(editingExam.id);
       } else {
         const types = OMR.examTypes({ questionCount, layout });
-        const points = {}; for (let n = 1; n <= questionCount; n++) points[n] = types[n] === 'essay' ? 5 : 3;
-        const ref = await db.collection('omrExams').add({ ...data, questionCount, choiceCount, layout, points,
-          maxScore: OMR.round(Object.values(points).reduce((a, b) => a + b, 0), 2), status:'draft', createdAt: FV.serverTimestamp() });
-        await db.collection('omrKeys').doc(ref.id).set({ answers:{}, points, allCorrect:[] });
-        closeModal('examModal'); toast('시험을 만들었습니다. 정답을 입력하세요.'); openExam(ref.id);
+        // 이전 시험 양식: 같은 번호·같은 유형이면 배점(·단원·정답)을 그대로 가져옴
+        const srcTypes = tplSrc ? OMR.examTypes(tplSrc) : null;
+        const same = n => srcTypes && srcTypes[n] === types[n];
+        let srcKey = null;
+        if (tplSrc && $('fCopyKey').checked){
+          const ks = await db.collection('omrKeys').doc(tplSrc.id).get().catch(() => null);
+          srcKey = ks && ks.exists ? ks.data() : null;
+        }
+        const points = {}, meta = {}, answers = {};
+        for (let n = 1; n <= questionCount; n++){
+          points[n] = same(n) && tplSrc.points && tplSrc.points[n] != null ? tplSrc.points[n] : (types[n] === 'essay' ? 5 : 3);
+          if (tplSrc && $('fCopyMeta').checked && tplSrc.meta && tplSrc.meta[n]) meta[n] = tplSrc.meta[n];
+          if (srcKey && same(n) && srcKey.answers && srcKey.answers[n]) answers[n] = srcKey.answers[n];
+        }
+        const extra = Object.keys(meta).length ? { meta } : {};
+        const ref = await db.collection('omrExams').add({ ...data, ...extra, questionCount, choiceCount, layout, points,
+          maxScore: OMR.round(Object.values(points).reduce((a, b) => a + b, 0), 2), status:'draft', createdAt: FV.serverTimestamp(),
+          ...(tplSrc ? { fromExam: tplSrc.id } : {}) });
+        await db.collection('omrKeys').doc(ref.id).set({ answers, points, allCorrect:[] });
+        closeModal('examModal'); toast(tplSrc ? `「${tplSrc.title}」 양식으로 만들었습니다${Object.keys(answers).length ? '' : ' · 정답을 입력하세요'}` : '시험을 만들었습니다. 정답을 입력하세요.', 3000); openExam(ref.id);
       }
       loadExams();
     } catch(e){ handleErr(e); }
+  };
+
+  // ═════════ 응시 대상 ═════════
+  let aud = null;   // {classes:Set, codes:Set, thenOpen:bool}
+  function openAudience(thenOpen){
+    aud = { classes: new Set(Array.isArray(ex.classNames) ? ex.classNames : [ex.className]),
+            codes: new Set(ex.targetCodes || []), thenOpen };
+    $('audQ').value = '';
+    $('audLead').textContent = thenOpen ? '응시를 열기 전에, 이 시험을 볼 반이나 학생을 고르세요. 고른 학생에게만 시험이 보입니다.'
+      : '이 시험을 볼 반이나 학생을 바꿀 수 있어요. 이미 낸 답안은 그대로 남습니다.';
+    $('audSave').textContent = thenOpen ? '이 대상으로 응시 열기' : '저장';
+    renderAudience();
+    openModal('audModal');
+  }
+  const inAud = s => aud.classes.has(s.className) || aud.codes.has(s.code);
+  function renderAudience(){
+    const byClass = {};
+    students.forEach(s => (byClass[s.className] = byClass[s.className] || []).push(s));
+    const classes = Object.keys(byClass).sort((a, b) => a.localeCompare(b, 'ko'));
+    aud.classes.forEach(c => { if (!byClass[c]) { byClass[c] = []; classes.push(c); } });
+    $('audClasses').innerHTML = classes.map(c => `<button type="button" class="${aud.classes.has(c) ? 'on' : ''}" data-cls="${esc(c)}">${esc(c)}<small>${byClass[c].length}명</small></button>`).join('')
+      || '<span class="muted">등록된 반이 없어요.</span>';
+    // 학원·학년 묶음
+    const ACAD = Object.fromEntries(OMR.ACADEMIES), groups = {};
+    students.forEach(s => { if (!ACAD[s.academy]) return; const k = s.academy + '|' + (s.grade || ''); (groups[k] = groups[k] || []).push(s); });
+    const gk = Object.keys(groups).sort();
+    $('audQuickWrap').classList.toggle('hidden', !gk.length);
+    $('audQuick').innerHTML = gk.map(k => {
+      const [a, g] = k.split('|'), list = groups[k], n = list.filter(inAud).length;
+      return `<button type="button" class="${n === list.length ? 'on' : n ? 'part' : ''}" data-grp="${esc(k)}">${esc(ACAD[a])}${g ? ' ' + g + '학년' : ''}<small>${list.length}명</small></button>`;
+    }).join('');
+    // 개별
+    const q = $('audQ').value.trim();
+    $('audList').innerHTML = classes.map(c => {
+      const list = byClass[c].filter(s => !q || s.name.includes(q)).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+      if (!list.length) return '';
+      const whole = aud.classes.has(c);
+      return `<div class="aud-g">${esc(c)}${whole ? ' · 반 전체 선택됨' : ''}</div>` + list.map(s =>
+        `<label class="${whole ? 'cls' : ''}"><input type="checkbox" data-code="${esc(s.code)}" ${inAud(s) ? 'checked' : ''} ${whole ? 'disabled' : ''}>${esc(s.name)}
+          <span class="m">${[ACAD[s.academy], s.grade ? s.grade + '학년' : ''].filter(Boolean).map(esc).join(' ')}</span></label>`).join('');
+    }).join('') || '<div class="empty" style="padding:16px;">학생이 없습니다.</div>';
+    const total = students.filter(inAud).length;
+    const indiv = students.filter(s => !aud.classes.has(s.className) && aud.codes.has(s.code)).length;
+    $('audSum').textContent = total ? `응시 대상 ${total}명 · 반 ${aud.classes.size}개${indiv ? ` + 개별 ${indiv}명` : ''}` : '아직 아무도 고르지 않았어요';
+  }
+  $('audClasses').addEventListener('click', e => {
+    const b = e.target.closest('[data-cls]'); if (!b) return;
+    const c = b.dataset.cls; aud.classes.has(c) ? aud.classes.delete(c) : aud.classes.add(c); renderAudience();
+  });
+  $('audQuick').addEventListener('click', e => {
+    const b = e.target.closest('[data-grp]'); if (!b) return;
+    const [a, g] = b.dataset.grp.split('|');
+    const list = students.filter(s => s.academy === a && String(s.grade || '') === g);
+    const all = list.every(inAud);
+    list.forEach(s => all ? aud.codes.delete(s.code) : aud.codes.add(s.code));
+    if (all && list.some(inAud)) toast('반 전체로 고른 학생은 반 선택을 풀어야 빠져요', 2600);
+    renderAudience();
+  });
+  $('audList').addEventListener('change', e => {
+    const c = e.target.closest('[data-code]'); if (!c) return;
+    c.checked ? aud.codes.add(c.dataset.code) : aud.codes.delete(c.dataset.code); renderAudience();
+  });
+  $('audQ').oninput = renderAudience;
+  $('audSave').onclick = async () => {
+    const classNames = [...aud.classes];
+    const targetCodes = [...aud.codes].filter(code => { const s = students.find(x => x.code === code); return !s || !aud.classes.has(s.className); });
+    if (!classNames.length && !targetCodes.length){ toast('반이나 학생을 한 명 이상 고르세요'); return; }
+    const patch = { classNames, targetCodes };
+    if (aud.thenOpen) patch.status = 'open';
+    try {
+      await db.collection('omrExams').doc(ex.id).update(patch);
+      Object.assign(ex, patch);
+      closeModal('audModal'); renderHeader(); renderSubs(); renderSend();
+      toast(aud.thenOpen ? `응시를 열었습니다 · ${students.filter(inAud).length}명` : '응시 대상을 저장했습니다');
+    } catch(err){ handleErr(err); }
   };
 
   // ═════════ 시험 상세 ═════════
@@ -741,7 +887,7 @@
   function renderHeader(){
     $('exTitle').textContent = ex.title;
     const due = toDate(ex.dueAt);
-    $('exMeta').textContent = `${ex.className} · ${ex.subject} · ${ex.questionCount}문항 (${OMR.layoutText(ex)}) · 만점 ${ex.maxScore ?? ''}` +
+    $('exMeta').textContent = `대상 ${OMR.audienceText(ex)} · ${ex.subject} · ${ex.questionCount}문항 (${OMR.layoutText(ex)}) · 만점 ${ex.maxScore ?? ''}` +
       (ex.examDate ? ` · ${ex.examDate}` : '') + (due ? ` · 마감 ${fmtDateTime(due)}` : '') +
       (ex.passScore != null ? ` · 재시험 기준 ${ex.passScore}점` : '');
     const [label, cls] = STATUS[ex.status] || [ex.status, 'draft'];
@@ -753,7 +899,7 @@
     if (ex.status === 'closed') btns += `<button class="btn sm primary" data-st="grade">${graded ? '다시 채점' : '채점하기'}</button>` +
       (graded ? `<button class="btn sm red" data-st="published">결과 공개</button>` : '') + `<button class="btn sm" data-st="open">응시 다시 열기</button>`;
     if (ex.status === 'published') btns += `<button class="btn sm" data-st="grade">다시 채점</button><button class="btn sm" data-st="closed">공개 취소</button>`;
-    btns += `<button class="btn sm ghost" data-st="edit">시험 설정</button><button class="btn sm ghost" data-st="delete" style="color:var(--red);">삭제</button>`;
+    btns += `<button class="btn sm ghost" data-st="audience">응시 대상</button><button class="btn sm ghost" data-st="edit">시험 설정</button><button class="btn sm ghost" data-st="delete" style="color:var(--red);">삭제</button>`;
     sb.innerHTML = `<span class="pill ${cls}">${label}</span>` +
       (graded ? `<span class="muted">채점 ${fmtDateTime(ex.gradedAt)}</span>` : '') +
       `<span class="grow"></span>${btns}`;
@@ -764,6 +910,7 @@
     const st = b.dataset.st;
     try {
       if (st === 'edit') return examModal(ex);
+      if (st === 'audience') return openAudience(false);
       if (st === 'delete'){
         if (!confirm(`'${ex.title}' 시험을 삭제할까요? 제출 답안·성적표도 모두 삭제됩니다.`)) return;
         const refs = [db.collection('omrExams').doc(ex.id), db.collection('omrKeys').doc(ex.id), db.collection('omrKeys').doc(ex.id + '__essay')];
@@ -774,7 +921,8 @@
       }
       if (st === 'open'){
         if (!keyComplete()){ toast('정답을 먼저 모두 입력·저장하세요', 3000); return; }
-        await setStatus('open'); toast('응시를 열었습니다. 학생들이 제출할 수 있습니다.');
+        if (ex.status === 'draft') return openAudience(true);   // 처음 열 때는 응시 대상부터
+        await setStatus('open'); toast('응시를 다시 열었습니다.');
       } else if (st === 'closed'){ await setStatus('closed'); }
       else if (st === 'published'){
         await setStatus('published'); toast('결과를 공개했습니다. 성적표 링크가 열립니다.');
@@ -1113,7 +1261,7 @@
   };
 
   // ───────── 제출 현황 ─────────
-  function classStudents(){ return students.filter(s => s.className === ex.className); }
+  function classStudents(){ return students.filter(s => OMR.examForStudent(ex, s)); }
   function renderSubs(){
     const byCode = Object.fromEntries(exSubs.map(s => [s.code, s]));
     const roster = classStudents();
@@ -1173,7 +1321,7 @@
       const token = sub.reportToken || OMR.genToken();
       const wrong = r.questions.filter(q => !q.ok).map(q => q.n);
       ops.push(['set', db.collection('omrReports').doc(token), {
-        examId: ex.id, examTitle: ex.title, subject: ex.subject, className: ex.className, examDate: ex.examDate || null,
+        examId: ex.id, examTitle: ex.title, subject: ex.subject, className: sub.className || ex.className, examDate: ex.examDate || null,
         code: r.code, name: r.name, score: r.score, maxScore: stats.maxScore, correctCount: r.correctCount,
         questionCount: ex.questionCount, rank: r.rank, n: stats.n, percentile: r.percentile,
         avg: stats.avg, high: stats.high, low: stats.low, wrong, questions: r.questions, gradedAt: now,
@@ -1186,7 +1334,8 @@
             rank: r.rank, n: stats.n, grade: an.byCode[r.code].grade, avg: stats.avg, className: ex.className };
           const items = linkDocs[ri].filter(x => x.examId !== ex.id).concat(item).sort((a,b) => (a.date || '').localeCompare(b.date || ''));
           ops.push(['set', db.collection('omrReportLinks').doc(r.code), { code: r.code, name: r.name, items: items.slice(-40), updatedAt: now }]);
-          return items.filter(x => x.className === ex.className && (x.date || '') <= (ex.examDate || '9999')).slice(-8);
+          const cls = new Set([ex.className, sub.className, ...(ex.classNames || [])]);
+          return items.filter(x => cls.has(x.className) && (x.date || '') <= (ex.examDate || '9999')).slice(-8);
         })(),
       }]);
       const wrongDetail = r.questions.filter(q => !q.ok).map(q => ({ n: q.n, tag: q.tag, level: q.level, note: q.note || null, marked: q.marked, correct: q.correct }));
@@ -1200,7 +1349,7 @@
       const below = ex.passScore != null && r.score < ex.passScore;
       if (below){
         ops.push(['set', db.collection('omrRetests').doc(rid), {
-          examId: ex.id, examTitle: ex.title, className: ex.className, code: r.code, name: r.name,
+          examId: ex.id, examTitle: ex.title, className: sub.className || ex.className, code: r.code, name: r.name,
           originalScore: r.score, passScore: ex.passScore, attempts: prev ? (prev.attempts || []) : [],
           createdAt: prev ? prev.createdAt : now, updatedAt: now,
         }]);

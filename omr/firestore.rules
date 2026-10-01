@@ -54,7 +54,10 @@
           && exists(codePath)
           && d.name == get(codePath).data.name
           && d.className == get(codePath).data.className
-          && exam().className == d.className            // 자기 반 시험만 응시
+          // 응시 대상: 대상을 고른 시험은 고른 반 + 개별로 고른 학생, 예전 시험은 시험의 반
+          && ('classNames' in exam()
+              ? (d.className in exam().classNames || d.code in exam().targetCodes)
+              : exam().className == d.className)
           && exam().status == 'open'
           && (exam().dueAt == null || request.time < exam().dueAt)
           && d.keys().hasOnly(['examId', 'code', 'name', 'className', 'answers',

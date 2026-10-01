@@ -172,7 +172,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=12"></script>
+<script src="common.js?v=13"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast } = OMR;
@@ -232,7 +232,7 @@
     loadWeek();
     const box = $('examList');
     box.innerHTML = '<div class="empty">불러오는 중…</div>';
-    const qs = await db.collection('omrExams').where('className','==',me.className).get();
+    const qs = await OMR.examsForStudent(me);
     const exams = qs.docs.map(d => ({ id:d.id, ...d.data() }))
       .filter(e => e.status && e.status !== 'draft')
       .sort((a,b) => (toDate(b.createdAt)||0) - (toDate(a.createdAt)||0));
@@ -341,7 +341,7 @@
       safe(db.collection('clinicSlots').get()),
       safe(db.collection('lectures').get()),
       safe(db.collection('dailyReportLinks').doc(me.code).get()),
-      safe(db.collection('omrExams').where('className','==',me.className).get()),
+      safe(OMR.examsForStudent(me)),
     ]);
     // 과제: 열려 있고 아직 안 낸 것(또는 보완 요청) 중 기한이 7일 안이거나 지난 것
     if (as){

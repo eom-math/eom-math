@@ -525,6 +525,33 @@
   // ───────── 학생 대시보드 데이터 (메인 화면 배너용) ─────────
   // base: 학생 페이지까지의 경로 접두사 (메인에서는 'omr/')
   // 반환: { week:[{d,cls,t,m,href}], latest:{token,...report}|null, trend:[{date,score,max,avg,token}] }
+  // ───────── 응시 대상 ─────────
+  // 대상을 고른 시험: exam.classNames(반 목록) + exam.targetCodes(개별 학생 코드). 예전 시험은 exam.className 하나.
+  function examForStudent(exam, me) {
+    if (Array.isArray(exam.classNames)) return exam.classNames.includes(me.className) || (exam.targetCodes || []).includes(me.code);
+    return exam.className === me.className;
+  }
+  /** 학생이 볼 수 있는 시험 목록 (QuerySnapshot 비슷한 {docs}) */
+  async function examsForStudent(me) {
+    const col = db.collection('omrExams');
+    const snaps = await Promise.all([
+      col.where('className', '==', me.className).get(),
+      col.where('classNames', 'array-contains', me.className).get().catch(() => null),
+      col.where('targetCodes', 'array-contains', me.code).get().catch(() => null),
+    ]);
+    const seen = new Set(), docs = [];
+    snaps.forEach(sn => sn && sn.docs.forEach(d => {
+      if (seen.has(d.id)) return; seen.add(d.id);
+      if (examForStudent(d.data(), me)) docs.push(d);
+    }));
+    return { docs, size: docs.length, empty: !docs.length };
+  }
+  function audienceText(exam) {
+    if (!Array.isArray(exam.classNames)) return exam.className || '';
+    const c = exam.classNames, t = (exam.targetCodes || []).length;
+    return [c.length ? c.join(', ') : '', t ? `개별 ${t}명` : ''].filter(Boolean).join(' + ') || '대상 없음';
+  }
+
   async function studentDashboard(me, base = '', opts = {}) {
     const now = new Date(), in7 = new Date(now.getTime() + 7 * 864e5), today = todayStr();
     const safe = p => p.catch(e => { console.warn(e); return null; });
@@ -535,7 +562,7 @@
       safe(db.collection('clinicSlots').get()),
       safe(db.collection('lectures').get()),
       safe(db.collection('dailyReportLinks').doc(me.code).get()),
-      safe(db.collection('omrExams').where('className', '==', me.className).get()),
+      safe(examsForStudent(me)),
     ]);
     const rows = [];
     if (as) {
@@ -668,7 +695,7 @@
     QTYPES, examTypes, examSegments, layoutText, shortEq,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
-    ACADEMIES, rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
+    ACADEMIES, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
