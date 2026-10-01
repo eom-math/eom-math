@@ -41,6 +41,28 @@
   .key-row label.ac{font-size:12px;color:var(--dim);display:flex;gap:4px;align-items:center;}
   .key-row.multi .no::after{content:" 복수";font-size:10px;color:var(--red);font-weight:800;}
   .key-cols{columns:2 360px;column-gap:28px;}
+  .key-seg-h{break-inside:avoid;break-after:avoid;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:var(--dim);padding:12px 0 4px;}
+  .key-seg-h:first-child{padding-top:0;}
+  .qt{display:inline-block;font-size:11px;font-weight:800;padding:2px 7px;border-radius:99px;background:var(--bg2);color:var(--ink);}
+  .qt.short{background:#e7eefc;color:#1d4ed8;} .qt.essay{background:#fdf0e1;color:#b45309;}
+  .key-row input.sans{width:184px;padding:6px 8px;font-size:14px;}
+  .key-row .essay-note{width:184px;font-size:12px;color:#b45309;font-weight:700;}
+  .seg{display:grid;grid-template-columns:44px 14px 72px 22px 1fr 34px;align-items:center;gap:6px;margin-bottom:6px;}
+  .seg .from{font-weight:800;text-align:right;font-variant-numeric:tabular-nums;}
+  .seg .input{padding:8px 8px;font-size:14px;}
+  .seg .x{border:0;background:none;font-size:18px;color:var(--dim);cursor:pointer;}
+  .seg .x:disabled{visibility:hidden;}
+  .seg-bar{display:flex;height:8px;border-radius:99px;overflow:hidden;margin:4px 0 6px;background:var(--bg2);}
+  .seg-bar i{display:block;height:100%;} .seg-bar i.mc{background:#111114;} .seg-bar i.short{background:#3b6fe0;} .seg-bar i.essay{background:#e08a2e;}
+  .wr-q{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#fff;}
+  .wr-q .h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;}
+  .wr-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .wr-chips button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:5px 10px;font-size:13px;font-weight:700;cursor:pointer;}
+  .wr-chips button.ok{background:var(--ok-soft);border-color:transparent;color:var(--ok);cursor:default;}
+  .wr-chips button.no:hover{border-color:var(--ok);color:var(--ok);}
+  .wr-chips small{font-weight:600;opacity:.7;margin-left:3px;}
+  .essay-tbl input{width:64px;padding:6px 6px;font-size:14px;text-align:right;}
+  .essay-tbl input.empty{border-color:var(--warn);}
   .key-cols .key-row{break-inside:avoid;}
   .qstat{display:grid;grid-template-columns:40px 1fr 52px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line2);font-size:13px;}
   .qstat .dist{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;}
@@ -126,6 +148,7 @@
     <div class="tabs" id="exTabs">
       <button data-tab="key" class="on">정답·배점</button>
       <button data-tab="subs">제출 현황</button>
+      <button data-tab="written" id="writtenTabBtn">서답형 채점</button>
       <button data-tab="result">성적</button>
       <button data-tab="send">성적표 발송</button>
       <button data-tab="retest">재시험</button>
@@ -135,7 +158,7 @@
       <div class="card">
         <div class="grid2">
           <div>
-            <label class="f">정답 빠른 입력 (1번부터 차례로, 예: 35142 21534)</label>
+            <label class="f">객관식 정답 빠른 입력 (5지선다 문항에 차례로, 예: 35142 21534)</label>
             <div class="row" style="flex-wrap:nowrap;"><input class="input" id="quickKey" inputmode="numeric" placeholder="35142..."><button class="btn" id="quickKeyBtn">채우기</button></div>
           </div>
           <div>
@@ -153,13 +176,28 @@
           </div>
         </div>
         <datalist id="tagList"></datalist>
-        <p class="muted" style="margin-top:10px;">번호를 눌러 정답을 고릅니다. 두 개 이상 누르면 <b>복수 정답</b>(둘 중 하나만 골라도 정답). 문항 오류는 <b>전원정답</b>에 체크 후 재채점하세요.</p>
+        <p class="muted" style="margin-top:10px;"><b>5지선다</b>는 번호를 눌러 정답을 고르고, <b>단답형</b>은 정답을 적습니다(여러 표현을 인정하려면 쉼표로: <code>1/2, 0.5</code>). <b>서논술형</b>은 정답 대신 「서답형 채점」 탭에서 학생별 점수를 넣습니다.<br>객관식은 두 개 이상 누르면 <b>복수 정답</b>(둘 중 하나만 골라도 정답). 문항 오류는 <b>전원정답</b>에 체크 후 재채점하세요.</p>
       </div>
       <div class="card"><div class="key-cols" id="keyRows"></div></div>
       <div class="row between">
         <span class="muted" id="keySum"></span>
         <button class="btn primary" id="saveKeyBtn">정답 저장</button>
       </div>
+    </div>
+
+    <div id="exWritten" class="hidden">
+      <div id="wrShortWrap">
+        <h3 style="margin-top:0;">단답형 답 확인 <span class="muted" style="font-weight:600;">— 학생이 쓴 답을 모았어요. 맞는 표현인데 오답 처리된 답을 누르면 정답으로 인정합니다.</span></h3>
+        <div id="wrShort"></div>
+      </div>
+      <div id="wrEssayWrap">
+        <div class="row between" style="margin:18px 0 8px;">
+          <h3 style="margin:0;">서논술형 점수 입력 <span class="muted" style="font-weight:600;">— 부분 점수 가능 (0.5점 단위)</span></h3>
+          <div class="row"><span class="muted" id="essayState"></span><button class="btn primary" id="essaySaveBtn">점수 저장</button></div>
+        </div>
+        <div class="tbl-wrap"><table class="tbl essay-tbl" id="essayTbl"></table></div>
+      </div>
+      <p class="muted" style="margin-top:10px;">저장한 뒤 위의 <b>채점하기 / 다시 채점</b>을 누르면 성적표에 반영됩니다.</p>
     </div>
 
     <div id="exSubs" class="hidden">
@@ -228,9 +266,19 @@
         <datalist id="subjectList"><option>공통수학1</option><option>공통수학2</option><option>대수</option><option>미적분I</option><option>미적분II</option><option>확률과 통계</option><option>기하</option></datalist></div>
       <div><label class="f">반</label><input class="input" id="fClass" list="classList" placeholder="고2 미적분 A반"><datalist id="classList"></datalist></div>
     </div>
-    <div class="grid2" id="fCountWrap">
-      <div><label class="f">문항 수</label><input class="input" id="fCount" type="number" min="1" max="100" value="20"></div>
-      <div><label class="f">선지</label><select class="input" id="fChoice"><option value="5">5지선다</option><option value="4">4지선다</option></select></div>
+    <div id="fLayoutWrap">
+      <label class="f">문항 구성 <span class="muted" style="font-weight:600;">— 몇 번까지 어떤 유형인지 정하세요</span></label>
+      <div class="seg-bar" id="segBar"></div>
+      <div id="segRows"></div>
+      <div class="row" style="gap:6px;margin-top:4px;">
+        <button class="btn sm" type="button" id="segAdd">+ 구간 추가</button>
+        <span class="grow"></span>
+        <span class="muted" style="font-size:12px;">빠른 설정</span>
+        <button class="btn sm ghost" type="button" data-preset="naesin">내신형</button>
+        <button class="btn sm ghost" type="button" data-preset="suneung">수능형 30</button>
+        <button class="btn sm ghost" type="button" data-preset="mc">객관식만</button>
+      </div>
+      <p class="muted" id="segSum" style="margin-top:6px;"></p>
     </div>
     <div class="grid2">
       <div><label class="f">시험일</label><input class="input" id="fDate" type="date"></div>
@@ -295,7 +343,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=10"></script>
+<script src="common.js?v=11"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast, copyText, fmtPhone, normalizePhone } = OMR;
@@ -311,6 +359,8 @@
   let unsubSubs = null;
   let retests = [];
   let unsubRetests = null;
+  let exTypes = [null];   // 문항 번호 → 'mc' | 'short' | 'essay'
+  let essayScores = {};   // {학생코드: {번호: 점수}}  (omrKeys/{시험ID}__essay)
 
   function handleErr(e, msg){
     console.error(e);
@@ -331,7 +381,7 @@
     });
   }
   tabs('mainTabs', { exams:'tabExams', students:'tabStudents' });
-  tabs('exTabs', { key:'exKey', subs:'exSubs', result:'exResult', send:'exSend', retest:'exRetest' });
+  tabs('exTabs', { key:'exKey', subs:'exSubs', written:'exWritten', result:'exResult', send:'exSend', retest:'exRetest' });
   $('adminNav').innerHTML = OMR.adminNav('admin.html');
 
   // ───────── 로그인 ─────────
@@ -496,6 +546,75 @@
     });
   }
 
+  // ───────── 문항 구성 편집 (구간: n번 ~ m번 = 유형) ─────────
+  let segs = [];      // [{type, to}]
+  const QT = OMR.QTYPES;
+  const PRESETS = {
+    naesin: [{ type:'mc', to:18 }, { type:'short', to:20 }, { type:'essay', to:24 }],
+    suneung: [{ type:'mc', to:15 }, { type:'short', to:22 }, { type:'mc', to:28 }, { type:'short', to:30 }],
+    mc: [{ type:'mc', to:20 }],
+  };
+  function segsFromExam(e){
+    if (!e) return PRESETS.naesin.map(x => ({ ...x }));
+    let n = 0;
+    return OMR.examSegments(e).map(g => ({ type: g.type, to: g.to }));
+  }
+  function segsToLayout(){
+    let from = 1; const layout = [];
+    for (const g of segs){
+      const cnt = g.to - from + 1;
+      if (!(cnt >= 1)) throw new Error(`${from}번부터 시작하는 구간의 끝 번호를 확인하세요.`);
+      const last = layout[layout.length - 1];
+      if (last && last.type === g.type) last.count += cnt; else layout.push({ type: g.type, count: cnt });
+      from = g.to + 1;
+    }
+    const total = from - 1;
+    if (!(total >= 1 && total <= 100)) throw new Error('문항 수는 1~100입니다.');
+    return { layout, total };
+  }
+  function renderSegs(locked){
+    let from = 1;
+    $('segRows').innerHTML = segs.map((g, i) => {
+      const html = `<div class="seg" data-i="${i}"><span class="from">${from}번</span><span>~</span>
+        <input class="input to" type="number" min="${from}" max="100" value="${g.to}" ${locked ? 'disabled' : ''} aria-label="끝 번호">
+        <span>번</span>
+        <select class="input ty" ${locked ? 'disabled' : ''}>${Object.entries(QT).map(([k, v]) => `<option value="${k}" ${g.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+        <button class="x" type="button" ${locked || segs.length < 2 ? 'disabled' : ''} aria-label="구간 삭제">×</button></div>`;
+      from = (g.to || from) + 1; return html;
+    }).join('');
+    $('segAdd').disabled = locked;
+    document.querySelectorAll('[data-preset]').forEach(b => b.disabled = locked);
+    segSummary();
+  }
+  function segSummary(){
+    let from = 1, total = 0; const cnt = { mc:0, short:0, essay:0 }; let bad = false;
+    segs.forEach(g => { const c = g.to - from + 1; if (!(c >= 1)) bad = true; else { cnt[g.type] += c; total = g.to; } from = g.to + 1; });
+    $('segBar').innerHTML = bad || !total ? '' : segs.map((g, i) => { const f = i ? segs[i - 1].to + 1 : 1; return `<i class="${g.type}" style="width:${(g.to - f + 1) / total * 100}%"></i>`; }).join('');
+    $('segSum').innerHTML = bad ? '<span style="color:var(--red);">끝 번호는 시작 번호보다 크거나 같아야 해요.</span>'
+      : `총 <b>${total}문항</b> · ${Object.entries(cnt).filter(([, v]) => v).map(([k, v]) => `${QT[k]} ${v}`).join(' · ')}`;
+  }
+  $('segRows').addEventListener('input', e => {
+    const row = e.target.closest('.seg'); if (!row) return;
+    const g = segs[+row.dataset.i];
+    if (e.target.classList.contains('to')) g.to = parseInt(e.target.value, 10) || 0;
+    if (e.target.classList.contains('ty')) g.type = e.target.value;
+    // 시작 번호 표시만 갱신 (입력 중 포커스 유지)
+    let from = 1;
+    $('segRows').querySelectorAll('.seg').forEach((r, i) => { r.querySelector('.from').textContent = from + '번'; from = (segs[i].to || from) + 1; });
+    segSummary();
+  });
+  $('segRows').addEventListener('change', e => { if (e.target.classList.contains('ty')) segSummary(); });
+  $('segRows').addEventListener('click', e => {
+    const x = e.target.closest('.x'); if (!x || x.disabled) return;
+    segs.splice(+x.closest('.seg').dataset.i, 1); renderSegs(false);
+  });
+  $('segAdd').onclick = () => {
+    const last = segs[segs.length - 1], order = ['mc', 'short', 'essay'];
+    const next = last ? order[(order.indexOf(last.type) + 1) % 3] : 'mc';
+    segs.push({ type: next, to: (last ? last.to : 0) + (next === 'mc' ? 10 : 2) }); renderSegs(false);
+  };
+  document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { segs = PRESETS[b.dataset.preset].map(x => ({ ...x })); renderSegs(false); });
+
   // 새 시험 / 시험 설정 수정
   let editingExam = null;
   function examModal(e){
@@ -504,25 +623,25 @@
     $('fTitle').value = e ? e.title : '';
     $('fSubject').value = e ? e.subject : '';
     $('fClass').value = e ? e.className : '';
-    $('fCount').value = e ? e.questionCount : 20;
-    $('fChoice').value = e ? e.choiceCount : 5;
-    // 제출이 생긴 뒤에는 문항 수·선지를 바꾸지 않음
+    // 제출이 생긴 뒤에는 문항 구성을 바꾸지 않음
     const locked = e && e.status !== 'draft';
-    $('fCount').disabled = $('fChoice').disabled = !!locked;
+    segs = segsFromExam(e); renderSegs(!!locked);
     $('fDate').value = e ? (e.examDate || '') : new Date(Date.now() + 9*3600e3).toISOString().slice(0,10);
     const d = e && toDate(e.dueAt);
     $('fDue').value = d ? new Date(d.getTime() - d.getTimezoneOffset()*60e3).toISOString().slice(0,16) : '';
     $('fPass').value = e && e.passScore != null ? e.passScore : '';
     $('fGrade').value = e && e.gradeSystem !== undefined ? (e.gradeSystem || '') : '5';
-    $('examModalMsg').textContent = locked ? '응시가 시작된 시험은 문항 수·선지를 바꿀 수 없습니다.' : '';
+    $('examModalMsg').textContent = locked ? '응시가 시작된 시험은 문항 구성을 바꿀 수 없습니다.' : '';
     openModal('examModal');
   }
   $('newExamBtn').onclick = () => examModal(null);
   $('examSaveBtn').onclick = async () => {
     const title = $('fTitle').value.trim(), subject = $('fSubject').value.trim(), className = $('fClass').value.trim();
-    const questionCount = parseInt($('fCount').value, 10), choiceCount = parseInt($('fChoice').value, 10);
     if (!title || !subject || !className){ $('examModalMsg').textContent = '제목·과목·반을 입력하세요.'; return; }
-    if (!(questionCount >= 1 && questionCount <= 100)){ $('examModalMsg').textContent = '문항 수는 1~100입니다.'; return; }
+    let layout, questionCount; const choiceCount = 5;
+    if (!editingExam || editingExam.status === 'draft'){
+      try { ({ layout, total: questionCount } = segsToLayout()); } catch(err){ $('examModalMsg').textContent = err.message; return; }
+    }
     const due = $('fDue').value ? firebase.firestore.Timestamp.fromDate(new Date($('fDue').value)) : null;
     const passRaw = $('fPass').value.trim();
     const data = { title, subject, className, examDate: $('fDate').value || null, dueAt: due,
@@ -530,14 +649,21 @@
     try {
       if (editingExam){
         if (editingExam.status === 'draft'){
-          data.questionCount = questionCount; data.choiceCount = choiceCount;
+          data.questionCount = questionCount; data.choiceCount = choiceCount; data.layout = layout;
+          // 문항 수가 바뀌면 배점도 맞춰 줌 (새 문항은 서논술형 5점, 나머지 3점)
+          const types = OMR.examTypes({ questionCount, layout }), pts = {};
+          for (let n = 1; n <= questionCount; n++) pts[n] = (editingExam.points || {})[n] ?? (types[n] === 'essay' ? 5 : 3);
+          data.points = pts; data.maxScore = OMR.round(Object.values(pts).reduce((a, b) => a + b, 0), 2);
+          const kp = {}; for (let n = 1; n <= questionCount; n++) kp[n] = pts[n];
+          await db.collection('omrKeys').doc(editingExam.id).set({ points: kp }, { merge:true });
         }
         await db.collection('omrExams').doc(editingExam.id).update(data);
         closeModal('examModal'); toast('저장했습니다'); openExam(editingExam.id);
       } else {
-        const points = {}; for (let n = 1; n <= questionCount; n++) points[n] = 3;
-        const ref = await db.collection('omrExams').add({ ...data, questionCount, choiceCount, points,
-          maxScore: questionCount * 3, status:'draft', createdAt: FV.serverTimestamp() });
+        const types = OMR.examTypes({ questionCount, layout });
+        const points = {}; for (let n = 1; n <= questionCount; n++) points[n] = types[n] === 'essay' ? 5 : 3;
+        const ref = await db.collection('omrExams').add({ ...data, questionCount, choiceCount, layout, points,
+          maxScore: OMR.round(Object.values(points).reduce((a, b) => a + b, 0), 2), status:'draft', createdAt: FV.serverTimestamp() });
         await db.collection('omrKeys').doc(ref.id).set({ answers:{}, points, allCorrect:[] });
         closeModal('examModal'); toast('시험을 만들었습니다. 정답을 입력하세요.'); openExam(ref.id);
       }
@@ -556,14 +682,21 @@
       const [es, ks] = await Promise.all([db.collection('omrExams').doc(id).get(), db.collection('omrKeys').doc(id).get()]);
       ex = { id, ...es.data() };
       exKey = ks.exists ? ks.data() : { answers:{}, points: ex.points || {}, allCorrect:[] };
+      exTypes = OMR.examTypes(ex);
+      essayScores = {};
+      if (exTypes.includes('essay')){
+        const ed = await db.collection('omrKeys').doc(id + '__essay').get().catch(() => null);
+        essayScores = ed && ed.exists ? (ed.data().scores || {}) : {};
+      }
     } catch(e){ handleErr(e); return; }
     show('vExam');
     renderHeader();
     renderKey();
+    $('writtenTabBtn').classList.toggle('hidden', !exTypes.some(t => t === 'short' || t === 'essay'));
     if (unsubSubs) unsubSubs();
     unsubSubs = db.collection('omrSubmissions').where('examId','==',id).onSnapshot(qs => {
       exSubs = qs.docs.map(d => ({ id:d.id, ...d.data() }));
-      renderSubs(); renderResult(); renderSend();
+      renderSubs(); renderResult(); renderSend(); renderWritten();
     }, e => handleErr(e));
     if (unsubRetests) unsubRetests();
     unsubRetests = db.collection('omrRetests').where('examId','==',id).onSnapshot(qs => {
@@ -575,7 +708,7 @@
   function renderHeader(){
     $('exTitle').textContent = ex.title;
     const due = toDate(ex.dueAt);
-    $('exMeta').textContent = `${ex.className} · ${ex.subject} · ${ex.questionCount}문항 ${ex.choiceCount}지선다 · 만점 ${ex.maxScore ?? ''}` +
+    $('exMeta').textContent = `${ex.className} · ${ex.subject} · ${ex.questionCount}문항 (${OMR.layoutText(ex)}) · 만점 ${ex.maxScore ?? ''}` +
       (ex.examDate ? ` · ${ex.examDate}` : '') + (due ? ` · 마감 ${fmtDateTime(due)}` : '') +
       (ex.passScore != null ? ` · 재시험 기준 ${ex.passScore}점` : '');
     const [label, cls] = STATUS[ex.status] || [ex.status, 'draft'];
@@ -600,7 +733,7 @@
       if (st === 'edit') return examModal(ex);
       if (st === 'delete'){
         if (!confirm(`'${ex.title}' 시험을 삭제할까요? 제출 답안·성적표도 모두 삭제됩니다.`)) return;
-        const refs = [db.collection('omrExams').doc(ex.id), db.collection('omrKeys').doc(ex.id)];
+        const refs = [db.collection('omrExams').doc(ex.id), db.collection('omrKeys').doc(ex.id), db.collection('omrKeys').doc(ex.id + '__essay')];
         exSubs.forEach(s => { refs.push(db.collection('omrSubmissions').doc(s.id)); if (s.reportToken) refs.push(db.collection('omrReports').doc(s.reportToken)); });
         if (unsubSubs) unsubSubs(); unsubSubs = null;
         for (let i = 0; i < refs.length; i += 400){ const bt = db.batch(); refs.slice(i, i+400).forEach(r => bt.delete(r)); await bt.commit(); }
@@ -631,24 +764,36 @@
   function keyComplete(){
     const ac = exKey.allCorrect || [];
     for (let n = 1; n <= ex.questionCount; n++)
-      if (!ac.includes(n) && !((exKey.answers[n] || []).length)) return false;
+      if (exTypes[n] !== 'essay' && !ac.includes(n) && !((exKey.answers[n] || []).length)) return false;
     return true;
   }
   function renderKey(){
     const rows = $('keyRows');
     let html = '';
-    for (let n = 1; n <= ex.questionCount; n++){
-      const ans = (exKey.answers[n] || []).map(Number);
-      const ac = (exKey.allCorrect || []).includes(n);
-      html += `<div class="key-row${ans.length > 1 ? ' multi' : ''}" data-n="${n}"><span class="no">${n}</span><div class="choices">`;
-      for (let c = 1; c <= ex.choiceCount; c++) html += `<button class="bubble sm${ans.includes(c) ? ' on' : ''}" data-c="${c}">${c}</button>`;
-      const meta = (ex.meta && ex.meta[n]) || {};
-      html += `</div><input class="input pts" type="number" step="0.5" min="0.5" value="${exKey.points[n] ?? 3}" aria-label="${n}번 배점">
-        <label class="ac"><input type="checkbox" ${ac ? 'checked' : ''}> 전원정답</label>
-        <input class="input tag" list="tagList" placeholder="단원 태그" value="${esc(meta.tag || '')}" aria-label="${n}번 단원">
-        <select class="input lv" aria-label="${n}번 난이도">${['', '하', '중', '상'].map(l =>
-          `<option value="${l}" ${meta.level === l ? 'selected' : ''}>${l || '난이도'}</option>`).join('')}</select></div>`;
-    }
+    OMR.examSegments(ex).forEach(g => {
+      html += `<div class="key-seg-h"><span class="qt ${g.type}">${OMR.QTYPES[g.type]}</span>${g.from === g.to ? g.from : g.from + '~' + g.to}번</div>`;
+      for (let n = g.from; n <= g.to; n++){
+        const t = exTypes[n];
+        const ans = (exKey.answers[n] || []);
+        const ac = (exKey.allCorrect || []).includes(n);
+        html += `<div class="key-row${t === 'mc' && ans.length > 1 ? ' multi' : ''}" data-n="${n}" data-t="${t}"><span class="no">${n}</span>`;
+        if (t === 'mc'){
+          html += '<div class="choices">';
+          for (let c = 1; c <= ex.choiceCount; c++) html += `<button class="bubble sm${ans.map(Number).includes(c) ? ' on' : ''}" data-c="${c}">${c}</button>`;
+          html += '</div>';
+        } else if (t === 'short'){
+          html += `<input class="input sans" value="${esc(ans.join(', '))}" placeholder="정답 (예: 12)" aria-label="${n}번 단답형 정답">`;
+        } else {
+          html += `<span class="essay-note">선생님 채점 · 부분점수</span>`;
+        }
+        const meta = (ex.meta && ex.meta[n]) || {};
+        html += `<input class="input pts" type="number" step="0.5" min="0.5" value="${exKey.points[n] ?? 3}" aria-label="${n}번 배점">
+          <label class="ac"><input type="checkbox" ${ac ? 'checked' : ''}> 전원정답</label>
+          <input class="input tag" list="tagList" placeholder="단원 태그" value="${esc(meta.tag || '')}" aria-label="${n}번 단원">
+          <select class="input lv" aria-label="${n}번 난이도">${['', '하', '중', '상'].map(l =>
+            `<option value="${l}" ${meta.level === l ? 'selected' : ''}>${l || '난이도'}</option>`).join('')}</select></div>`;
+      }
+    });
     rows.innerHTML = html;
     fillTagList();
     updateKeySum();
@@ -744,7 +889,9 @@
     $('keyRows').querySelectorAll('.key-row').forEach(r => {
       const n = +r.dataset.n;
       meta[n] = { tag: r.querySelector('.tag').value.trim() || null, level: r.querySelector('.lv').value || null };
-      answers[n] = [...r.querySelectorAll('.bubble.on')].map(b => +b.dataset.c);
+      const t = r.dataset.t;
+      answers[n] = t === 'short' ? r.querySelector('.sans').value.split(/[,，]/).map(x => x.trim()).filter(Boolean)
+        : t === 'essay' ? [] : [...r.querySelectorAll('.bubble.on')].map(b => +b.dataset.c);
       points[n] = parseFloat(r.querySelector('.pts').value) || 0;
       if (r.querySelector('.ac input').checked) allCorrect.push(n);
     });
@@ -753,8 +900,10 @@
   function updateKeySum(){
     const k = readKeyFromUI();
     const total = Object.values(k.points).reduce((a,b) => a + b, 0);
-    const filled = Object.entries(k.answers).filter(([n, a]) => a.length || k.allCorrect.includes(+n)).length;
-    $('keySum').textContent = `정답 ${filled}/${ex.questionCount} 입력 · 총점 ${OMR.round(total, 1)}점`;
+    const need = Object.keys(k.answers).filter(n => exTypes[n] !== 'essay');
+    const filled = need.filter(n => k.answers[n].length || k.allCorrect.includes(+n)).length;
+    const essayN = ex.questionCount - need.length;
+    $('keySum').textContent = `정답 ${filled}/${need.length} 입력${essayN ? ` · 서논술형 ${essayN}문항` : ''} · 총점 ${OMR.round(total, 1)}점`;
   }
   $('keyRows').addEventListener('click', e => {
     const b = e.target.closest('.bubble'); if (!b) return;
@@ -768,13 +917,13 @@
     const digits = $('quickKey').value.replace(/[^0-9]/g, '').split('').map(Number);
     const bad = digits.find(d => d < 1 || d > ex.choiceCount);
     if (bad !== undefined){ toast(`1~${ex.choiceCount} 숫자만 입력하세요`); return; }
-    $('keyRows').querySelectorAll('.key-row').forEach((r, i) => {
+    $('keyRows').querySelectorAll('.key-row[data-t="mc"]').forEach((r, i) => {
       if (i >= digits.length) return;
       r.querySelectorAll('.bubble').forEach(b => b.classList.toggle('on', +b.dataset.c === digits[i]));
       r.classList.remove('multi');
     });
     updateKeySum();
-    toast(`${Math.min(digits.length, ex.questionCount)}문항 채웠습니다`);
+    toast(`객관식 ${Math.min(digits.length, $('keyRows').querySelectorAll('.key-row[data-t="mc"]').length)}문항 채웠습니다`);
   };
   $('tagBulkBtn').onclick = () => {
     const m = $('tagRange').value.trim().match(/^(\d+)\s*(?:[-~]\s*(\d+))?$/);
@@ -791,7 +940,7 @@
   };
   $('saveKeyBtn').onclick = async () => {
     const k = readKeyFromUI();
-    const missing = Object.entries(k.answers).filter(([n, a]) => !a.length && !k.allCorrect.includes(+n)).map(([n]) => n);
+    const missing = Object.entries(k.answers).filter(([n, a]) => exTypes[n] !== 'essay' && !a.length && !k.allCorrect.includes(+n)).map(([n]) => n);
     if (Object.values(k.points).some(p => !(p > 0))){ toast('배점은 0보다 커야 합니다'); return; }
     if (missing.length && !confirm(`${missing.join(', ')}번 정답이 비어 있습니다. 그래도 저장할까요? (응시를 열려면 모두 입력해야 합니다)`)) return;
     const maxScore = OMR.round(Object.values(k.points).reduce((a,b) => a + b, 0), 2);
@@ -826,11 +975,11 @@
     $('subTbl').innerHTML = `<tr><th>이름</th><th>상태</th><th class="num">마킹</th><th>시각</th><th class="num">점수</th><th></th></tr>` +
       roster.map(r => {
         const s = byCode[r.code];
-        const marked = s ? Object.values(s.answers || {}).filter(a => a && a.length).length : 0;
+        const marked = s ? Object.entries(s.answers || {}).filter(([n, a]) => exTypes[n] !== 'essay' && a && a.length).length : 0;
         const status = !s ? '<span class="sub-status none">미응시</span>'
           : s.status === 'submitted' ? '<span class="sub-status submitted">제출</span>' : '<span class="sub-status draft">푸는 중</span>';
         return `<tr><td><b>${esc(r.name)}</b>${r._gone ? ' <span class="pill">명단 외</span>' : ''}</td><td>${status}</td>
-          <td class="num">${s ? `${marked}/${ex.questionCount}` : ''}</td>
+          <td class="num">${s ? `${marked}/${exTypes.filter(t => t && t !== 'essay').length}` : ''}</td>
           <td class="muted">${s ? fmtDateTime(s.submittedAt || s.savedAt) : ''}</td>
           <td class="num">${s && s.score != null ? `<b>${s.score}</b>` : ''}</td>
           <td style="text-align:right;">${s && s.status === 'submitted' ? `<button class="btn sm ghost" data-unlock="${s.id}">잠금 해제</button>` : ''}</td></tr>`;
@@ -851,8 +1000,13 @@
     if (!keyComplete()){ toast('정답이 모두 입력되지 않았습니다', 3000); return; }
     const subs = exSubs.filter(s => s.status === 'submitted');
     if (!subs.length){ toast('제출된 답안이 없습니다'); return; }
+    const essayNs = exTypes.map((t, n) => t === 'essay' ? n : 0).filter(Boolean);
+    if (essayNs.length){
+      const miss = subs.filter(s => essayNs.some(n => { const v = (essayScores[s.code] || {})[n]; return v == null || v === ''; }));
+      if (miss.length && !confirm(`서논술형 점수가 비어 있는 학생이 ${miss.length}명 있습니다 (${miss.slice(0, 5).map(s => s.name).join(', ')}${miss.length > 5 ? ' 등' : ''}).\n빈 칸은 0점으로 채점할까요?\n\n'취소'를 누르고 「서답형 채점」 탭에서 먼저 입력할 수 있어요.`)) return;
+    }
     toast('채점 중…', 1500);
-    const graded = OMR.gradeExam(ex, exKey, subs);
+    const graded = OMR.gradeExam(ex, exKey, subs, essayScores);
     const { results, stats } = graded;
     const an = OMR.examAnalytics(ex, graded);
     const now = FV.serverTimestamp();
@@ -908,6 +1062,82 @@
     toast(`${results.length}명 채점 완료${nRe ? ` · 재시험 대상 ${nRe}명` : ''}${ex.status === 'published' ? '' : ' · 확인 후 결과 공개를 누르세요'}`, 3600);
   }
 
+  // ───────── 서답형 채점: 단답형 답 모아보기 · 서논술형 점수 ─────────
+  function renderWritten(){
+    if (!ex) return;
+    const shortNs = [], essayNs = [];
+    exTypes.forEach((t, n) => { if (t === 'short') shortNs.push(n); if (t === 'essay') essayNs.push(n); });
+    $('wrShortWrap').classList.toggle('hidden', !shortNs.length);
+    $('wrEssayWrap').classList.toggle('hidden', !essayNs.length);
+    const subs = exSubs.filter(s => s.status === 'submitted');
+    // 단답형
+    $('wrShort').innerHTML = shortNs.map(n => {
+      const acc = (exKey.answers[n] || []).map(String);
+      const cnt = {};
+      subs.forEach(s => { const v = s.answers && s.answers[n]; const t = typeof v === 'string' ? v.trim() : ''; cnt[t] = (cnt[t] || 0) + 1; });
+      const blank = cnt[''] || 0; delete cnt[''];
+      const chips = Object.entries(cnt).sort((a, b) => b[1] - a[1]).map(([v, c]) => {
+        const ok = acc.some(a => OMR.shortEq(a, v));
+        return `<button class="${ok ? 'ok' : 'no'}" data-accept="${n}" data-v="${esc(v)}" ${ok ? 'disabled' : ''} title="${ok ? '정답' : '눌러서 정답으로 인정'}">${ok ? '○ ' : ''}${esc(v)}<small>${c}명</small></button>`;
+      }).join('');
+      return `<div class="wr-q"><div class="h"><b>${n}번</b><span class="qt short">단답형</span>
+        <span class="muted">정답: <b style="color:var(--ink);">${acc.length ? acc.map(esc).join(', ') : '미입력'}</b></span>${blank ? `<span class="muted">미응답 ${blank}명</span>` : ''}</div>
+        <div class="wr-chips">${chips || '<span class="muted">아직 제출된 답이 없어요.</span>'}</div></div>`;
+    }).join('');
+    // 서논술형
+    if (!essayNs.length) return;
+    const pts = exKey.points || {};
+    const roster = subs.slice().sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    if (!roster.length){ $('essayTbl').innerHTML = '<tr><td class="empty">제출한 학생이 없습니다.</td></tr>'; $('essayState').textContent = ''; return; }
+    let empty = 0;
+    $('essayTbl').innerHTML = `<tr><th>이름</th>${essayNs.map(n => `<th class="num">${n}번 <span class="muted">/${pts[n] ?? ''}</span></th>`).join('')}<th class="num">합계</th></tr>` +
+      roster.map(s => {
+        const sc = essayScores[s.code] || {};
+        let sum = 0;
+        return `<tr data-code="${esc(s.code)}"><td><b>${esc(s.name)}</b></td>${essayNs.map(n => {
+          const v = sc[n]; const has = v != null && v !== ''; if (has) sum += Number(v); else empty++;
+          return `<td class="num"><input type="number" step="0.5" min="0" max="${pts[n] ?? ''}" data-n="${n}" value="${has ? v : ''}" class="${has ? '' : 'empty'}" aria-label="${esc(s.name)} ${n}번 점수"></td>`;
+        }).join('')}<td class="num"><b class="esum">${OMR.round(sum, 1)}</b></td></tr>`;
+      }).join('');
+    $('essayState').textContent = empty ? `빈 칸 ${empty}개` : '모두 입력됨 ✓';
+  }
+  $('wrShort').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-accept]'); if (!b || b.disabled) return;
+    const n = +b.dataset.accept, v = b.dataset.v;
+    if (!confirm(`'${v}'를 ${n}번 정답으로 인정할까요?\n(같은 답을 쓴 학생 모두 정답 처리 · 다시 채점하면 반영)`)) return;
+    const acc = [...(exKey.answers[n] || []).map(String), v];
+    try {
+      await db.collection('omrKeys').doc(ex.id).set({ answers: { [n]: acc } }, { merge:true });
+      exKey.answers[n] = acc;
+      const inp = document.querySelector(`#keyRows .key-row[data-n="${n}"] .sans`); if (inp) inp.value = acc.join(', ');
+      renderWritten(); toast(`${n}번에 '${v}' 정답 추가 · ${ex.gradedAt ? '다시 채점하면 반영돼요' : '채점할 때 반영돼요'}`, 3000);
+    } catch(err){ handleErr(err); }
+  });
+  $('essayTbl').addEventListener('input', e => {
+    const tr = e.target.closest('tr[data-code]'); if (!tr) return;
+    e.target.classList.toggle('empty', e.target.value === '');
+    tr.querySelector('.esum').textContent = OMR.round([...tr.querySelectorAll('input')].reduce((a, i) => a + (parseFloat(i.value) || 0), 0), 1);
+    $('essayState').textContent = '저장 안 됨';
+  });
+  $('essaySaveBtn').onclick = async () => {
+    const pts = exKey.points || {}, scores = { ...essayScores };
+    for (const tr of $('essayTbl').querySelectorAll('tr[data-code]')){
+      const row = {};
+      for (const i of tr.querySelectorAll('input')){
+        if (i.value === '') continue;
+        const v = parseFloat(i.value), mx = Number(pts[i.dataset.n]);
+        if (isNaN(v) || v < 0 || (mx && v > mx)){ i.focus(); toast(`${i.dataset.n}번은 0~${mx}점 사이로 입력하세요`); return; }
+        row[i.dataset.n] = v;
+      }
+      scores[tr.dataset.code] = row;
+    }
+    try {
+      await db.collection('omrKeys').doc(ex.id + '__essay').set({ examId: ex.id, scores, updatedAt: FV.serverTimestamp() });
+      essayScores = scores; renderWritten();
+      toast(ex.gradedAt ? '저장했습니다 · 다시 채점하면 성적표에 반영돼요' : '저장했습니다', 3000);
+    } catch(err){ handleErr(err); }
+  };
+
   // ───────── 성적 ─────────
   function gradedSubs(){
     return exSubs.filter(s => s.status === 'submitted' && s.score != null)
@@ -940,6 +1170,15 @@
     }).join('');
     const key = exKey.answers || {};
     $('qStats').innerHTML = (st.questionStats || []).map(q => {
+      const qt = q.type || 'mc';
+      if (qt === 'short' || qt === 'essay'){
+        const body = qt === 'short'
+          ? (q.answers || []).map(a => `<span class="${a.ok ? 'ans' : ''}">${esc(a.v)} ${a.c}</span>`).join('') + (q.blank ? `<span>미응답 ${q.blank}</span>` : '')
+          : `<span>평균 ${q.avg ?? '-'}점 / ${(ex.points || {})[q.n] ?? ''}점</span>`;
+        return `<div class="qstat"><b>${q.n}번</b>
+          <div><div class="bar ${q.rate < 50 ? 'low' : ''}"><i style="width:${q.rate}%"></i></div><div class="dist"><span class="qt ${qt}">${OMR.QTYPES[qt]}</span>${body}</div></div>
+          <b class="num" style="text-align:right;">${q.rate}%</b></div>`;
+      }
       const ans = (key[q.n] || []).map(Number);
       const wrongs = Object.entries(q.dist).filter(([c]) => !ans.includes(+c)).sort((a,b) => b[1]-a[1]);
       const trap = wrongs.length && wrongs[0][1] > 0 ? +wrongs[0][0] : null;

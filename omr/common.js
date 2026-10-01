@@ -86,12 +86,51 @@
     toast('복사했습니다');
   }
 
+  // ───────── 문항 구성 (5지선다 · 단답형 · 서논술형) ─────────
+  // exam.layout = [{type:'mc'|'short'|'essay', count}] 순서대로 1번부터 이어짐. 없으면(예전 시험) 모두 객관식.
+  const QTYPES = { mc: '5지선다', short: '단답형', essay: '서논술형' };
+  function examTypes(exam) {
+    const t = [null], qn = exam.questionCount || 0;
+    (Array.isArray(exam.layout) ? exam.layout : []).forEach(seg => {
+      for (let i = 0; i < (seg.count || 0); i++) t.push(QTYPES[seg.type] ? seg.type : 'mc');
+    });
+    while (t.length <= qn) t.push('mc');
+    return t.slice(0, qn + 1);
+  }
+  /** [{type, from, to}] — 같은 유형이 이어지면 한 구간으로 */
+  function examSegments(exam) {
+    const t = examTypes(exam), out = [];
+    for (let n = 1; n < t.length; n++) {
+      const last = out[out.length - 1];
+      if (last && last.type === t[n]) last.to = n; else out.push({ type: t[n], from: n, to: n });
+    }
+    return out;
+  }
+  function layoutText(exam) {
+    if (!Array.isArray(exam.layout) || !exam.layout.length) return `${exam.choiceCount || 5}지선다`;
+    return examSegments(exam).map(s => `${s.from === s.to ? s.from : s.from + '~' + s.to}번 ${QTYPES[s.type]}`).join(' · ');
+  }
+  // 단답형 비교: 공백 무시, 숫자는 값으로(12 = 12.0), 전각·특수 대시 정리
+  function shortNorm(v) {
+    return String(v == null ? '' : v).normalize('NFKC').replace(/\s+/g, '').replace(/[−–—]/g, '-').toLowerCase();
+  }
+  function shortEq(a, b) {
+    const x = shortNorm(a), y = shortNorm(b);
+    if (!x || !y) return false;
+    if (x === y) return true;
+    const num = /^[-+]?(\d+\.?\d*|\.\d+)$/;
+    return num.test(x) && num.test(y) && Number(x) === Number(y);
+  }
+
   // ───────── 답안 정규화 ─────────
-  // answers: {"1":[3], "2":[], ...}
-  function normalizeAnswers(raw, questionCount, choiceCount) {
+  // answers: {"1":[3], "19":"12", ...}  객관식은 배열, 단답형은 문자열, 서논술형은 [] (답안지에 작성)
+  function normalizeAnswers(raw, questionCount, choiceCount, types) {
     const out = {};
     for (let n = 1; n <= questionCount; n++) {
       const v = raw && raw[String(n)];
+      const ty = types ? types[n] : 'mc';
+      if (ty === 'short') { out[n] = typeof v === 'string' ? v.slice(0, 40) : (Array.isArray(v) || v == null ? '' : String(v).slice(0, 40)); continue; }
+      if (ty === 'essay') { out[n] = []; continue; }
       const arr = Array.isArray(v) ? v : (v == null || v === '' ? [] : [v]);
       out[n] = [...new Set(arr.map(Number))]
         .filter(m => Number.isInteger(m) && m >= 1 && m <= choiceCount)
@@ -101,42 +140,56 @@
   }
 
   // ───────── 채점 ─────────
-  // 규칙: 정확히 1개 마킹 + 그 번호가 정답 목록(복수 정답 인정)에 있으면 정답.
-  //       미응답·중복 마킹은 오답. allCorrect 문항은 전원 정답.
-  function gradeOne(q, marked) {
+  // 객관식: 정확히 1개 마킹 + 정답 목록(복수 정답 인정)에 있으면 정답. 미응답·중복 마킹은 오답.
+  // 단답형: 인정 답안 중 하나와 같으면 정답.  서논술형: 선생님이 입력한 점수(부분 점수), 만점이면 정답.
+  // allCorrect 문항은 전원 정답.
+  function gradeOne(q, marked, essayScore) {
     if (q.allCorrect) return { ok: true, earned: q.points };
+    if (q.type === 'essay') {
+      const v = Math.max(0, Math.min(q.points, Number(essayScore) || 0));
+      return { ok: v >= q.points, earned: v, partial: v > 0 && v < q.points, scored: essayScore != null && essayScore !== '' };
+    }
+    if (q.type === 'short') {
+      const ok = q.answers.some(a => shortEq(a, marked));
+      return { ok, earned: ok ? q.points : 0 };
+    }
     const ok = marked.length === 1 && q.answers.includes(marked[0]);
     return { ok, earned: ok ? q.points : 0 };
   }
 
   /**
-   * exam: {questionCount, choiceCount}
-   * key:  {answers: {"1":[3],...}, points: {"1":3,...}, allCorrect: [번호...]}
+   * exam: {questionCount, choiceCount, layout}
+   * key:  {answers: {"1":[3], "19":["12"], ...}, points: {"1":3,...}, allCorrect: [번호...]}
    * subs: [{code, name, answers}]  (최종 제출분만)
+   * essay: {학생코드: {"22": 4.5, ...}}  서논술형 점수 (선택)
    * 반환: { questions, results[], stats }
    */
-  function gradeExam(exam, key, subs) {
-    const qn = exam.questionCount;
+  function gradeExam(exam, key, subs, essay) {
+    const qn = exam.questionCount, types = examTypes(exam);
     const questions = [];
     for (let n = 1; n <= qn; n++) {
-      const ans = (key.answers && key.answers[n]) || [];
+      const type = types[n];
+      const raw = (key.answers && key.answers[n]) || [];
       const allCorrect = (key.allCorrect || []).includes(n);
-      if (!allCorrect && !ans.length) throw new Error(`${n}번 정답이 비어 있습니다.`);
+      if (type !== 'essay' && !allCorrect && !raw.length) throw new Error(`${n}번 정답이 비어 있습니다.`);
       const meta = (exam.meta && exam.meta[n]) || {};
-      questions.push({ n, answers: ans.map(Number), points: Number(key.points[n]) || 0, allCorrect,
-                       tag: meta.tag || null, level: meta.level || null });
+      questions.push({ n, type, answers: type === 'short' ? raw.map(String) : type === 'essay' ? [] : raw.map(Number),
+                       points: Number(key.points[n]) || 0, allCorrect, tag: meta.tag || null, level: meta.level || null });
     }
     const maxScore = questions.reduce((s, q) => s + q.points, 0);
 
     const results = subs.map(sub => {
-      const marks = normalizeAnswers(sub.answers, qn, exam.choiceCount);
+      const marks = normalizeAnswers(sub.answers, qn, exam.choiceCount, types);
+      const es = (essay && essay[sub.code]) || {};
       let total = 0, correct = 0;
       const qs = questions.map(q => {
         const marked = marks[q.n];
-        const { ok, earned } = gradeOne(q, marked);
-        total += earned; correct += ok ? 1 : 0;
-        return { n: q.n, marked, correct: q.answers, ok, blank: !marked.length,
-                 points: q.points, earned, allCorrect: q.allCorrect, tag: q.tag, level: q.level };
+        const g = gradeOne(q, marked, es[q.n]);
+        total += g.earned; correct += g.ok ? 1 : 0;
+        const x = { n: q.n, type: q.type, marked, correct: q.answers, ok: g.ok, blank: q.type === 'essay' ? false : !marked.length,
+                    points: q.points, earned: round(g.earned, 2), allCorrect: q.allCorrect, tag: q.tag, level: q.level };
+        if (q.type === 'essay') { x.partial = !!g.partial; x.scored = !!g.scored; }
+        return x;
       });
       return { code: sub.code, name: sub.name, score: round(total, 2), correctCount: correct, questions: qs };
     });
@@ -157,15 +210,22 @@
     const std = N ? Math.sqrt(scores.reduce((a, b) => a + (b - mean) ** 2, 0) / N) : 0;
     const questionStats = questions.map(q => {
       const dist = {};
-      for (let c = 1; c <= exam.choiceCount; c++) dist[c] = 0;
-      let ok = 0, blank = 0;
+      if (q.type === 'mc') for (let c = 1; c <= exam.choiceCount; c++) dist[c] = 0;
+      let ok = 0, blank = 0, earned = 0;
+      const shortAns = {};
       results.forEach(r => {
         const x = r.questions[q.n - 1];
         if (x.ok) ok++;
         if (x.blank) blank++;
-        x.marked.forEach(m => { dist[m]++; });
+        earned += x.earned;
+        if (q.type === 'mc') x.marked.forEach(m => { dist[m]++; });
+        else if (q.type === 'short' && x.marked) { const k = String(x.marked).trim(); shortAns[k] = (shortAns[k] || 0) + 1; }
       });
-      return { n: q.n, rate: N ? round(ok / N * 100, 1) : 0, blank, dist };
+      const st = { n: q.n, type: q.type, rate: N ? round(ok / N * 100, 1) : 0, blank, dist };
+      if (q.type === 'short') st.answers = Object.entries(shortAns).sort((a, b) => b[1] - a[1]).slice(0, 8)
+        .map(([v, c]) => ({ v, c, ok: q.allCorrect || q.answers.some(a => shortEq(a, v)) }));
+      if (q.type === 'essay') { st.avg = N ? round(earned / N, 2) : 0; st.rate = N && q.points ? round(earned / N / q.points * 100, 1) : 0; }
+      return st;
     });
     results.forEach(r => r.questions.forEach(x => { x.rate = questionStats[x.n - 1].rate; }));
 
@@ -605,6 +665,7 @@
     db, FV, MESSAGE_TEMPLATE, renderMessage, genCode, genToken, esc, toDate, fmtDateTime,
     GRADE_BANDS, gradeOf, examAnalytics,
     normalizePhone, fmtPhone, round, toast, copyText, normalizeAnswers, gradeOne, gradeExam,
+    QTYPES, examTypes, examSegments, layoutText, shortEq,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
     ACADEMIES, rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,

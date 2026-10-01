@@ -36,6 +36,8 @@
   .qc.ok .r{color:var(--ok);}
   .qc.no{background:var(--red-soft);border-color:rgba(214,48,31,.25);}
   .qc.no .r{color:var(--red);}
+  .qc.part{background:#fdf3e6;border-color:rgba(224,138,46,.35);} .qc.part .r{color:#b45309;font-size:15px;}
+  .qc .ty{font-size:9.5px;font-weight:800;color:var(--dim);}
 
   .wl{display:grid;grid-template-columns:44px 1fr 88px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line2);font-size:13.5px;}
   .wl:last-child{border-bottom:0;}
@@ -75,7 +77,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=10"></script>
+<script src="common.js?v=11"></script>
 <script>
 (async function(){
   const { db, esc } = OMR;
@@ -103,7 +105,10 @@
   const tagMap = {};
   r.questions.forEach(q => { if (!q.tag) return; const t = tagMap[q.tag] = tagMap[q.tag] || { tag:q.tag, ok:0, total:0 }; t.total++; if (q.ok) t.ok++; });
   const tagRows = Object.values(tagMap).sort((a,b) => a.ok/a.total - b.ok/b.total);
-  const ansText = a => a && a.length ? a.join('·') : '—';
+  const ansText = a => Array.isArray(a) ? (a.length ? esc(a.join(' · ')) : '—') : (a ? esc(a) : '—');
+  const TY = { short:'단답', essay:'서술' };
+  const qcCls = q => q.ok ? 'ok' : q.type === 'essay' && q.earned > 0 ? 'part' : 'no';
+  const qcMark = q => q.type === 'essay' && !q.allCorrect ? `${q.earned}<span style="font-size:10px;">/${q.points}</span>` : (q.ok ? '○' : '✕');
 
   const G = r.grade, sysLabel = r.gradeSystem === '9' ? '수능 9등급' : r.gradeSystem === '5' ? '내신 5등급' : '';
   const topPct = r.percentile != null ? Math.max(0, Math.round((100 - r.percentile) * 10) / 10) : null;
@@ -228,7 +233,7 @@
       <div class="tbl-wrap"><table class="tbl"><tr><th>순위</th><th>문항</th><th class="num">배점</th><th class="num">정답률</th><th class="num">내 결과</th></tr>
         ${r.topWrong.map((q, i) => { const mine = r.questions[q.n - 1];
           return `<tr><td>${i + 1}위</td><td><b>${q.n}번</b>${q.tag ? ` <span class="muted">${esc(q.tag)}</span>` : ''}</td><td class="num">${q.points}점</td><td class="num">${Math.round(q.rate * 10) / 10}%</td>
-            <td class="num"><span class="pill ${mine && mine.ok ? 'open' : 'red'}">${mine && mine.ok ? '정답' : '오답'}</span></td></tr>`; }).join('')}
+            <td class="num">${mine && mine.type === 'essay' && !mine.ok ? `<span class="pill ${mine.earned > 0 ? 'closed' : 'red'}">${mine.earned}/${mine.points}점</span>` : `<span class="pill ${mine && mine.ok ? 'open' : 'red'}">${mine && mine.ok ? '정답' : '오답'}</span>`}</td></tr>`; }).join('')}
       </table></div></div>` : ''}
 
     <div class="card">
@@ -236,19 +241,21 @@
       <div class="legend"><span>○ 정답</span><span style="color:var(--red);">✕ 오답</span><span>아래 숫자 = 반 정답률</span></div>
       <div class="qgrid">
         ${r.questions.map(q => `
-          <div class="qc ${q.ok ? 'ok' : 'no'}" title="내 답 ${ansText(q.marked)} / 정답 ${ansText(q.correct)}">
-            <div class="n">${q.n}번</div><div class="r">${q.ok ? '○' : '✕'}</div><div class="d">${Math.round(q.rate)}%</div>
+          <div class="qc ${qcCls(q)}" title="${q.type === 'essay' ? `서논술형 ${q.earned}/${q.points}점` : `내 답 ${ansText(q.marked)} / 정답 ${ansText(q.correct)}`}">
+            <div class="n">${q.n}번${TY[q.type] ? ` <span class="ty">${TY[q.type]}</span>` : ''}</div><div class="r">${qcMark(q)}</div><div class="d">${Math.round(q.rate)}%</div>
           </div>`).join('')}
       </div>
     </div>
 
     <div class="card">
-      <h3>틀린 문항 ${wrong.length ? `<span class="pill red">${wrong.length}개</span>` : ''}</h3>
+      <h3>${wrong.some(q => q.type === 'essay') ? '틀리거나 감점된 문항' : '틀린 문항'} ${wrong.length ? `<span class="pill red">${wrong.length}개</span>` : ''}</h3>
       ${wrong.length ? wrong.map(q => `
         <div class="wl">
           <b>${q.n}번</b>
           <div>
-            <div class="ans">내 답 <b style="color:var(--red);">${q.blank ? '미응답' : ansText(q.marked)}</b> · 정답 <b style="color:var(--ok);">${ansText(q.correct)}</b> · ${q.points}점</div>
+            <div class="ans">${q.type === 'essay'
+              ? `서논술형 · 내 점수 <b style="color:${q.earned > 0 ? '#b45309' : 'var(--red)'};">${q.earned}점</b> / ${q.points}점`
+              : `${q.type === 'short' ? '단답형 · ' : ''}내 답 <b style="color:var(--red);">${q.blank ? '미응답' : ansText(q.marked)}</b> · 정답 <b style="color:var(--ok);">${ansText(q.correct)}</b> · ${q.points}점`}</div>
           </div>
           <div class="rate">반 정답률 ${Math.round(q.rate)}%<div class="bar" style="margin-top:4px;"><i style="width:${q.rate}%"></i></div></div>
         </div>`).join('') : '<p class="muted">모든 문항을 맞혔습니다. 👏</p>'}
