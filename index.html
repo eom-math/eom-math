@@ -913,7 +913,7 @@
       <span class="bn-go" aria-hidden="true">→</span>
     </a>
 
-    <a class="bn" id="bnTrend" href="omr/">
+    <a class="bn" id="bnTrend" href="omr/review.html">
       <div class="bn-l"><span class="bn-k">Review test</span><b>복습 테스트 추이</b><span class="bn-s" id="bnTrendCnt">최근 5회</span></div>
       <div class="bn-c" id="bnTrendBody"><span class="bn-empty">불러오는 중…</span></div>
       <span class="bn-go" aria-hidden="true">→</span>
@@ -1112,7 +1112,7 @@
     setAdminUI(!!user);
   });
 </script>
-<script src="omr/common.js?v=7"></script>
+<script src="omr/common.js?v=8"></script>
 <script>
 (function(){
   var btn=document.getElementById('tocBtn'), toc=document.getElementById('toc'),
@@ -1337,8 +1337,7 @@
     $('bnTrendCnt').textContent = d.trend.length ? '최근 ' + d.trend.length + '회' : '최근 5회';
     if (!sample){
       if (d.latest) $('bnDaily').href = 'omr/daily-report.html?t=' + encodeURIComponent(d.latest.token);
-      var last = d.trend[d.trend.length - 1];
-      if (last && last.token) $('bnTrend').href = 'omr/daily-report.html?t=' + encodeURIComponent(last.token);
+      $('bnTrend').href = 'omr/review.html';
       var first = d.week[0];
       $('bnWeek').href = first && first.href ? first.href : 'omr/';
     }
@@ -1355,6 +1354,11 @@
     $('dashLogin').onclick = function(e){ e.preventDefault(); if (window.openGate) window.openGate(); else location.href = 'omr/'; };
     $('dashWho').textContent = '';
   }
+  ['bnWeek','bnDaily','bnTrend'].forEach(function(id){
+    $(id).addEventListener('click', function(e){
+      if ($(id).classList.contains('sample') && window.openGate){ e.preventDefault(); window.openGate(id === 'bnTrend' ? 'omr/review.html' : null); }
+    });
+  });
   var code = null; try { code = localStorage.getItem('omrStudentCode'); } catch(e){}
   if (!code){ showSample(); return; }
   OMR.studentByCode(code).then(function(me){

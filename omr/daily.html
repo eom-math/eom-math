@@ -174,10 +174,12 @@
         <div><label class="f">오늘 진도</label><input class="input" id="lProgress" placeholder="예: 공통수학2 명제 — 필요·충분조건"></div>
         <div><label class="f">다음 과제 범위</label><input class="input" id="lNext" placeholder="예: 쎈 B단계 212~240번"></div>
       </div>
-      <div class="grid2" style="margin-top:10px;">
+      <div class="grid3" style="margin-top:10px;">
+        <div><label class="f">복습 단원 <span style="font-weight:600;">(단원별 분석에 쓰여요)</span></label><input class="input" id="lUnit" list="unitList" placeholder="예: 명제"></div>
         <div><label class="f">복습 테스트 이름</label><input class="input" id="lTest" placeholder="예: 명제 복습테스트"></div>
         <div><label class="f">만점</label><input class="input" type="number" id="lMax" min="1" placeholder="100"></div>
       </div>
+      <datalist id="unitList"></datalist>
       <div style="margin-top:14px;">
         <div class="fl"><span>보완 유형 목록 <span style="font-weight:600;">— 학생 카드에서 눌러 표시합니다</span></span></div>
         <div class="chips" id="typeChips"></div>
@@ -237,7 +239,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=7"></script>
+<script src="common.js?v=8"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, genToken, round } = OMR;
@@ -366,14 +368,14 @@
     if (!className || !date){ $('newMsg').textContent = '반과 날짜를 입력하세요.'; return; }
     $('newCreateBtn').disabled = true;
     try {
-      let types = [], maxScore = 100, prevTitle = '';
+      let types = [], maxScore = 100, prevTitle = '', prevUnit = '';
       const prev = (await db.collection('dailyLessons').where('className','==',className).get()).docs
         .map(d => d.data()).sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
-      if (prev){ maxScore = prev.maxScore || 100; prevTitle = prev.title || ''; if ($('nCopyTypes').checked) types = prev.types || []; }
+      if (prev){ maxScore = prev.maxScore || 100; prevTitle = prev.title || ''; prevUnit = prev.unit || ''; if ($('nCopyTypes').checked) types = prev.types || []; }
       let title = $('nTitle').value.trim();
       if (!title){ const m = prevTitle.match(/(\d+)\s*회차/); title = m ? `${+m[1] + 1}회차` : ''; }
       const ref = await db.collection('dailyLessons').add({
-        className, date, title, progress:'', nextHomework:'', testName:'', maxScore, types, files:[],
+        className, date, title, progress:'', nextHomework:'', testName:'', unit: prevUnit, maxScore, types, files:[],
         status:'draft', filledCount:0,
         createdAt: FV.serverTimestamp(), updatedAt: FV.serverTimestamp(),
         createdBy: { uid:me.uid, name:me.name }, updatedBy: { uid:me.uid, name:me.name },
@@ -403,6 +405,16 @@
     renderPublished();
   }
 
+  let unitCache = null;
+  async function fillUnitList(){
+    if (!unitCache){
+      const set = new Set();
+      try { (await db.collection('dailyLessons').get()).docs.forEach(d => { const u = d.data().unit; if (u) set.add(u); }); } catch(e){}
+      try { const t = await db.collection('omrTypes').doc('tree').get(); if (t.exists) (t.data().items || []).forEach(x => { if (x.mid) set.add(x.mid); }); } catch(e){}
+      unitCache = [...set].sort((a,b) => a.localeCompare(b, 'ko'));
+    }
+    $('unitList').innerHTML = unitCache.map(u => `<option value="${esc(u)}">`).join('');
+  }
   function students(){ return roster.filter(s => s.className === lesson.className); }
 
   function renderLessonForm(){
@@ -412,6 +424,8 @@
     $('lProgress').value = lesson.progress || '';
     $('lNext').value = lesson.nextHomework || '';
     $('lTest').value = lesson.testName || '';
+    $('lUnit').value = lesson.unit || '';
+    fillUnitList();
     $('lMax').value = lesson.maxScore || '';
     $('lessonKicker').textContent = `${lesson.className} · ${OMR.fmtKDate(lesson.date)}`;
     const pub = lesson.status === 'published';
@@ -433,7 +447,7 @@
       } catch(e){ $('lessonSaveMsg').textContent = '저장 실패'; handleErr(e); }
     }, 500);
   }
-  [['lDate','date'],['lTitle','title'],['lProgress','progress'],['lNext','nextHomework'],['lTest','testName']].forEach(([id,k]) => {
+  [['lDate','date'],['lTitle','title'],['lProgress','progress'],['lNext','nextHomework'],['lTest','testName'],['lUnit','unit']].forEach(([id,k]) => {
     $(id).addEventListener('change', () => { saveLesson({ [k]: $(id).value.trim() }); if (k === 'date') $('lessonKicker').textContent = `${lesson.className} · ${OMR.fmtKDate(lesson.date)}`; });
   });
   $('lMax').addEventListener('change', () => { const v = Number($('lMax').value); saveLesson({ maxScore: v > 0 ? v : 100 }); renderStudents(); });
@@ -654,7 +668,7 @@
     return {
       lessonId: lesson.id, code: s.code, name: s.name, className: lesson.className,
       date: lesson.date, title: lesson.title || '', progress: lesson.progress || '', nextHomework: lesson.nextHomework || '',
-      testName: lesson.testName || '', maxScore: lesson.maxScore || 100,
+      testName: lesson.testName || '', unit: lesson.unit || '', maxScore: lesson.maxScore || 100,
       attendance: en.attendance || 'present',
       score: typeof en.score === 'number' ? en.score : null,
       homework: typeof en.homework === 'number' ? en.homework : null,
@@ -681,7 +695,7 @@
       list.forEach((s, i) => {
         const en = entries[s.code];
         const token = en.token || genToken();
-        const me2 = { lessonId: lesson.id, token, date: lesson.date, title: lesson.title || '',
+        const me2 = { lessonId: lesson.id, token, date: lesson.date, title: lesson.title || '', unit: lesson.unit || lesson.testName || '',
           score: typeof en.score === 'number' ? en.score : null, max: lesson.maxScore || 100, avg: st.avg,
           absent: en.attendance === 'absent' };
         const items = links[i].filter(x => x.lessonId !== lesson.id).concat(me2)

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>복습 테스트 분석 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=5">
+<style>
+  :root{ --hl:#FFE45C; --teal:#2F8F8B; --teal-soft:#BFE3E0; }
+  .wrap{max-width:640px;}
+  .sumbox{background:var(--ink);color:#fff;border-radius:16px;padding:20px 20px 18px;margin-bottom:12px;}
+  .sumbox .k{font-size:11.5px;font-weight:800;letter-spacing:.14em;color:#ff7a6c;}
+  .sumbox h1{color:#fff;font-size:21px;line-height:1.45;margin:8px 0 14px;font-weight:800;letter-spacing:-.02em;word-break:keep-all;}
+  .sumbox h1 em{font-style:normal;color:#ff8a78;}
+  .sumbox h1 mark{background:none;color:#FFE45C;}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  @media (max-width:440px){ .kpis{grid-template-columns:repeat(2,1fr);} }
+  .kpis > div{background:rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;}
+  .kpis .l{font-size:11px;opacity:.65;font-weight:700;}
+  .kpis .v{font-size:21px;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+  .kpis .v small{font-size:11.5px;opacity:.6;font-weight:700;margin-left:1px;}
+  .kpis .up{color:#7DDBA3;} .kpis .down{color:#ff8a78;}
+
+  .sec{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;}
+  .sec h2{font-size:16px;margin:0 0 4px;display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+  .sec h2 small{font-size:12px;color:var(--faint);font-weight:700;}
+  .sec .sub{font-size:12.5px;color:var(--dim);margin-bottom:12px;}
+  .chart svg{width:100%;height:auto;display:block;}
+  .legend{display:flex;gap:12px;justify-content:flex-end;font-size:11.5px;color:var(--dim);margin-top:4px;flex-wrap:wrap;}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:4px;border-radius:2px;}
+
+  .unit{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:12px 0;border-bottom:1px solid var(--line2);}
+  .unit:last-child{border-bottom:0;padding-bottom:2px;}
+  .unit .nm{font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .unit .st{font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;}
+  .st.good{background:var(--ok-soft);color:var(--ok);} .st.mid{background:var(--warn-soft);color:var(--warn);} .st.need{background:var(--red-soft);color:var(--red);}
+  .unit .pc{text-align:right;font-weight:900;font-size:18px;font-variant-numeric:tabular-nums;}
+  .unit .pc small{font-size:11px;color:var(--faint);font-weight:700;}
+  .unit .meta{grid-column:1 / -1;font-size:12px;color:var(--dim);}
+  .ubar{grid-column:1 / -1;position:relative;height:10px;border-radius:99px;background:var(--bg2);margin-top:4px;}
+  .ubar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;}
+  .ubar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);}
+  .unit .wk{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:4px;font-size:12.5px;}
+  .unit .wk span{font-weight:700;background:linear-gradient(transparent 50%,var(--hl) 50%);padding:0 2px;}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media (max-width:520px){ .cols{grid-template-columns:1fr;} }
+  .cols .sec{margin-bottom:0;}
+  .list{display:flex;flex-direction:column;gap:6px;}
+  .list .it{display:flex;align-items:center;gap:8px;font-size:13.5px;}
+  .list .it b{font-weight:800;}
+  .list .it .c{margin-left:auto;font-size:11.5px;font-weight:800;color:var(--dim);white-space:nowrap;}
+  .list .it .hlx{background:linear-gradient(transparent 50%,var(--hl) 50%);padding:0 2px;}
+  .none{font-size:13px;color:var(--dim);}
+
+  .todo{background:var(--red);color:#fff;border-radius:14px;padding:16px;margin:12px 0;}
+  .todo h2{color:#fff;font-size:16px;margin:0 0 8px;}
+  .todo ol{margin:0;padding-left:20px;font-size:14px;line-height:1.7;}
+  .todo .btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  .todo .btns a{background:#fff;color:var(--red);text-decoration:none;font-weight:800;font-size:13px;padding:9px 13px;border-radius:8px;}
+
+  .hist a{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line2);text-decoration:none;color:inherit;font-size:13.5px;}
+  .hist a:last-child{border-bottom:0;}
+  .hist .d{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;}
+  .hist .u{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .hist .s{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;}
+  .hist .s small{color:var(--faint);font-weight:700;}
+  .hist .s .x{display:block;font-size:11px;font-weight:700;}
+  .x.up{color:var(--ok);} .x.down{color:var(--red);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="../#quick">← 엄형국 <span>수학</span></a>
+    <span class="sub" id="whoami"></span>
+  </div>
+  <div id="root"><div class="empty">복습 테스트 기록을 불러오는 중…</div></div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=8"></script>
+<script>
+(async function(){
+  const { db, esc, round } = OMR;
+  const $ = id => document.getElementById(id);
+  const me = await OMR.requireStudent(); if (!me) return;
+  $('whoami').textContent = me.name + ' · ' + me.className;
+  const root = $('root');
+  const fail = m => { root.innerHTML = `<div class="empty">${m}</div>`; };
+
+  // ───── 데이터: 학생별 리포트 목록 + 각 리포트(단원·보완 유형) ─────
+  let items = [];
+  try {
+    const d = await db.collection('dailyReportLinks').doc(me.code).get();
+    items = d.exists ? (d.data().items || []) : [];
+  } catch(e){ console.error(e); return fail('불러오지 못했어요. 잠시 후 다시 시도해 주세요.'); }
+  items = items.filter(x => x.score != null && !x.absent).sort((a,b) => (a.date || '').localeCompare(b.date || '')).slice(-30);
+  if (!items.length) return fail('아직 복습 테스트 기록이 없어요.<br>수업 리포트가 쌓이면 단원별 분석이 여기에 나와요.');
+  const reps = await Promise.all(items.map(x => db.collection('dailyReports').doc(x.token).get().then(s => s.exists ? s.data() : null).catch(() => null)));
+  const tests = items.map((x, i) => {
+    const r = reps[i] || {};
+    const max = x.max || r.maxScore || 100;
+    const unit = (r.unit || x.unit || r.testName || (r.progress || '').split(/[—\-·:]/)[0] || '').trim() || '미분류';
+    return { date: x.date, title: x.title || r.title || '', token: x.token, score: x.score, max, avg: x.avg ?? r.avg ?? null,
+      pct: x.score / max * 100, avgPct: (x.avg ?? r.avg) != null ? (x.avg ?? r.avg) / max * 100 : null,
+      unit, weak: r.weak || [], testName: r.testName || '' };
+  });
+
+  // ───── 전체 추이 ─────
+  const N = tests.length, mean = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : null;
+  const allPct = mean(tests.map(t => t.pct));
+  const vsAvg = mean(tests.filter(t => t.avgPct != null).map(t => t.pct - t.avgPct));
+  const k = Math.min(3, Math.floor(N / 2));
+  const recent = k ? mean(tests.slice(-k).map(t => t.pct)) : null, before = k ? mean(tests.slice(-2 * k, -k).map(t => t.pct)) : null;
+  const delta = recent != null && before != null ? round(recent - before, 1) : null;
+  const best = tests.reduce((b, t) => t.pct > b.pct ? t : b, tests[0]);
+  // 최소제곱 기울기(회당 %p)로 흐름 판단
+  const xs = tests.map((_, i) => i), xm = mean(xs), ym = allPct;
+  const slope = N >= 3 ? xs.reduce((s, x, i) => s + (x - xm) * (tests[i].pct - ym), 0) / xs.reduce((s, x) => s + (x - xm) ** 2, 0) : 0;
+  const trendWord = N < 3 ? '기록이 더 쌓이면 흐름을 알려드릴게요' : slope > 1 ? '꾸준히 오르는 중이에요' : slope < -1 ? '조금씩 내려가고 있어요' : '안정적으로 유지되고 있어요';
+
+  // ───── 단원별 ─────
+  const units = {};
+  tests.forEach(t => {
+    const u = units[t.unit] = units[t.unit] || { name: t.unit, tests: [], weak: {} };
+    u.tests.push(t);
+    t.weak.forEach(w => { u.weak[w] = (u.weak[w] || 0) + 1; });
+  });
+  const unitRows = Object.values(units).map(u => {
+    const pct = mean(u.tests.map(t => t.pct));
+    const avgs = u.tests.filter(t => t.avgPct != null);
+    const avgPct = avgs.length ? mean(avgs.map(t => t.avgPct)) : null;
+    const diff = avgPct != null ? pct - avgPct : null;
+    const last = u.tests[u.tests.length - 1];
+    const weakList = Object.entries(u.weak).sort((a,b) => b[1] - a[1]);
+    const repeated = weakList.filter(([, c]) => c >= 2).length;
+    // 판단: 80% 이상이고 반 평균 이상 → 잘 됨 / 70% 미만이거나 반 평균보다 5%p 이상 낮거나 같은 유형 반복 실수 → 추가 학습 필요
+    let status = 'mid';
+    if (pct >= 80 && (diff == null || diff >= 0) && !repeated) status = 'good';
+    else if (pct < 70 || (diff != null && diff <= -5) || repeated) status = 'need';
+    return { ...u, pct, avgPct, diff, last, weakList, status, count: u.tests.length };
+  }).sort((a,b) => ({ need:0, mid:1, good:2 }[a.status] - { need:0, mid:1, good:2 }[b.status]) || a.pct - b.pct);
+  const good = unitRows.filter(u => u.status === 'good'), need = unitRows.filter(u => u.status === 'need');
+
+  // ───── 보완 유형: 반복 / 극복 ─────
+  const weakAll = {};
+  tests.forEach((t, i) => t.weak.forEach(w => { const o = weakAll[w] = weakAll[w] || { name: w, count: 0, first: i, last: i, unit: t.unit }; o.count++; o.last = i; }));
+  const weakArr = Object.values(weakAll);
+  const repeatedW = weakArr.filter(w => w.count >= 2 && w.last >= N - 3).sort((a,b) => b.count - a.count || b.last - a.last);
+  const overcome = weakArr.filter(w => w.last < N - 2 && N >= 3).sort((a,b) => b.count - a.count).slice(0, 6);
+  const openW = weakArr.filter(w => w.count === 1 && w.last >= N - 2);
+
+  // ───── 요약 문장 ─────
+  const sentence = [];
+  sentence.push(`최근 ${N}번의 복습 테스트에서 평균 <em>${Math.round(allPct)}%</em>를 받았고, ${trendWord}.`);
+  if (good.length) sentence.push(`<mark>${good.slice(0, 2).map(u => esc(u.name)).join('·')}</mark> 단원은 복습이 잘 되고 있어요.`);
+  if (need.length) sentence.push(`<em>${need.slice(0, 2).map(u => esc(u.name)).join('·')}</em> 단원은 추가 학습이 필요해요.`);
+
+  // ───── 차트 ─────
+  function chart(){
+    const W = 340, H = 180, pl = 28, pr = 12, pt = 20, pb = 26;
+    const vals = tests.flatMap(t => [t.pct, t.avgPct].filter(v => v != null));
+    const lo = Math.max(0, Math.floor((Math.min(...vals) - 10) / 10) * 10);
+    const x = i => N === 1 ? (pl + W - pr) / 2 : pl + i * (W - pl - pr) / (N - 1);
+    const y = v => pt + (1 - (Math.max(lo, Math.min(100, v)) - lo) / (100 - lo)) * (H - pt - pb);
+    const path = (arr) => arr.map((v, i) => v == null ? '' : `${i && arr[i-1] != null ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+    // 3회 이동 평균
+    const ma = tests.map((_, i) => i < 2 ? null : mean(tests.slice(i - 2, i + 1).map(t => t.pct)));
+    const grid = [lo, Math.round((lo + 100) / 2), 100].map(g => `<line x1="${pl}" x2="${W - pr}" y1="${y(g)}" y2="${y(g)}" stroke="rgba(17,17,20,.08)"/><text x="${pl - 6}" y="${y(g) + 3.5}" text-anchor="end" font-size="9" fill="#9A9AA2">${g}</text>`).join('');
+    const step = Math.max(1, Math.ceil(N / 6));
+    const labels = tests.map((t, i) => (i % step === 0 || i === N - 1) ? `<text x="${x(i).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="9.5" fill="#63636B">${t.date ? +t.date.slice(5, 7) + '/' + +t.date.slice(8, 10) : ''}</text>` : '').join('');
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="복습 테스트 점수 추이">${grid}
+      <path d="${path(tests.map(t => t.avgPct))}" fill="none" stroke="#D6301F" stroke-width="1.4" stroke-dasharray="4 4" opacity=".7"/>
+      ${N >= 3 ? `<path d="${path(ma)}" fill="none" stroke="#2F8F8B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>` : ''}
+      <path d="${path(tests.map(t => t.pct))}" fill="none" stroke="#111114" stroke-width="2" stroke-linejoin="round"/>
+      ${tests.map((t, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(t.pct).toFixed(1)}" r="${i === N - 1 ? 5 : 3}" fill="${i === N - 1 ? '#D6301F' : '#111114'}" stroke="#fff" stroke-width="1.5"/>`).join('')}
+      <text x="${x(N - 1).toFixed(1)}" y="${(y(tests[N - 1].pct) - 10).toFixed(1)}" text-anchor="${N > 1 ? 'end' : 'middle'}" font-size="11" font-weight="800" fill="#D6301F">${Math.round(tests[N - 1].pct)}%</text>
+      ${labels}</svg>`;
+  }
+
+  const ST = { good:'복습 잘 됨', mid:'보통', need:'추가 학습 필요' };
+  const COLOR = { good:'var(--ok)', mid:'var(--warn)', need:'var(--red)' };
+  const fmtD = d => d ? `${+d.slice(5, 7)}/${+d.slice(8, 10)}` : '';
+
+  root.innerHTML = `
+    <div class="sumbox">
+      <div class="k">REVIEW TEST ANALYSIS</div>
+      <h1>${sentence.join(' ')}</h1>
+      <div class="kpis">
+        <div><div class="l">전체 평균</div><div class="v">${Math.round(allPct)}<small>%</small></div></div>
+        <div><div class="l">반 평균 대비</div><div class="v ${vsAvg >= 0 ? 'up' : 'down'}">${vsAvg == null ? '–' : (vsAvg >= 0 ? '+' : '') + round(vsAvg, 1)}<small>%p</small></div></div>
+        <div><div class="l">최근 ${k || 1}회 변화</div><div class="v ${delta > 0 ? 'up' : delta < 0 ? 'down' : ''}">${delta == null ? '–' : (delta > 0 ? '▲' : delta < 0 ? '▼' : '') + Math.abs(delta)}<small>${delta == null ? '' : '%p'}</small></div></div>
+        <div><div class="l">최고 기록</div><div class="v">${best.score}<small>/${best.max}</small></div></div>
+      </div>
+    </div>
+
+    <div class="sec chart">
+      <h2>점수 흐름 <small>${N}회 · 백분율</small></h2>
+      ${chart()}
+      <div class="legend"><span><i style="background:#111114"></i>내 점수</span>${N >= 3 ? '<span><i style="background:#2F8F8B;opacity:.6;height:4px"></i>3회 평균선</span>' : ''}<span><i style="background:repeating-linear-gradient(90deg,#D6301F 0 4px,transparent 4px 7px)"></i>반 평균</span></div>
+    </div>
+
+    <div class="sec">
+      <h2>단원별 복습 상태 <small>${unitRows.length}개 단원</small></h2>
+      <div class="sub">막대는 내 평균, 검은 선은 반 평균이에요. 같은 유형을 두 번 이상 놓치면 ‘추가 학습 필요’로 표시돼요.</div>
+      ${unitRows.map(u => `
+        <div class="unit">
+          <div class="nm">${esc(u.name)}<span class="st ${u.status}">${ST[u.status]}</span></div>
+          <div class="pc">${Math.round(u.pct)}<small>%</small></div>
+          <div class="ubar"><i style="width:${Math.min(100, u.pct)}%;background:${COLOR[u.status]};opacity:.85"></i>${u.avgPct != null ? `<b style="left:calc(${Math.min(100, u.avgPct)}% - 1px)"></b>` : ''}</div>
+          <div class="meta">${u.count}회 응시 · 최근 ${fmtD(u.last.date)} ${u.last.score}/${u.last.max}점${u.diff != null ? ` · 반 평균보다 ${u.diff >= 0 ? '+' : ''}${round(u.diff, 1)}%p` : ''}</div>
+          ${u.weakList.length ? `<div class="wk">${u.weakList.slice(0, 4).map(([w, c]) => `<span>${esc(w)}${c > 1 ? ` ×${c}` : ''}</span>`).join('')}</div>` : ''}
+        </div>`).join('')}
+    </div>
+
+    ${need.length || repeatedW.length ? `<div class="todo"><h2>다음 수업 전까지 이렇게 해 보세요</h2><ol>
+      ${repeatedW.slice(0, 3).map(w => `<li><b>${esc(w.name)}</b> — ${w.count}번 놓친 유형이에요. 오답노트에서 해당 문제를 다시 풀어 보세요.</li>`).join('')}
+      ${need.filter(u => !repeatedW.some(w => w.unit === u.name)).slice(0, 2).map(u => `<li><b>${esc(u.name)}</b> 단원 개념 정리를 다시 보고 기본 문제를 한 번 더 풀어 보세요.</li>`).join('')}
+      </ol><div class="btns"><a href="book.html">클리닉 예약하기 →</a><a href="ask.html">질문하기 →</a></div></div>` : ''}
+
+    <div class="cols">
+      <div class="sec"><h2>반복되는 실수 <small>최근 3회 기준</small></h2>
+        ${repeatedW.length ? `<div class="list">${repeatedW.map(w => `<div class="it"><span class="hlx"><b>${esc(w.name)}</b></span><span class="c">${w.count}회 · ${esc(w.unit)}</span></div>`).join('')}</div>`
+          : `<div class="none">${openW.length ? '아직 두 번 이상 놓친 유형은 없어요. 최근에 처음 나온 유형만 확인하세요.' : '반복되는 실수가 없어요. 👏'}</div>`}
+        ${openW.length ? `<div class="sub" style="margin:10px 0 4px;">최근 새로 나온 유형</div><div class="list">${openW.map(w => `<div class="it"><span>${esc(w.name)}</span><span class="c">${esc(w.unit)}</span></div>`).join('')}</div>` : ''}
+      </div>
+      <div class="sec"><h2>극복한 유형 <small>최근 2회 없음</small></h2>
+        ${overcome.length ? `<div class="list">${overcome.map(w => `<div class="it"><span>✓ ${esc(w.name)}</span><span class="c">${w.count}회 → 0</span></div>`).join('')}</div>`
+          : '<div class="none">기록이 더 쌓이면 이전에 놓쳤다가 극복한 유형이 여기에 나와요.</div>'}
+      </div>
+    </div>
+
+    <div class="sec hist" style="margin-top:12px;">
+      <h2>회차별 기록 <small>눌러서 그날 리포트 보기</small></h2>
+      ${tests.slice().reverse().map((t, i, arr) => { const prev = arr[i + 1]; const dd = prev ? round(t.pct - prev.pct, 1) : null;
+        return `<a href="daily-report.html?t=${encodeURIComponent(t.token)}"><span class="d">${fmtD(t.date)}${t.title ? `<br>${esc(t.title)}` : ''}</span>
+          <span class="u">${esc(t.unit)}${t.weak.length ? ` <span style="color:var(--dim);font-weight:600;">· ${t.weak.map(esc).join(', ')}</span>` : ''}</span>
+          <span class="s">${t.score}<small>/${t.max}</small>${dd ? `<span class="x ${dd > 0 ? 'up' : 'down'}">${dd > 0 ? '▲' : '▼'}${Math.abs(dd)}</span>` : ''}</span></a>`; }).join('')}
+    </div>
+    <p class="muted" style="text-align:center;margin:14px 0 4px;font-size:12px;">엄형국 수학 · 내신성공의 방정식</p>`;
+})();
+</script>
+</body>
+</html>
