@@ -232,7 +232,7 @@
 <!-- 클리닉 시간 -->
 <div class="modal-bg hidden" id="slotModal">
   <div class="modal">
-    <h2>클리닉 시간 열기</h2>
+    <h2 id="slotTitle">클리닉 시간 열기</h2>
     <div class="stack">
       <div class="grid3">
         <div><label class="f">날짜</label><input class="input" type="date" id="sDate"></div>
@@ -248,7 +248,7 @@
         <div><label class="f">담당</label><input class="input" id="sStaff" placeholder="예: 김조교"></div>
       </div>
       <div><label class="f">안내</label><input class="input" id="sNote" placeholder="예: 오답노트 지참"></div>
-      <div><label class="f">매주 반복</label><select class="input" id="sRepeat"><option value="1">이번만</option><option value="2">2주</option><option value="4">4주</option><option value="8">8주</option></select></div>
+      <div id="sRepeatWrap"><label class="f">매주 반복</label><select class="input" id="sRepeat"><option value="1">이번만</option><option value="2">2주</option><option value="4">4주</option><option value="8">8주</option></select></div>
     </div>
     <p class="muted" id="slotMsg" style="margin-top:8px;"></p>
     <div class="row" style="margin-top:14px;"><button class="btn grow" data-close="slotModal">취소</button><button class="btn primary grow" id="slotSave">열기</button></div>
@@ -424,6 +424,7 @@
             <button class="btn sm ghost" data-cancel="${esc(b.id)}">취소</button></span>
             ${b.memo ? `<div class="memo">메모: ${esc(b.memo)}</div>` : ''}</div>`).join('') : '<div class="muted">아직 예약한 학생이 없습니다.</div>')
           + `<div class="row" style="margin-top:12px;gap:6px;">
+              <button class="btn sm primary" data-edit>✎ 수정</button>
               <button class="btn sm" data-toggle>${s.status === 'open' ? '예약 닫기' : '예약 다시 열기'}</button>
               <button class="btn sm" data-copy>예약 안내 문구 복사</button>
               <button class="btn sm ghost" data-del style="color:var(--red);">시간 삭제</button></div>`;
@@ -441,6 +442,7 @@
             await bt.commit(); toast('취소했습니다'); loadClinic();
           } catch(e){ handleErr(e); }
         });
+        body.querySelector('[data-edit]').onclick = () => openSlotEdit(s, bks);
         body.querySelector('[data-toggle]').onclick = async () => {
           try { await db.collection('clinicSlots').doc(s.id).update({ status: s.status === 'open' ? 'closed' : 'open' }); loadClinic(); } catch(e){ handleErr(e); }
         };
@@ -455,7 +457,22 @@
     return el;
   }
 
+  // ───────── 클리닉 시간 수정 ─────────
+  let editingSlot = null, editingBks = [];
+  function openSlotEdit(s, bks){
+    editingSlot = s; editingBks = bks || [];
+    $('slotTitle').textContent = '클리닉 시간 수정';
+    $('slotSave').textContent = '저장';
+    $('sRepeatWrap').classList.add('hidden');
+    $('sDate').value = s.date; $('sStart').value = s.start; $('sEnd').value = s.end;
+    $('sClass').value = s.className; if ($('sClass').value !== s.className) $('sClass').insertAdjacentHTML('beforeend', `<option selected>${esc(s.className)}</option>`);
+    $('sCap').value = s.capacity; $('sPlace').value = s.place || ''; $('sStaff').value = s.staff || ''; $('sNote').value = s.note || '';
+    $('slotMsg').textContent = editingBks.length ? `예약한 학생 ${editingBks.length}명이 있어요. 정원은 ${s.count || 0}명보다 적게 줄일 수 없어요.` : '';
+    openModal('slotModal');
+  }
   $('newSlotBtn').onclick = () => {
+    editingSlot = null; editingBks = [];
+    $('slotTitle').textContent = '클리닉 시간 열기'; $('slotSave').textContent = '열기'; $('sRepeatWrap').classList.remove('hidden');
     const d = new Date(); d.setDate(d.getDate() + 1);
     $('sDate').value = OMR.todayStr(d); $('slotMsg').textContent = '';
     if (me.role !== 'admin' && !$('sStaff').value) $('sStaff').value = me.name;
@@ -465,6 +482,24 @@
     const date = $('sDate').value, start = $('sStart').value, end = $('sEnd').value, cap = parseInt($('sCap').value, 10);
     if (!date || !start || !end || !(cap > 0)){ $('slotMsg').textContent = '날짜, 시간, 정원을 입력하세요.'; return; }
     if (end <= start){ $('slotMsg').textContent = '끝나는 시간이 시작보다 늦어야 합니다.'; return; }
+    if (editingSlot){
+      const s = editingSlot;
+      if (cap < (s.count || 0)){ $('slotMsg').textContent = `이미 ${s.count}명이 예약했어요. 정원을 ${s.count}명 이상으로 해 주세요.`; return; }
+      const patch = { date, start, end, capacity: cap, className: $('sClass').value,
+        place: $('sPlace').value.trim(), staff: $('sStaff').value.trim(), note: $('sNote').value.trim(),
+        updatedAt: FV.serverTimestamp(), updatedBy: { uid: me.uid, name: me.name } };
+      const moved = date !== s.date || start !== s.start || end !== s.end || patch.place !== (s.place || '');
+      try {
+        await db.collection('clinicSlots').doc(s.id).update(patch);
+        closeModal('slotModal'); toast('수정했습니다'); loadClinic();
+        if (moved && editingBks.length && confirm(`예약한 학생 ${editingBks.length}명에게 보낼 변경 안내 문구를 복사할까요?`))
+          copyText(`[엄형국 수학] 클리닉 시간 변경 안내\n${editingBks.map(b => b.name).join(', ')} 학생\n` +
+            `변경 전: ${kDate(s.date)} ${s.start}–${s.end}${s.place ? ' · ' + s.place : ''}\n` +
+            `변경 후: ${kDate(date)} ${start}–${end}${patch.place ? ' · ' + patch.place : ''}\n` +
+            `예약은 그대로 유지돼요. 시간이 안 되면 ${bookUrl()} 에서 취소해 주세요.`);
+      } catch(e){ handleErr(e); }
+      return;
+    }
     const n = +$('sRepeat').value, ops = [];
     for (let i = 0; i < n; i++){
       const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() + 7 * i);
