@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>학생 관리 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=5">
+<style>
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  @media (max-width:600px){ .grid2,.grid3{grid-template-columns:1fr;} }
+  .ac-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+  @media (max-width:700px){ .ac-cards{grid-template-columns:repeat(2,1fr);} }
+  .ac{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;cursor:pointer;width:100%;}
+  .ac:hover{border-color:var(--ink);}
+  .ac.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .ac .n{font-size:12px;font-weight:800;color:var(--dim);}
+  .ac.on .n{color:rgba(255,255,255,.7);}
+  .ac .c{font-size:24px;font-weight:900;margin:2px 0 4px;font-variant-numeric:tabular-nums;}
+  .ac .c small{font-size:12px;font-weight:700;margin-left:2px;}
+  .ac .g{display:flex;gap:6px;font-size:11.5px;font-weight:700;color:var(--dim);}
+  .ac.on .g{color:rgba(255,255,255,.75);}
+  .ac.warn .c{color:var(--warn);}
+  .filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;}
+  .filters .input{width:auto;padding:8px 10px;font-size:14px;}
+  .filters .q{flex:1 1 160px;min-width:140px;}
+  .bulkbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--ink);color:#fff;border-radius:12px;padding:10px 12px;margin-bottom:10px;}
+  .bulkbar .input{width:auto;padding:6px 8px;font-size:13px;}
+  .bulkbar .btn{background:#fff;}
+  .tag{display:inline-block;font-size:12px;font-weight:800;padding:3px 8px;border-radius:99px;background:var(--bg2);white-space:nowrap;}
+  .tag.a-daechi-sangsang{background:#fde8e6;color:#b42318;}
+  .tag.a-daechi-snt{background:#e7eefc;color:#1d4ed8;}
+  .tag.a-megastudy-russel{background:#e8f5ec;color:#15803d;}
+  .tag.none{background:var(--warn-soft);color:var(--warn);}
+  .tbl td.ck,.tbl th.ck{width:30px;text-align:center;}
+  .tbl input[type=checkbox]{width:16px;height:16px;}
+  .hint{font-size:12.5px;color:var(--dim);line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap wide">
+  <div class="topbar">
+    <a class="brand" href="../index.html">엄형국 <span>수학</span> · 관리</a>
+    <div class="row"><span class="sub" id="adminEmail"></span><button class="btn sm hidden" id="logoutBtn">로그아웃</button></div>
+  </div>
+  <nav class="row admin-nav" id="adminNav" style="gap:4px;margin:-8px 0 16px;"></nav>
+
+  <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
+    <h1>관리자 로그인</h1>
+    <p class="lead">메인 사이트 관리자 계정으로 로그인하세요.</p>
+    <div class="card stack">
+      <input class="input" type="email" id="loginEmail" placeholder="이메일" autocomplete="username">
+      <input class="input" type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
+      <button class="btn primary block" id="loginBtn">로그인</button>
+      <p class="muted" id="loginMsg"></p>
+    </div>
+  </section>
+
+  <section id="vMain" class="hidden">
+    <div class="row between" style="margin-bottom:6px;align-items:flex-end;">
+      <div><div class="kicker">STUDENTS</div><h1 style="margin:0;">학생 관리</h1></div>
+      <div class="row">
+        <button class="btn sm" id="csvBtn">CSV 내려받기</button>
+        <button class="btn" id="bulkBtn">여러 명 붙여넣기</button>
+        <button class="btn primary" id="addBtn">+ 학생</button>
+      </div>
+    </div>
+    <p class="hint" style="margin:6px 0 14px;">학생 코드는 자동 발급됩니다. <b>학원·학년</b>을 지정하면 학생이 메인 자료실에서 <b>자기 학원 자료만</b> 보고, 자기 학년 탭이 먼저 열려요.</p>
+    <div id="permWarn" class="note hidden" style="margin-bottom:14px;border:1px solid var(--red);">
+      <b>Firestore 권한 오류</b> — 보안 규칙이 게시됐는지, 규칙의 ADMIN_EMAIL이 지금 로그인한 이메일과 같은지 확인하세요.
+    </div>
+
+    <div class="ac-cards" id="acCards"></div>
+    <div class="filters">
+      <select class="input" id="fAcad"></select>
+      <select class="input" id="fGrade"><option value="">전체 학년</option><option value="1">1학년</option><option value="2">2학년</option><option value="3">3학년</option><option value="none">학년 미지정</option></select>
+      <select class="input" id="fClass"></select>
+      <input class="input q" id="fQ" placeholder="이름·코드 검색">
+    </div>
+    <div class="bulkbar hidden" id="bulkBar">
+      <b id="selCount"></b>
+      <select class="input" id="bAcad"></select>
+      <select class="input" id="bGrade"><option value="">학년 그대로</option><option value="1">1학년</option><option value="2">2학년</option><option value="3">3학년</option></select>
+      <button class="btn sm" id="bApply">선택한 학생에 적용</button>
+      <button class="btn sm ghost" id="bClear" style="color:#fff;background:transparent;">선택 해제</button>
+    </div>
+    <div class="tbl-wrap"><table class="tbl" id="tbl"></table></div>
+    <p class="muted" id="countLine" style="margin-top:8px;"></p>
+  </section>
+</div>
+
+<datalist id="classList"></datalist>
+
+<div class="modal-bg hidden" id="stuModal">
+  <div class="modal stack">
+    <h2 id="stuTitle">학생 추가</h2>
+    <div class="grid2">
+      <div><label class="f">이름</label><input class="input" id="sName"></div>
+      <div><label class="f">반 (시험·과제용)</label><input class="input" id="sClass" list="classList" placeholder="예: 고2 미적분 A반"></div>
+    </div>
+    <div class="grid2">
+      <div><label class="f">학원</label><select class="input" id="sAcad"></select></div>
+      <div><label class="f">학년</label><select class="input" id="sGrade"><option value="">미지정</option><option value="1">1학년</option><option value="2">2학년</option><option value="3">3학년</option></select></div>
+    </div>
+    <div class="grid2">
+      <div><label class="f">학생 연락처</label><input class="input" id="sPhone" inputmode="tel" placeholder="010-0000-0000"></div>
+      <div><label class="f">학부모 연락처</label><input class="input" id="sParent" inputmode="tel" placeholder="010-0000-0000"></div>
+    </div>
+    <p class="muted" id="stuMsg"></p>
+    <div class="row"><button class="btn grow" data-close>취소</button><button class="btn primary grow" id="stuSave">저장</button></div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="bulkModal">
+  <div class="modal stack">
+    <h2>여러 명 붙여넣기</h2>
+    <p class="muted">한 줄에 한 명: <b>이름, 학원, 학년, 반, 학생 연락처, 학부모 연락처</b><br>엑셀에서 복사해 붙여넣어도 됩니다. 학원은 <b>상상 · SNT · 러셀</b>처럼 줄여 써도 되고, 학년은 <b>1 · 고1 · 1학년</b> 모두 됩니다.</p>
+    <textarea class="input" id="bulkText" placeholder="김민수, 상상, 2, 고2 미적분 A반, 010-1111-2222, 010-3333-4444&#10;이서연, SNT, 고1, 고1 공통수학 B반"></textarea>
+    <p class="muted" id="bulkMsg"></p>
+    <div class="row"><button class="btn grow" data-close>취소</button><button class="btn primary grow" id="bulkSave">등록</button></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=10"></script>
+<script>
+(function(){
+  const { db, FV, esc, toast, copyText, fmtPhone, normalizePhone } = OMR;
+  const $ = id => document.getElementById(id);
+  const ACAD = Object.fromEntries(OMR.ACADEMIES);
+  const acadOpts = (first) => first + OMR.ACADEMIES.map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join('');
+  $('adminNav').innerHTML = OMR.adminNav('students.html');
+  $('fAcad').innerHTML = acadOpts('<option value="">전체 학원</option>') + '<option value="none">학원 미지정</option>';
+  $('sAcad').innerHTML = acadOpts('<option value="">미지정</option>');
+  $('bAcad').innerHTML = acadOpts('<option value="">학원 그대로</option>');
+
+  let students = [], sel = new Set(), editing = null;
+
+  function show(v){ ['vLogin','vMain'].forEach(x => $(x).classList.toggle('hidden', x !== v)); }
+  function handleErr(e, msg){
+    console.error(e);
+    if (e && e.code === 'permission-denied') $('permWarn').classList.remove('hidden');
+    toast(msg || ('오류: ' + (e && e.message || e)), 3500);
+  }
+  document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => {
+    if (e.target === m || e.target.hasAttribute('data-close')) m.classList.add('hidden'); }));
+
+  OMR.mountAdminLogin(async user => {
+    if (!user) return show('vLogin');
+    show('vMain'); load();
+  });
+
+  async function load(){
+    try {
+      const qs = await db.collection('omrStudents').get();
+      students = qs.docs.map(d => ({ id:d.id, ...d.data() }))
+        .sort((a,b) => (a.className||'').localeCompare(b.className||'','ko') || (a.name||'').localeCompare(b.name||'','ko'));
+    } catch(e){ handleErr(e, '학생 명단을 불러오지 못했습니다'); students = []; }
+    sel = new Set([...sel].filter(id => students.some(s => s.id === id)));
+    const classes = [...new Set(students.map(s => s.className).filter(Boolean))].sort((a,b) => a.localeCompare(b,'ko'));
+    $('classList').innerHTML = classes.map(c => `<option value="${esc(c)}">`).join('');
+    const prev = $('fClass').value;
+    $('fClass').innerHTML = '<option value="">전체 반</option>' + classes.map(c => `<option>${esc(c)}</option>`).join('');
+    if (classes.includes(prev)) $('fClass').value = prev;
+    render();
+  }
+
+  const gradeOf = s => [1,2,3].includes(Number(s.grade)) ? Number(s.grade) : null;
+  const acadOf = s => ACAD[s.academy] ? s.academy : null;
+
+  function filtered(){
+    const fa = $('fAcad').value, fg = $('fGrade').value, fc = $('fClass').value, q = $('fQ').value.trim().toLowerCase();
+    return students.filter(s =>
+      (!fa || (fa === 'none' ? !acadOf(s) : s.academy === fa)) &&
+      (!fg || (fg === 'none' ? !gradeOf(s) : gradeOf(s) === Number(fg))) &&
+      (!fc || s.className === fc) &&
+      (!q || (s.name||'').toLowerCase().includes(q) || (s.code||'').toLowerCase().includes(q)));
+  }
+
+  function renderCards(){
+    const fa = $('fAcad').value;
+    const cards = OMR.ACADEMIES.map(([k, n]) => {
+      const list = students.filter(s => s.academy === k);
+      const g = [1,2,3].map(x => list.filter(s => gradeOf(s) === x).length);
+      return `<button class="ac ${fa === k ? 'on' : ''}" data-a="${k}"><div class="n">${esc(n)}</div>
+        <div class="c">${list.length}<small>명</small></div><div class="g"><span>1학년 ${g[0]}</span><span>2학년 ${g[1]}</span><span>3학년 ${g[2]}</span></div></button>`;
+    });
+    const none = students.filter(s => !acadOf(s)).length;
+    cards.push(`<button class="ac ${none ? 'warn' : ''} ${fa === 'none' ? 'on' : ''}" data-a="none"><div class="n">학원 미지정</div>
+      <div class="c">${none}<small>명</small></div><div class="g"><span>${none ? '자료실이 잠겨 보여요' : '모두 지정됨 ✓'}</span></div></button>`);
+    $('acCards').innerHTML = cards.join('');
+  }
+  $('acCards').addEventListener('click', e => {
+    const b = e.target.closest('[data-a]'); if (!b) return;
+    $('fAcad').value = $('fAcad').value === b.dataset.a ? '' : b.dataset.a; render();
+  });
+  ['fAcad','fGrade','fClass'].forEach(id => $(id).onchange = render);
+  $('fQ').oninput = render;
+
+  function render(){
+    renderCards();
+    const list = filtered(), t = $('tbl');
+    $('countLine').textContent = `${list.length}명 표시 · 전체 ${students.length}명`;
+    if (!list.length){ t.innerHTML = '<tr><td class="empty">조건에 맞는 학생이 없습니다.</td></tr>'; renderBulk(); return; }
+    const allOn = list.every(s => sel.has(s.id));
+    t.innerHTML = `<tr><th class="ck"><input type="checkbox" id="ckAll" ${allOn ? 'checked' : ''} aria-label="모두 선택"></th><th>이름</th><th>학원</th><th>학년</th><th>반</th><th>코드</th><th>학생 연락처</th><th>학부모 연락처</th><th></th></tr>` +
+      list.map(s => { const a = acadOf(s), g = gradeOf(s); return `<tr>
+        <td class="ck"><input type="checkbox" data-ck="${s.id}" ${sel.has(s.id) ? 'checked' : ''}></td>
+        <td><b>${esc(s.name)}</b></td>
+        <td>${a ? `<span class="tag a-${a}">${esc(ACAD[a])}</span>` : '<span class="tag none">미지정</span>'}</td>
+        <td>${g ? g + '학년' : '<span class="muted">—</span>'}</td>
+        <td>${esc(s.className || '')}</td>
+        <td><span class="code">${esc(s.code)}</span></td>
+        <td>${esc(fmtPhone(s.phone))}</td><td>${esc(fmtPhone(s.parentPhone))}</td>
+        <td style="white-space:nowrap;text-align:right;">
+          <button class="btn sm" data-act="copy" data-id="${s.id}">코드 안내 복사</button>
+          <button class="btn sm" data-act="edit" data-id="${s.id}">수정</button>
+          <button class="btn sm ghost" data-act="del" data-id="${s.id}" style="color:var(--red);">삭제</button>
+        </td></tr>`; }).join('');
+    $('ckAll').onchange = e => { list.forEach(s => e.target.checked ? sel.add(s.id) : sel.delete(s.id)); render(); };
+    renderBulk();
+  }
+  function renderBulk(){
+    $('bulkBar').classList.toggle('hidden', !sel.size);
+    $('selCount').textContent = `${sel.size}명 선택`;
+  }
+  $('bClear').onclick = () => { sel.clear(); render(); };
+
+  $('tbl').addEventListener('change', e => {
+    const c = e.target.closest('[data-ck]'); if (!c) return;
+    c.checked ? sel.add(c.dataset.ck) : sel.delete(c.dataset.ck); render();
+  });
+  $('tbl').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const s = students.find(x => x.id === b.dataset.id); if (!s) return;
+    if (b.dataset.act === 'copy'){
+      const url = new URL('../', location.href).href;
+      copyText(`[엄형국 수학] ${s.name} 학생의 학생 코드는 ${s.code} 입니다.\n${url} 에 들어가서 학생 코드로 입장하세요.`);
+    } else if (b.dataset.act === 'edit') openEdit(s);
+    else if (b.dataset.act === 'del'){
+      if (!confirm(`${s.name} 학생을 삭제할까요? 코드도 함께 삭제되어 더 이상 입장할 수 없습니다. (제출·성적 기록은 남습니다)`)) return;
+      try {
+        const batch = db.batch();
+        batch.delete(db.collection('omrStudents').doc(s.id));
+        batch.delete(db.collection('omrCodes').doc(s.code));
+        await batch.commit(); sel.delete(s.id); toast('삭제했습니다'); load();
+      } catch(err){ handleErr(err); }
+    }
+  });
+
+  // ── 선택한 학생 학원·학년 일괄 지정 ──
+  $('bApply').onclick = async () => {
+    const a = $('bAcad').value, g = $('bGrade').value;
+    if (!a && !g) return toast('바꿀 학원이나 학년을 고르세요');
+    const ids = [...sel], patch = {};
+    if (a) patch.academy = a;
+    if (g) patch.grade = Number(g);
+    try {
+      for (let i = 0; i < ids.length; i += 200){
+        const batch = db.batch();
+        ids.slice(i, i + 200).forEach(id => {
+          const s = students.find(x => x.id === id); if (!s) return;
+          batch.update(db.collection('omrStudents').doc(id), patch);
+          batch.set(db.collection('omrCodes').doc(s.code), patch, { merge:true });
+        });
+        await batch.commit();
+      }
+      toast(`${ids.length}명에게 적용했습니다`); sel.clear(); $('bAcad').value = ''; $('bGrade').value = ''; load();
+    } catch(e){ handleErr(e); }
+  };
+
+  // ── 추가·수정 ──
+  function openEdit(s){
+    editing = s || null;
+    $('stuTitle').textContent = s ? '학생 수정' : '학생 추가';
+    $('sName').value = s ? s.name : '';
+    $('sClass').value = s ? (s.className || '') : ($('fClass').value || '');
+    $('sAcad').value = s ? (acadOf(s) || '') : (ACAD[$('fAcad').value] ? $('fAcad').value : '');
+    $('sGrade').value = s ? (gradeOf(s) || '') : (/^[123]$/.test($('fGrade').value) ? $('fGrade').value : '');
+    $('sPhone').value = s ? (s.phone || '') : '';
+    $('sParent').value = s ? (s.parentPhone || '') : '';
+    $('stuMsg').textContent = '';
+    $('stuModal').classList.remove('hidden');
+    setTimeout(() => $('sName').focus(), 50);
+  }
+  $('addBtn').onclick = () => openEdit(null);
+
+  function parseAcad(t){
+    t = String(t || '').replace(/\s/g, '').toLowerCase();
+    if (!t) return null;
+    if (ACAD[t]) return t;
+    if (t.includes('상상')) return 'daechi-sangsang';
+    if (t.includes('snt') || t.includes('에스엔티')) return 'daechi-snt';
+    if (t.includes('러셀') || t.includes('russel')) return 'megastudy-russel';
+    throw new Error(`학원 "${t}"을(를) 알 수 없어요 (상상 · SNT · 러셀)`);
+  }
+  function parseGrade(t){
+    t = String(t || '').trim();
+    if (!t) return null;
+    const m = t.match(/[123]/);
+    if (!m || t.replace(/고|학년|\s/g, '').length > 1) throw new Error(`학년 "${t}"을(를) 알 수 없어요 (1 · 2 · 3)`);
+    return Number(m[0]);
+  }
+  function fields(name, academy, grade, cls, phone, parent){
+    name = (name || '').trim(); cls = (cls || '').trim();
+    if (!name || !cls) throw new Error('이름과 반은 꼭 입력하세요.');
+    return { name, className: cls, academy: academy || null, grade: grade || null,
+      phone: normalizePhone(phone) || (phone || '').trim() || null,
+      parentPhone: normalizePhone(parent) || (parent || '').trim() || null };
+  }
+  const codeDoc = (f, studentId) => ({ name: f.name, className: f.className, studentId, academy: f.academy, grade: f.grade });
+
+  async function uniqueCode(taken){
+    for (let i = 0; i < 20; i++){
+      const c = OMR.genCode();
+      if (taken.has(c)) continue;
+      const snap = await db.collection('omrCodes').doc(c).get();
+      if (!snap.exists){ taken.add(c); return c; }
+    }
+    throw new Error('코드 생성 실패');
+  }
+
+  $('stuSave').onclick = async () => {
+    try {
+      const f = fields($('sName').value, $('sAcad').value || null, $('sGrade').value ? Number($('sGrade').value) : null,
+        $('sClass').value, $('sPhone').value, $('sParent').value);
+      const batch = db.batch();
+      if (editing){
+        batch.update(db.collection('omrStudents').doc(editing.id), f);
+        batch.set(db.collection('omrCodes').doc(editing.code), codeDoc(f, editing.id), { merge:true });
+      } else {
+        const code = await uniqueCode(new Set(students.map(s => s.code)));
+        const ref = db.collection('omrStudents').doc();
+        batch.set(ref, { ...f, code, createdAt: FV.serverTimestamp() });
+        batch.set(db.collection('omrCodes').doc(code), codeDoc(f, ref.id));
+      }
+      await batch.commit();
+      $('stuModal').classList.add('hidden'); toast('저장했습니다'); load();
+    } catch(e){ $('stuMsg').textContent = e.message; if (e.code) handleErr(e); }
+  };
+
+  $('bulkBtn').onclick = () => { $('bulkText').value = ''; $('bulkMsg').textContent = ''; $('bulkModal').classList.remove('hidden'); };
+  $('bulkSave').onclick = async () => {
+    const lines = $('bulkText').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return;
+    try {
+      const rows = lines.map((l, i) => {
+        const p = l.split(/\t|,/).map(x => x.trim());
+        try { return fields(p[0], parseAcad(p[1]), parseGrade(p[2]), p[3], p[4], p[5]); }
+        catch(e){ throw new Error(`${i + 1}번째 줄: ${e.message}`); }
+      });
+      $('bulkMsg').textContent = `${rows.length}명 등록 중…`;
+      const taken = new Set(students.map(s => s.code));
+      for (let i = 0; i < rows.length; i += 200){
+        const batch = db.batch();
+        for (const f of rows.slice(i, i + 200)){
+          const code = await uniqueCode(taken);
+          const ref = db.collection('omrStudents').doc();
+          batch.set(ref, { ...f, code, createdAt: FV.serverTimestamp() });
+          batch.set(db.collection('omrCodes').doc(code), codeDoc(f, ref.id));
+        }
+        await batch.commit();
+      }
+      $('bulkModal').classList.add('hidden'); toast(`${rows.length}명을 등록했습니다`); load();
+    } catch(e){ $('bulkMsg').textContent = e.message; if (e.code) handleErr(e); }
+  };
+
+  $('csvBtn').onclick = () => {
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const rows = [['이름','학원','학년','반','코드','학생 연락처','학부모 연락처']]
+      .concat(filtered().map(s => [s.name, ACAD[s.academy] || '', gradeOf(s) || '', s.className || '', s.code, fmtPhone(s.phone), fmtPhone(s.parentPhone)]));
+    const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(',')).join('\r\n')], { type:'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `학생명단_${OMR.todayStr()}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+})();
+</script>
+</body>
+</html>

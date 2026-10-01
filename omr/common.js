@@ -337,7 +337,9 @@
   }
 
   // ───────── 관리자 공통: 로그인·상단 메뉴 ─────────
-  const ADMIN_PAGES = [['admin.html', '시험·OMR'], ['clinic.html', '오답 클리닉'], ['assign.html', '과제'], ['daily.html', '데일리 리포트'], ['ops.html', '운영'], ['study.html', '플래너·순공']];
+  /** 출강 학원 (메인 자료실 배너와 같은 키) */
+  const ACADEMIES = [['daechi-sangsang', '대치 상상학원'], ['daechi-snt', '대치 SNT학원'], ['megastudy-russel', '메가스터디 러셀']];
+  const ADMIN_PAGES = [['students.html', '학생 관리'], ['admin.html', '시험·OMR'], ['clinic.html', '오답 클리닉'], ['assign.html', '과제'], ['daily.html', '데일리 리포트'], ['ops.html', '운영'], ['study.html', '플래너·순공']];
   const STAFF_PAGES = [['daily.html', '데일리 리포트'], ['ops.html', '운영'], ['study.html', '플래너·순공']];
   function adminNav(current) {
     return ADMIN_PAGES.map(([href, label]) =>
@@ -403,7 +405,9 @@
     code = String(code || '').trim().toUpperCase();
     if (code.length !== 6) return null;
     const s = await db.collection('omrCodes').doc(code).get();
-    return s.exists ? { code, name: s.data().name, className: s.data().className, studentId: s.data().studentId } : null;
+    if (!s.exists) return null;
+    const d = s.data();
+    return { code, name: d.name, className: d.className, studentId: d.studentId, academy: d.academy || null, grade: d.grade || null };
   }
   /** 학생 페이지 공통: 저장된 코드로 학생을 불러오고, 없으면 포털로 보냄 */
   async function requireStudent() {
@@ -603,7 +607,7 @@
     normalizePhone, fmtPhone, round, toast, copyText, normalizeAnswers, gradeOne, gradeExam,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
-    rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
+    ACADEMIES, rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

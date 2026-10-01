@@ -82,7 +82,7 @@
   <section id="vMain" class="hidden">
     <div class="tabs" id="mainTabs">
       <button data-tab="exams" class="on">시험</button>
-      <button data-tab="students">학생·코드</button>
+      <a class="btn sm ghost" href="students.html" style="margin-left:auto;align-self:center;">학생 등록·관리는 「학생 관리」 →</a>
     </div>
     <div id="permWarn" class="note hidden" style="margin-bottom:14px;border:1px solid var(--red);">
       <b>Firestore 권한 오류</b> — <code>omr/firestore.rules</code>의 규칙을 Firebase 콘솔에 추가했는지,
@@ -295,7 +295,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=9"></script>
+<script src="common.js?v=10"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast, copyText, fmtPhone, normalizePhone } = OMR;
@@ -435,12 +435,12 @@
       const batch = db.batch();
       if (editingStudent){
         batch.update(db.collection('omrStudents').doc(editingStudent.id), f);
-        batch.set(db.collection('omrCodes').doc(editingStudent.code), { name:f.name, className:f.className, studentId:editingStudent.id });
+        batch.set(db.collection('omrCodes').doc(editingStudent.code), { name:f.name, className:f.className, studentId:editingStudent.id }, { merge:true });
       } else {
         const code = await uniqueCode(new Set(students.map(s => s.code)));
         const ref = db.collection('omrStudents').doc();
         batch.set(ref, { ...f, code, createdAt: FV.serverTimestamp() });
-        batch.set(db.collection('omrCodes').doc(code), { name:f.name, className:f.className, studentId:ref.id });
+        batch.set(db.collection('omrCodes').doc(code), { name:f.name, className:f.className, studentId:ref.id }, { merge:true });
       }
       await batch.commit();
       closeModal('studentModal'); toast('저장했습니다'); loadStudents();
@@ -465,7 +465,7 @@
           const code = await uniqueCode(taken);
           const ref = db.collection('omrStudents').doc();
           batch.set(ref, { ...f, code, createdAt: FV.serverTimestamp() });
-          batch.set(db.collection('omrCodes').doc(code), { name:f.name, className:f.className, studentId:ref.id });
+          batch.set(db.collection('omrCodes').doc(code), { name:f.name, className:f.className, studentId:ref.id }, { merge:true });
         }
         await batch.commit();
       }

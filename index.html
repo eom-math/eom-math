@@ -303,7 +303,7 @@
   .section-head h2 em{ font-style:normal; font-weight:600; letter-spacing:0; color:var(--dim); margin-left:8px; text-transform:none; }
   .sub-head{ font-size:13px; font-weight:800; color:var(--ink); margin:30px 0 12px; display:flex; align-items:center; gap:8px; }
   .sub-head::before{ content:""; width:14px; height:2px; background:var(--red); }
-  #materials .section-head + .sub-head{ margin-top:4px; }
+  #course .section-head + .course-intro{ margin-top:4px; }
   .game-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
   .game-grid .tower-cta{ margin:0; flex-direction:column; align-items:flex-start; gap:18px; padding:20px 18px; min-height:150px; }
   .game-grid .tower-cta-sub{ line-height:1.45; }
@@ -322,6 +322,34 @@
   @media (max-width:640px){ .study-grid{ grid-template-columns:1fr; } .study-grid a{ flex-direction:row; align-items:baseline; justify-content:space-between; } }
   #materials .stats{ border-top:1px solid var(--line); }
 
+
+  /* ---------- 수업소개 · 학원별 자료실 ---------- */
+  .course-intro{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .course-intro .ci{ border:1px solid var(--line); background:#fff; padding:18px 16px; }
+  .course-intro .ci-k{ display:inline-block; font-size:11px; font-weight:800; letter-spacing:.08em; color:#fff; background:var(--ink); padding:3px 8px; margin-bottom:12px; }
+  .course-intro b{ display:block; font-size:16px; font-weight:800; line-height:1.4; letter-spacing:-.01em; margin-bottom:8px; }
+  .course-intro p{ font-size:12.5px; color:var(--dim); line-height:1.55; }
+  @media (max-width:640px){ .course-intro{ grid-template-columns:1fr; } .course-intro b br{ display:none; } }
+  #course .sub-head{ margin-top:28px; }
+  .acad-note{ font-size:13px; color:var(--dim); margin:-6px 0 12px; line-height:1.5; }
+  .acad-note b{ color:var(--ink); }
+  .stats.acad-grid{ grid-template-columns:repeat(3,1fr); border-top:1px solid var(--line); }
+  .stats.acad-grid.solo{ grid-template-columns:1fr; }
+  .stats.acad-grid .stat:last-child{ border-right:none; }
+  @media (max-width:640px){ .stats.acad-grid{ grid-template-columns:1fr; } .stats.acad-grid .stat{ border-right:none; } }
+  .stat.acad[hidden], .stats.acad-grid[hidden]{ display:none; }
+  @media (min-width:641px){ #tab-course .hub-full{ font-size:16px; white-space:nowrap; letter-spacing:-.03em; } }
+  .acad-tabs{ display:flex; gap:4px; margin:0 0 12px; }
+  .acad-tabs button{ flex:1; padding:8px 0; border:1px solid var(--line); background:#fff; font:inherit; font-size:12.5px; font-weight:700; color:var(--dim); cursor:pointer; }
+  .acad-tabs button:hover{ border-color:var(--ink); color:var(--ink); }
+  .acad-tabs button.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .acad-tabs button.mine::after{ content:"•"; color:var(--red); margin-left:3px; }
+  .acad-tabs[hidden]{ display:none; }
+  .acad-lock{ font-size:13px; line-height:1.6; padding:4px 0 6px; }
+  .acad-lock[hidden]{ display:none; }
+  .acad-lock button{ margin-top:10px; border:0; background:var(--ink); color:#fff; font:inherit; font-size:13px; font-weight:700; padding:10px 14px; cursor:pointer; }
+  .acad-lock button:hover{ background:var(--red); }
+  .stat.acad.locked .u::before{ content:"🔒"; }
 
   /* ---------- hub (category buttons) ---------- */
   .hub{ padding:64px 0 8px; }
@@ -637,28 +665,24 @@
     </div>
   </div>
   <section class="hub" id="hub" aria-label="바로가기">
-    <div class="hub-head">
-      <p class="hub-kicker">Menu</p>
-      <h2 class="hub-title">무엇을 찾으세요?</h2>
-    </div>
     <div class="hub-grid" role="tablist" aria-label="메뉴">
+      <button class="hub-card" id="tab-course" type="button" role="tab" aria-selected="false" aria-controls="course" data-hub="course">
+        <span class="hub-top"><span class="hub-no">01</span><span class="hub-ic"><svg viewBox="0 0 24 24"><path d="M3 9.5L12 5l9 4.5-9 4.5z"/><path d="M7 11.5v4.2c1.4 1.3 3.1 1.9 5 1.9s3.6-.6 5-1.9v-4.2"/><path d="M21 9.5v5"/></svg></span></span>
+        <span class="hub-en">Course</span>
+        <span class="hub-t"><span class="hub-full">수업소개·커리큘럼</span><span class="hub-short">수업소개</span></span>
+        <span class="hub-m"><span>Step 01–04</span><i class="hub-arrow">↓</i></span>
+      </button>
+      <button class="hub-card" id="tab-materials" type="button" role="tab" aria-selected="false" aria-controls="materials" data-hub="materials">
+        <span class="hub-top"><span class="hub-no">02</span><span class="hub-ic"><svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"/><path d="M6.5 8h2M15.5 8h2M15.5 11h2"/></svg></span></span>
+        <span class="hub-en">Library</span>
+        <span class="hub-t"><span class="hub-full">자료실</span><span class="hub-short">자료실</span></span>
+        <span class="hub-m"><span>학원 · 학년별 자료</span><i class="hub-arrow">↓</i></span>
+      </button>
       <button class="hub-card" id="tab-games" type="button" role="tab" aria-selected="false" aria-controls="games" data-hub="games">
-        <span class="hub-top"><span class="hub-no">01</span><span class="hub-ic"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.3" r=".9" class="f"/><circle cx="17.8" cy="13.7" r=".9" class="f"/></svg></span></span>
+        <span class="hub-top"><span class="hub-no">03</span><span class="hub-ic"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.3" r=".9" class="f"/><circle cx="17.8" cy="13.7" r=".9" class="f"/></svg></span></span>
         <span class="hub-en">Game</span>
         <span class="hub-t"><span class="hub-full">개념 퀴즈 게임</span><span class="hub-short">게임</span></span>
         <span class="hub-m"><span>게임 3종</span><i class="hub-arrow">↓</i></span>
-      </button>
-      <button class="hub-card" id="tab-omr" type="button" role="tab" aria-selected="false" aria-controls="omr" data-hub="omr">
-        <span class="hub-top"><span class="hub-no">02</span><span class="hub-ic"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17.5" rx="2"/><path d="M9 3.5h6v2.5H9z"/><path d="M8.5 13l2.3 2.3 4.7-4.8"/></svg></span></span>
-        <span class="hub-en">Test</span>
-        <span class="hub-t"><span class="hub-full">학습 관리</span><span class="hub-short">학습관리</span></span>
-        <span class="hub-m"><span>OMR · 클리닉 · 영상 · 질문</span><i class="hub-arrow">↓</i></span>
-      </button>
-      <button class="hub-card" id="tab-materials" type="button" role="tab" aria-selected="false" aria-controls="materials" data-hub="materials">
-        <span class="hub-top"><span class="hub-no">03</span><span class="hub-ic"><svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"/><path d="M6.5 8h2M15.5 8h2M15.5 11h2"/></svg></span></span>
-        <span class="hub-en">Library</span>
-        <span class="hub-t"><span class="hub-full">자료실</span><span class="hub-short">자료실</span></span>
-        <span class="hub-m"><span>커리큘럼 · 학원 자료</span><i class="hub-arrow">↓</i></span>
       </button>
       <button class="hub-card" id="tab-channel" type="button" role="tab" aria-selected="false" aria-controls="channel" data-hub="channel">
         <span class="hub-top"><span class="hub-no">04</span><span class="hub-ic"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z"/><path d="M8 9h8M8 12h5"/></svg></span></span>
@@ -668,58 +692,14 @@
       </button>
     </div>
     <div class="hub-panels">
-  <section class="group hub-panel" id="games" role="tabpanel" aria-labelledby="tab-games" hidden>
-    <div class="section-head"><h2>Game <em>개념 퀴즈 게임</em></h2><span>01</span></div>
-    <div class="game-grid">
-    <a class="tower-cta" href="tower.html?mode=tower">
-      <span class="tower-cta-badge">NEW</span>
-      <span class="tower-cta-body">
-        <span class="tower-cta-title">개념의 탑</span>
-        <span class="tower-cta-sub">15초 개념 퀴즈 →</span>
-      </span>
-    </a>
-
-    <a class="tower-cta monster-cta" href="tower.html?mode=monster">
-      <span class="tower-cta-badge monster-badge">⚔</span>
-      <span class="tower-cta-body">
-        <span class="tower-cta-title">수학몬스터</span>
-        <span class="tower-cta-sub">10초 안에 몬스터와 대결하는 개념 퀴즈 →</span>
-      </span>
-    </a>
-
-    <a class="tower-cta penguin-cta" href="tower.html?mode=penguin">
-      <span class="tower-cta-badge penguin-badge">🐧</span>
-      <span class="tower-cta-body">
-        <span class="tower-cta-title">수학 펭귄</span>
-        <span class="tower-cta-sub">8초 안에 장애물을 피하는 개념 퀴즈 →</span>
-      </span>
-    </a>
-
+  <section class="group hub-panel" id="course" role="tabpanel" aria-labelledby="tab-course" hidden>
+    <div class="section-head"><h2>Course <em>수업소개 · 커리큘럼</em></h2><span>01</span></div>
+    <div class="course-intro">
+      <div class="ci"><span class="ci-k">내신</span><b>조건에 강한<br>내신성공의 방정식</b><p>학교별 출제 경향에 맞춘 맞춤 해법으로 준비합니다.</p></div>
+      <div class="ci"><span class="ci-k">수능</span><b>변수에 흔들리지 않는<br>수능성공의 항등식</b><p>개념의 본질에서 출발해 어떤 문제에도 흔들리지 않게.</p></div>
+      <div class="ci"><span class="ci-k">관리</span><b>시험 · 복습 · 클리닉<br>끝까지 관리</b><p>모바일 OMR, 데일리 리포트, 오답 클리닉, 스터디 플래너.</p></div>
     </div>
-    <button class="hub-close" type="button" data-hub-close>접기 ↑</button>
-  </section>
-
-  <section class="group hub-panel" id="omr" role="tabpanel" aria-labelledby="tab-omr" hidden>
-    <div class="section-head"><h2>Study <em>학습 관리</em></h2><span>02</span></div>
-  <a class="tower-cta omr-cta" href="omr/">
-    <span class="tower-cta-badge">OMR</span>
-    <span class="tower-cta-body">
-      <span class="tower-cta-title">모바일 OMR 답안 제출</span>
-      <span class="tower-cta-sub">학생 코드로 입장해 시험 답안 제출 · 성적표 · 데일리 리포트를 확인하세요 →</span>
-    </span>
-  </a>
-  <div class="study-grid">
-    <a href="omr/book.html"><b>클리닉 예약</b><span>남은 자리를 보고 바로 예약</span></a>
-    <a href="omr/lectures.html"><b>영상 강의</b><span>복습 영상 · 시청 기록</span></a>
-    <a href="omr/ask.html"><b>질문하기</b><span>사진으로 올리면 답변</span></a>
-  </div>
-
-    <button class="hub-close" type="button" data-hub-close>접기 ↑</button>
-  </section>
-
-  <section class="group hub-panel" id="materials" role="tabpanel" aria-labelledby="tab-materials" hidden>
-    <div class="section-head"><h2>Library <em>자료실</em></h2><span>03</span></div>
-    <h3 class="sub-head" id="curriculum">커리큘럼별 자료</h3>
+    <h3 class="sub-head" id="curriculum">커리큘럼 · 단계별 자료</h3>
     <div class="curri-list">
 
       <div class="curri-item" data-key="concept-cliche">
@@ -791,14 +771,26 @@
       </div>
 
     </div>
-    <h3 class="sub-head">출강 학원별 자료</h3>
-  <div class="stats" id="stats">
-    <div class="stat" data-key="megastudy">
+    <button class="hub-close" type="button" data-hub-close>접기 ↑</button>
+  </section>
+
+  <section class="group hub-panel" id="materials" role="tabpanel" aria-labelledby="tab-materials" hidden>
+    <div class="section-head"><h2>Library <em>자료실</em></h2><span>02</span></div>
+    <p class="acad-note" id="acadNote">학원을 누르고 학년을 고르면 자료가 나와요.</p>
+  <div class="stats acad-grid" id="stats">
+    <div class="stat acad" data-acad="daechi-sangsang">
       <button class="stat-head" type="button">
-        <span><span class="k">Career</span><span class="v">메가스터디학원</span></span>
+        <span><span class="k">Academy</span><span class="v">대치 상상학원</span></span>
         <span class="u">자료함 열기 ↓</span>
       </button>
       <div class="stat-panel" hidden>
+        <div class="acad-tabs" role="tablist">
+          <button type="button" data-g="g1">1학년</button><button type="button" data-g="g2">2학년</button><button type="button" data-g="g3">3학년</button><button type="button" data-g="all">공통</button>
+        </div>
+        <div class="acad-lock" hidden>
+          <p><b>대치 상상학원 학생 전용</b> 자료예요.<br>학생 코드로 입장하면 우리 학원·학년 자료를 볼 수 있어요.</p>
+          <button type="button" class="acad-gate">학생 코드로 입장 →</button>
+        </div>
         <ul class="file-list"><li class="empty">불러오는 중...</li></ul>
         <label class="admin-upload" hidden>
           <input type="file" class="file-input">
@@ -806,12 +798,19 @@
         </label>
       </div>
     </div>
-    <div class="stat" data-key="megastudy-russel">
+    <div class="stat acad" data-acad="daechi-snt">
       <button class="stat-head" type="button">
-        <span><span class="k">Career</span><span class="v">메가스터디 러셀</span></span>
+        <span><span class="k">Academy</span><span class="v">대치 SNT학원</span></span>
         <span class="u">자료함 열기 ↓</span>
       </button>
       <div class="stat-panel" hidden>
+        <div class="acad-tabs" role="tablist">
+          <button type="button" data-g="g1">1학년</button><button type="button" data-g="g2">2학년</button><button type="button" data-g="g3">3학년</button><button type="button" data-g="all">공통</button>
+        </div>
+        <div class="acad-lock" hidden>
+          <p><b>대치 SNT학원 학생 전용</b> 자료예요.<br>학생 코드로 입장하면 우리 학원·학년 자료를 볼 수 있어요.</p>
+          <button type="button" class="acad-gate">학생 코드로 입장 →</button>
+        </div>
         <ul class="file-list"><li class="empty">불러오는 중...</li></ul>
         <label class="admin-upload" hidden>
           <input type="file" class="file-input">
@@ -819,25 +818,19 @@
         </label>
       </div>
     </div>
-    <div class="stat" data-key="daechi-sangsang">
+    <div class="stat acad" data-acad="megastudy-russel">
       <button class="stat-head" type="button">
-        <span><span class="k">Career</span><span class="v">대치 상상학원</span></span>
+        <span><span class="k">Academy</span><span class="v">메가스터디 러셀</span></span>
         <span class="u">자료함 열기 ↓</span>
       </button>
       <div class="stat-panel" hidden>
-        <ul class="file-list"><li class="empty">불러오는 중...</li></ul>
-        <label class="admin-upload" hidden>
-          <input type="file" class="file-input">
-          <span class="upload-btn">+ 파일 업로드</span>
-        </label>
-      </div>
-    </div>
-    <div class="stat" data-key="daechi-snt">
-      <button class="stat-head" type="button">
-        <span><span class="k">Career</span><span class="v">대치 SNT학원</span></span>
-        <span class="u">자료함 열기 ↓</span>
-      </button>
-      <div class="stat-panel" hidden>
+        <div class="acad-tabs" role="tablist">
+          <button type="button" data-g="g1">1학년</button><button type="button" data-g="g2">2학년</button><button type="button" data-g="g3">3학년</button><button type="button" data-g="all">공통</button>
+        </div>
+        <div class="acad-lock" hidden>
+          <p><b>메가스터디 러셀 학생 전용</b> 자료예요.<br>학생 코드로 입장하면 우리 학원·학년 자료를 볼 수 있어요.</p>
+          <button type="button" class="acad-gate">학생 코드로 입장 →</button>
+        </div>
         <ul class="file-list"><li class="empty">불러오는 중...</li></ul>
         <label class="admin-upload" hidden>
           <input type="file" class="file-input">
@@ -846,7 +839,37 @@
       </div>
     </div>
   </div>
+    <button class="hub-close" type="button" data-hub-close>접기 ↑</button>
+  </section>
 
+  <section class="group hub-panel" id="games" role="tabpanel" aria-labelledby="tab-games" hidden>
+    <div class="section-head"><h2>Game <em>개념 퀴즈 게임</em></h2><span>03</span></div>
+    <div class="game-grid">
+    <a class="tower-cta" href="tower.html?mode=tower">
+      <span class="tower-cta-badge">NEW</span>
+      <span class="tower-cta-body">
+        <span class="tower-cta-title">개념의 탑</span>
+        <span class="tower-cta-sub">15초 개념 퀴즈 →</span>
+      </span>
+    </a>
+
+    <a class="tower-cta monster-cta" href="tower.html?mode=monster">
+      <span class="tower-cta-badge monster-badge">⚔</span>
+      <span class="tower-cta-body">
+        <span class="tower-cta-title">수학몬스터</span>
+        <span class="tower-cta-sub">10초 안에 몬스터와 대결하는 개념 퀴즈 →</span>
+      </span>
+    </a>
+
+    <a class="tower-cta penguin-cta" href="tower.html?mode=penguin">
+      <span class="tower-cta-badge penguin-badge">🐧</span>
+      <span class="tower-cta-body">
+        <span class="tower-cta-title">수학 펭귄</span>
+        <span class="tower-cta-sub">8초 안에 장애물을 피하는 개념 퀴즈 →</span>
+      </span>
+    </a>
+
+    </div>
     <button class="hub-close" type="button" data-hub-close>접기 ↑</button>
   </section>
 
@@ -961,18 +984,18 @@
   <nav>
     <a href="#intro" data-spy="intro"><span class="n">01</span>소개</a>
     <a href="#profile" data-spy="profile"><span class="n">02</span>선생님 · 상담</a>
-    <a href="#games" data-spy="games"><span class="n">03</span>개념 퀴즈 게임</a>
-    <a class="sub" href="tower.html?mode=tower">개념의 탑</a>
-    <a class="sub" href="tower.html?mode=monster">수학몬스터</a>
-    <a class="sub" href="tower.html?mode=penguin">수학 펭귄</a>
-    <a href="#omr" data-spy="omr"><span class="n">04</span>학습 관리 (OMR · 클리닉 · 영상 · 질문)</a>
-    <a href="#materials" data-spy="materials"><span class="n">05</span>자료실</a>
+    <a href="#course" data-spy="course"><span class="n">03</span>수업소개 · 커리큘럼</a>
     <a class="sub" href="#curriculum" data-open="concept-cliche">개념 클리셰</a>
     <a class="sub" href="#curriculum" data-open="mise-en-scene">심화 미장센</a>
     <a class="sub" href="#curriculum" data-open="gichul-hommage">기출 오마주</a>
     <a class="sub" href="#curriculum" data-open="final-cut">파이널 컷</a>
-    <a class="sub" href="#stats">출강 학원별 자료</a>
-    <a href="#channel" data-spy="channel"><span class="n">06</span>채널</a>
+    <a href="#materials" data-spy="materials"><span class="n">04</span>자료실 (학원 · 학년별)</a>
+    <a href="#games" data-spy="games"><span class="n">05</span>개념 퀴즈 게임</a>
+    <a class="sub" href="tower.html?mode=tower">개념의 탑</a>
+    <a class="sub" href="tower.html?mode=monster">수학몬스터</a>
+    <a class="sub" href="tower.html?mode=penguin">수학 펭귄</a>
+    <a href="#quick" data-spy="quick"><span class="n">06</span>학생 바로가기 (OMR · 클리닉 · 영상 · 질문)</a>
+    <a href="#channel" data-spy="channel"><span class="n">07</span>채널</a>
   </nav>
   <div class="toc-foot"><a href="https://open.kakao.com/o/gvaZ3mHi" target="_blank" rel="noopener">카카오톡 상담 신청 →</a></div>
 </aside>
@@ -1010,8 +1033,10 @@
 
   function renderFiles(prefix, key, listEl){
     listEl.innerHTML = '<li class="empty">불러오는 중...</li>';
+    const tok = (listEl._tok || 0) + 1; listEl._tok = tok;   // 탭을 빨리 바꿔도 이전 목록이 섞이지 않게
     const folderRef = storage.ref(prefix + '/' + key);
     folderRef.listAll().then(res => {
+      if(listEl._tok !== tok) return;
       if(res.items.length === 0){
         listEl.innerHTML = '<li class="empty">아직 등록된 자료가 없습니다.</li>';
         return;
@@ -1019,6 +1044,7 @@
       listEl.innerHTML = '';
       res.items.forEach(item => {
         item.getDownloadURL().then(url => {
+          if(listEl._tok !== tok) return;
           const li = document.createElement('li');
           const a = document.createElement('a');
           a.href = url; a.target = '_blank'; a.rel = 'noopener';
@@ -1028,6 +1054,7 @@
         });
       });
     }).catch(() => {
+      if(listEl._tok !== tok) return;
       listEl.innerHTML = '<li class="empty">자료를 불러오지 못했습니다.</li>';
     });
   }
@@ -1072,10 +1099,90 @@
     });
   }
 
-  setupExpandable(
-    document.querySelectorAll('.stat'), '.stat-head', '.stat-panel', 'career',
-    (head, opening) => { head.querySelector('.u').textContent = opening ? '자료함 닫기 ↑' : '자료함 열기 ↓'; }
-  );
+  // ---- 출강 학원별 자료실: 학원 × 학년(1·2·3) + 공통 ----
+  // 저장 위치: career/{학원} (공통·이전 자료), career/{학원}-g1 · -g2 · -g3 (학년별)
+  // 학생은 학생 코드에 지정된 학원만, 관리자는 전부, 방문자는 잠금 표시
+  const ACAD_NAMES = { 'daechi-sangsang':'대치 상상학원', 'daechi-snt':'대치 SNT학원', 'megastudy-russel':'메가스터디 러셀' };
+  const acadState = { admin:false, me:null, meLoaded:false };
+  const acadBoxes = Array.from(document.querySelectorAll('.stat.acad'));
+  const acadFolder = (key, g) => g === 'all' ? key : key + '-' + g;
+  const acadAllowed = key => acadState.admin || !!(acadState.me && acadState.me.academy === key);
+  const myGrade = () => (acadState.me && /^[123]$/.test(String(acadState.me.grade))) ? 'g' + acadState.me.grade : null;
+
+  acadBoxes.forEach(box => {
+    const key = box.dataset.acad;
+    const head = box.querySelector('.stat-head'), panel = box.querySelector('.stat-panel');
+    const tabs = box.querySelector('.acad-tabs'), lock = box.querySelector('.acad-lock');
+    const list = box.querySelector('.file-list'), uploadLabel = box.querySelector('.admin-upload');
+    const fileInput = box.querySelector('.file-input');
+    box._g = null;
+    function pick(g){
+      box._g = g;
+      tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.g === g));
+      renderFiles('career', acadFolder(key, g), list);
+    }
+    box._refresh = () => {
+      const ok = acadAllowed(key);
+      box.classList.toggle('locked', !ok);
+      lock.hidden = ok; tabs.hidden = !ok; list.hidden = !ok;
+      if (uploadLabel) uploadLabel.hidden = !acadState.admin;
+      const mg = myGrade();
+      tabs.querySelectorAll('button').forEach(b => b.classList.toggle('mine', !acadState.admin && b.dataset.g === mg));
+      if (ok && !panel.hidden && !box._g) pick(mg || 'g1');
+    };
+    head.setAttribute('aria-expanded', 'false');
+    head.addEventListener('click', () => {
+      const opening = panel.hidden;
+      panel.hidden = !opening;
+      head.setAttribute('aria-expanded', String(opening));
+      head.querySelector('.u').textContent = opening ? '자료함 닫기 ↑' : '자료함 열기 ↓';
+      if (opening) box._refresh();
+    });
+    tabs.addEventListener('click', e => { const b = e.target.closest('button[data-g]'); if (b && acadAllowed(key)) pick(b.dataset.g); });
+    box.querySelector('.acad-gate').addEventListener('click', () => { if (window.openGate) window.openGate(); });
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if(!file || !acadState.admin) return;
+      const g = box._g || 'g1';
+      const btn = uploadLabel.querySelector('.upload-btn');
+      const original = btn.textContent;
+      btn.textContent = '업로드 중...';
+      storage.ref('career/' + acadFolder(key, g) + '/' + file.name).put(file).then(() => {
+        btn.textContent = original; fileInput.value = ''; pick(g);
+      }).catch(err => { btn.textContent = original; alert('업로드 실패: ' + err.message); });
+    });
+    tabs.querySelectorAll('button').forEach(b => {
+      b.title = b.dataset.g === 'all' ? '모든 학년 공통 자료' : b.textContent + ' 자료';
+    });
+  });
+
+  function applyAcad(){
+    const me = acadState.me, admin = acadState.admin;
+    const grid = document.getElementById('stats'), note = document.getElementById('acadNote');
+    const mine = me && ACAD_NAMES[me.academy] ? me.academy : null;
+    const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    acadBoxes.forEach(box => {
+      box.hidden = !admin && !!me && box.dataset.acad !== mine;
+      box._refresh();
+    });
+    grid.classList.toggle('solo', !admin && !!mine);
+    grid.hidden = !acadBoxes.some(b => !b.hidden);
+    if (admin) note.innerHTML = '<b>관리자 모드</b> · 모든 학원 자료를 볼 수 있어요. 학년 탭을 고른 뒤 파일을 올리면 그 학년에 올라갑니다. 학생 학원·학년 지정은 <a href="omr/students.html" style="text-decoration:underline;">학생 관리</a>에서.';
+    else if (mine) note.innerHTML = '<b>' + esc(me.name) + '</b> 학생 · <b>' + ACAD_NAMES[mine] + (myGrade() ? ' ' + me.grade + '학년' : '') + '</b> 자료만 보여요.';
+    else if (me) note.innerHTML = '아직 소속 학원이 지정되지 않았어요. 선생님께 말씀해 주시면 우리 학원 자료가 열려요.';
+    else note.innerHTML = '학원 자료는 <b>학생 전용</b>이에요. 학생 코드로 입장하면 우리 학원 자료만 보여요.';
+  }
+  applyAcad();
+  (function loadMe(){
+    let code = null; try { code = localStorage.getItem('omrStudentCode'); } catch(e){}
+    if (!code) return;
+    firebase.firestore().collection('omrCodes').doc(code).get().then(snap => {
+      if (!snap.exists) return;
+      const d = snap.data();
+      acadState.me = { name: d.name || '', academy: d.academy || null, grade: d.grade || null };
+      applyAcad();
+    }).catch(e => console.warn(e));
+  })();
 
   setupExpandable(
     document.querySelectorAll('.curri-item'), '.curri-head', '.curri-panel', 'curriculum'
@@ -1115,9 +1222,10 @@
 
   auth.onAuthStateChanged(user => {
     setAdminUI(!!user);
+    acadState.admin = !!user; applyAcad();
   });
 </script>
-<script src="omr/common.js?v=9"></script>
+<script src="omr/common.js?v=10"></script>
 <script>
 (function(){
   var btn=document.getElementById('tocBtn'), toc=document.getElementById('toc'),
@@ -1243,6 +1351,8 @@
   var skip = !!(store.get('sessionStorage', 'gateChoice') || qs.has('visit') || (location.hash && location.hash.length > 1));
   if (!skip){ gate.hidden = false; document.body.classList.add('gate-open'); }
   var codeIn = document.getElementById('gateCode'), go = document.getElementById('gateGo'), msg = document.getElementById('gateMsg');
+  var preCode = (qs.get('code') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  if (preCode){ codeIn.value = preCode; if (skip){ gate.hidden = false; document.body.classList.add('gate-open'); } }
   var saved = store.get('localStorage', 'omrStudentCode'), savedName = store.get('localStorage', 'omrStudentName');
   if (saved){
     var sb = document.getElementById('gateSaved');
