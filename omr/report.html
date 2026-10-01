@@ -86,7 +86,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=13"></script>
+<script src="common.js?v=14"></script>
 <script>
 (async function(){
   const { db, esc } = OMR;
@@ -135,7 +135,7 @@
   const qcCls = q => q.ok ? 'ok' : q.type === 'essay' && q.earned > 0 ? 'part' : 'no';
   const qcMark = q => q.type === 'essay' && !q.allCorrect ? `${q.earned}<span style="font-size:10px;">/${q.points}</span>` : (q.ok ? '○' : '✕');
 
-  const G = r.grade, sysLabel = r.gradeSystem === '9' ? '수능 9등급' : r.gradeSystem === '5' ? '내신 5등급' : '';
+  const G = r.grade, sysLabel = (r.gradeSystem === '9' ? '수능 9등급' : r.gradeSystem === '5' ? '내신 5등급' : '') + (r.cutoffs && r.cutoffs[0] && r.cutoffs[0].manual ? ' · 선생님 지정 컷' : '');
   const topPct = r.percentile != null ? Math.max(0, Math.round((100 - r.percentile) * 10) / 10) : null;
   const C = { ink:'#111114', dim:'#63636B', faint:'#9A9AA2', red:'#D6301F', teal:'#2F8F8B', tealSoft:'#9FD3CF', grid:'rgba(17,17,20,.08)', orange:'#E08A2E' };
 
@@ -250,7 +250,9 @@
     ${r.hist ? `<div class="card"><h3>점수대별 인원</h3>${histSvg()}</div>` : ''}
 
     ${r.cutoffs && r.cutoffs.length ? `<div class="card"><h3>등급 정보 <span class="muted" style="font-weight:600;">${sysLabel}</span></h3>
-      <div class="cuts">${r.cutoffs.map(c => `<div class="${c.grade === G ? 'me' : ''}"><span>${c.grade}등급 컷</span><b>${c.score}점</b><span class="muted">${c.upTo}등까지</span></div>`).join('')}</div></div>` : ''}
+      <div class="cuts">${r.cutoffs.map(c => c.manual
+        ? `<div class="${c.grade === G ? 'me' : ''}"><span>${c.grade}등급${c.score == null ? '' : ' 컷'}</span><b>${c.score == null ? (r.cutoffs[c.grade - 2] ? r.cutoffs[c.grade - 2].score + '점 미만' : '그 외') : c.score + '점 이상'}</b><span class="muted">${c.count}명</span></div>`
+        : `<div class="${c.grade === G ? 'me' : ''}"><span>${c.grade}등급 컷</span><b>${c.score}점</b><span class="muted">${c.upTo}등까지</span></div>`).join('')}</div></div>` : ''}
 
     ${typeBlock()}
 

@@ -79,6 +79,12 @@
   #quickKey{min-height:44px;max-height:220px;resize:vertical;font-size:14px;line-height:1.5;}
   #quickKey:focus{min-height:150px;}
   .key-row input.model{width:184px;padding:6px 8px;font-size:13px;border-color:rgba(224,138,46,.5);}
+  .cut-box{background:var(--bg2);border-radius:10px;padding:12px;}
+  .cut-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px;margin-top:10px;}
+  .cut-grid label{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:13px;font-weight:800;}
+  .cut-grid input{width:56px;border:0;font:inherit;font-size:15px;text-align:right;padding:2px;background:transparent;}
+  .cut-grid input:focus{outline:none;}
+  .cut-grid .last{color:var(--dim);font-weight:600;}
   .tpl-box{background:var(--bg2);border-radius:10px;padding:12px;}
   .seg{display:grid;grid-template-columns:44px 14px 72px 22px 1fr 34px;align-items:center;gap:6px;margin-bottom:6px;}
   .seg .from{font-weight:800;text-align:right;font-variant-numeric:tabular-nums;}
@@ -347,6 +353,15 @@
       <div><label class="f">성적표 등급</label><select class="input" id="fGrade">
         <option value="5">내신 5등급 (2022 개정)</option><option value="9">수능 9등급</option><option value="">등급 표시 안 함</option></select></div>
     </div>
+    <div class="cut-box" id="cutBox">
+      <div class="row" style="gap:16px;">
+        <span class="f" style="margin:0;">등급 나누는 방법</span>
+        <label class="row" style="gap:6px;font-size:13.5px;font-weight:700;"><input type="radio" name="gMode" value="rank" checked> 인원 비율로 자동</label>
+        <label class="row" style="gap:6px;font-size:13.5px;font-weight:700;"><input type="radio" name="gMode" value="score"> 등급컷 점수 직접 입력</label>
+      </div>
+      <div id="cutInputs" class="cut-grid hidden"></div>
+      <p class="muted" id="cutHint" style="font-size:12.5px;margin-top:6px;"></p>
+    </div>
     <p class="muted" id="examModalMsg"></p>
     <div class="row"><button class="btn grow" data-close>취소</button><button class="btn primary grow" id="examSaveBtn">저장</button></div>
   </div>
@@ -417,7 +432,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=13"></script>
+<script src="common.js?v=14"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast, copyText, fmtPhone, normalizePhone } = OMR;
@@ -689,6 +704,38 @@
   };
   document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { segs = PRESETS[b.dataset.preset].map(x => ({ ...x })); renderSegs(false); });
 
+  // ───────── 등급컷 (자동: 인원 비율 / 직접: 점수) ─────────
+  const gMode = () => (document.querySelector('input[name=gMode]:checked') || {}).value || 'rank';
+  function setGradeUI(sys, mode, cuts){
+    document.querySelectorAll('input[name=gMode]').forEach(r => { r.checked = r.value === (mode || 'rank'); });
+    renderCutInputs(sys, cuts);
+  }
+  function renderCutInputs(sys, cuts){
+    sys = sys ?? $('fGrade').value;
+    const L = sys === '9' ? 9 : sys === '5' ? 5 : 0;
+    $('cutBox').classList.toggle('hidden', !L);
+    const manual = gMode() === 'score';
+    $('cutInputs').classList.toggle('hidden', !manual || !L);
+    if (!L) return;
+    const prev = cuts || [...$('cutInputs').querySelectorAll('input')].map(i => i.value);
+    let html = '';
+    for (let g = 1; g < L; g++) html += `<label>${g}등급 <input type="number" step="0.5" min="0" data-g="${g}" value="${prev[g - 1] ?? ''}" placeholder="점수">점↑</label>`;
+    html += `<label class="last">${L}등급 = 나머지</label>`;
+    $('cutInputs').innerHTML = html;
+    $('cutHint').textContent = manual ? `각 등급의 최저 점수를 넣으세요 (그 점수 이상이면 해당 등급). 예: 1등급 90 → 90점 이상 1등급.`
+      : (sys === '9' ? '수능 9등급 비율(4·11·23·40·60·77·89·96%)로 석차에 따라 자동으로 나눠요.' : '내신 5등급 비율(10·34·66·90%)로 석차에 따라 자동으로 나눠요.');
+  }
+  document.querySelectorAll('input[name=gMode]').forEach(r => r.addEventListener('change', () => renderCutInputs()));
+  $('fGrade').addEventListener('change', () => renderCutInputs($('fGrade').value, []));
+  function readCuts(){
+    const L = $('fGrade').value === '9' ? 9 : $('fGrade').value === '5' ? 5 : 0;
+    if (!L || gMode() !== 'score') return { gradeMode: 'rank', gradeCuts: null };
+    const cuts = [...$('cutInputs').querySelectorAll('input')].map(i => i.value === '' ? NaN : parseFloat(i.value));
+    if (cuts.some(isNaN)) throw new Error('등급컷 점수를 모두 입력하세요.');
+    for (let i = 1; i < cuts.length; i++) if (!(cuts[i] < cuts[i - 1])) throw new Error(`${i + 1}등급 컷은 ${i}등급 컷(${cuts[i - 1]}점)보다 낮아야 해요.`);
+    return { gradeMode: 'score', gradeCuts: cuts };
+  }
+
   // 새 시험 / 시험 설정 수정
   let editingExam = null, tplSrc = null;
   $('fFrom').onchange = () => {
@@ -699,6 +746,7 @@
     $('fClass').value = tplSrc.className || '';
     $('fPass').value = tplSrc.passScore != null ? tplSrc.passScore : '';
     $('fGrade').value = tplSrc.gradeSystem !== undefined ? (tplSrc.gradeSystem || '') : '5';
+    setGradeUI($('fGrade').value, tplSrc.gradeMode, tplSrc.gradeCuts || []);
     segs = segsFromExam(tplSrc); renderSegs(false);
     const pts = Object.values(tplSrc.points || {});
     $('examModalMsg').textContent = `「${tplSrc.title}」 양식: ${OMR.layoutText(tplSrc)} · 만점 ${tplSrc.maxScore ?? OMR.round(pts.reduce((a, b) => a + b, 0), 1)}점. 제목과 시험일만 바꾸면 돼요.`;
@@ -724,6 +772,7 @@
     $('fDue').value = d ? new Date(d.getTime() - d.getTimezoneOffset()*60e3).toISOString().slice(0,16) : '';
     $('fPass').value = e && e.passScore != null ? e.passScore : '';
     $('fGrade').value = e && e.gradeSystem !== undefined ? (e.gradeSystem || '') : '5';
+    setGradeUI($('fGrade').value, e && e.gradeMode, (e && e.gradeCuts) || []);
     $('examModalMsg').textContent = locked ? '응시가 시작된 시험은 문항 구성을 바꿀 수 없습니다.' : '';
     openModal('examModal');
   }
@@ -739,6 +788,9 @@
     const passRaw = $('fPass').value.trim();
     const data = { title, subject, className, examDate: $('fDate').value || null, dueAt: due,
                    passScore: passRaw === '' ? null : parseFloat(passRaw), gradeSystem: $('fGrade').value };
+    try { Object.assign(data, readCuts()); } catch(err){ $('examModalMsg').textContent = err.message; return; }
+    if (editingExam && ex && ex.gradedAt && (data.gradeMode !== (editingExam.gradeMode || 'rank') || JSON.stringify(data.gradeCuts || null) !== JSON.stringify(editingExam.gradeCuts || null)))
+      setTimeout(() => toast('등급 기준이 바뀌었어요 · 「다시 채점」을 누르면 성적표에 반영됩니다', 3800), 600);
     try {
       if (editingExam){
         if (editingExam.status === 'draft'){

@@ -261,10 +261,22 @@
     const system = exam.gradeSystem === undefined ? '5' : exam.gradeSystem;   // 기본: 내신 5등급
     const N = results.length;
     const byCode = {};
-    results.forEach(r => { byCode[r.code] = { grade: gradeOf(r.rank, N, system) }; });
+    // 선생님이 직접 정한 등급 컷 점수(exam.gradeCuts = [1등급 컷, 2등급 컷, …], 마지막 등급은 나머지)
+    const levels = GRADE_BANDS[system] ? GRADE_BANDS[system].length : 0;
+    const cuts = Array.isArray(exam.gradeCuts) ? exam.gradeCuts.slice(0, Math.max(0, levels - 1)).map(Number) : null;
+    const manual = !!(levels && exam.gradeMode === 'score' && cuts && cuts.length === levels - 1 && cuts.every(x => !isNaN(x)));
+    const gradeByScore = sc => { for (let g = 0; g < cuts.length; g++) if (sc >= cuts[g] - 1e-9) return g + 1; return levels; };
+    results.forEach(r => { byCode[r.code] = { grade: manual ? gradeByScore(r.score) : gradeOf(r.rank, N, system) }; });
     // 등급 컷: 등급마다 가장 낮은 점수와 그 등급까지의 누적 인원
     const cutoffs = [];
-    if (GRADE_BANDS[system]) {
+    if (manual) {
+      let acc = 0;
+      for (let g = 1; g <= levels; g++) {
+        const count = results.filter(r => byCode[r.code].grade === g).length;
+        acc += count;
+        cutoffs.push({ grade: g, score: g < levels ? cuts[g - 1] : null, upTo: acc, count, manual: true });
+      }
+    } else if (GRADE_BANDS[system]) {
       const bands = GRADE_BANDS[system];
       for (let g = 1; g <= bands.length; g++) {
         const inG = results.filter(r => byCode[r.code].grade === g);
@@ -297,7 +309,7 @@
         (byCode[e.code].types = byCode[e.code].types || []).push(t);
       });
     });
-    return { system, std: stats.std, cutoffs, hist, topWrong, typeStats, byCode };
+    return { system, gradeMode: manual ? 'score' : 'rank', std: stats.std, cutoffs, hist, topWrong, typeStats, byCode };
   }
 
   // ───────── 오답 분석 (단원 태그별) ─────────
