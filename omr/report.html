@@ -38,6 +38,15 @@
   .qc.no .r{color:var(--red);}
   .qc.part{background:#fdf3e6;border-color:rgba(224,138,46,.35);} .qc.part .r{color:#b45309;font-size:15px;}
   .qc .ty{font-size:9.5px;font-weight:800;color:var(--dim);}
+  .qmeta{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;margin-top:4px;font-size:12px;color:var(--dim);}
+  .qmeta b{color:var(--ink);font-weight:700;}
+  .lvp{display:inline-block;font-size:11px;font-weight:800;padding:1px 7px;border-radius:99px;color:#fff;background:#9a9aa2;}
+  .lvp.lv-하{background:#7fb8a4;} .lvp.lv-중{background:#3b6fe0;} .lvp.lv-상{background:#e08a2e;} .lvp.lv-최상{background:#d6301f;}
+  .lvrow{display:grid;grid-template-columns:44px 1fr 64px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line2);}
+  .lvrow:first-of-type{border-top:0;}
+  .lvbars{display:grid;gap:3px;} .lvbars .bar{height:8px;} .lvbars .bar.me i{background:var(--ink);} .lvbars .bar.cls i{background:#c9c9cf;}
+  .lvnums{font-size:11px;color:var(--faint);margin-top:4px;}
+  .lvv{text-align:right;line-height:1.2;} .lvv b{display:block;font-size:16px;} .lvv span{font-size:11px;color:var(--dim);}
 
   .wl{display:grid;grid-template-columns:44px 1fr 88px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line2);font-size:13.5px;}
   .wl:last-child{border-bottom:0;}
@@ -77,7 +86,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=11"></script>
+<script src="common.js?v=12"></script>
 <script>
 (async function(){
   const { db, esc } = OMR;
@@ -107,6 +116,22 @@
   const tagRows = Object.values(tagMap).sort((a,b) => a.ok/a.total - b.ok/b.total);
   const ansText = a => Array.isArray(a) ? (a.length ? esc(a.join(' · ')) : '—') : (a ? esc(a) : '—');
   const TY = { short:'단답', essay:'서술' };
+  // 난이도별 결과: 내 득점률 vs 반 평균 정답률
+  function levelBlock(){
+    const L = ['하', '중', '상', '최상'].filter(l => r.questions.some(q => q.level === l));
+    if (!L.length) return '';
+    const rows = L.map(l => {
+      const qs = r.questions.filter(q => q.level === l);
+      const max = qs.reduce((a, q) => a + q.points, 0), mine = qs.reduce((a, q) => a + (q.earned ?? (q.ok ? q.points : 0)), 0);
+      const my = max ? mine / max * 100 : 0, cls = qs.reduce((a, q) => a + (q.rate || 0), 0) / qs.length;
+      return `<div class="lvrow"><span class="lvp lv-${l}">${l}</span>
+        <div><div class="lvbars"><div class="bar me"><i style="width:${my}%"></i></div><div class="bar cls"><i style="width:${cls}%"></i></div></div>
+          <div class="lvnums">${qs.length}문항 · ${qs.map(q => q.n).join(', ')}번</div></div>
+        <div class="lvv"><b>${Math.round(my)}%</b><span>반 ${Math.round(cls)}%</span></div></div>`;
+    }).join('');
+    return `<div class="card"><h3>난이도별 결과</h3>
+      <div class="legend"><span><span class="sw" style="background:var(--ink);"></span>나의 득점률</span><span><span class="sw" style="background:#c9c9cf;"></span>반 평균 정답률</span></div>${rows}</div>`;
+  }
   const qcCls = q => q.ok ? 'ok' : q.type === 'essay' && q.earned > 0 ? 'part' : 'no';
   const qcMark = q => q.type === 'essay' && !q.allCorrect ? `${q.earned}<span style="font-size:10px;">/${q.points}</span>` : (q.ok ? '○' : '✕');
 
@@ -236,6 +261,8 @@
             <td class="num">${mine && mine.type === 'essay' && !mine.ok ? `<span class="pill ${mine.earned > 0 ? 'closed' : 'red'}">${mine.earned}/${mine.points}점</span>` : `<span class="pill ${mine && mine.ok ? 'open' : 'red'}">${mine && mine.ok ? '정답' : '오답'}</span>`}</td></tr>`; }).join('')}
       </table></div></div>` : ''}
 
+    ${levelBlock()}
+
     <div class="card">
       <h3>문항별 정오답</h3>
       <div class="legend"><span>○ 정답</span><span style="color:var(--red);">✕ 오답</span><span>아래 숫자 = 반 정답률</span></div>
@@ -256,6 +283,7 @@
             <div class="ans">${q.type === 'essay'
               ? `서논술형 · 내 점수 <b style="color:${q.earned > 0 ? '#b45309' : 'var(--red)'};">${q.earned}점</b> / ${q.points}점`
               : `${q.type === 'short' ? '단답형 · ' : ''}내 답 <b style="color:var(--red);">${q.blank ? '미응답' : ansText(q.marked)}</b> · 정답 <b style="color:var(--ok);">${ansText(q.correct)}</b> · ${q.points}점`}</div>
+            ${q.tag || q.level || q.note ? `<div class="qmeta">${q.level ? `<span class="lvp lv-${esc(q.level)}">${esc(q.level)}</span>` : ''}${q.tag ? `<b>${esc(q.tag)}</b>` : ''}${q.note ? `<span>${esc(q.note)}</span>` : ''}</div>` : ''}
           </div>
           <div class="rate">반 정답률 ${Math.round(q.rate)}%<div class="bar" style="margin-top:4px;"><i style="width:${q.rate}%"></i></div></div>
         </div>`).join('') : '<p class="muted">모든 문항을 맞혔습니다. 👏</p>'}

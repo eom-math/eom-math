@@ -174,7 +174,7 @@
       if (type !== 'essay' && !allCorrect && !raw.length) throw new Error(`${n}번 정답이 비어 있습니다.`);
       const meta = (exam.meta && exam.meta[n]) || {};
       questions.push({ n, type, answers: type === 'short' ? raw.map(String) : type === 'essay' ? [] : raw.map(Number),
-                       points: Number(key.points[n]) || 0, allCorrect, tag: meta.tag || null, level: meta.level || null });
+                       points: Number(key.points[n]) || 0, allCorrect, tag: meta.tag || null, level: meta.level || null, note: meta.note || null });
     }
     const maxScore = questions.reduce((s, q) => s + q.points, 0);
 
@@ -187,7 +187,7 @@
         const g = gradeOne(q, marked, es[q.n]);
         total += g.earned; correct += g.ok ? 1 : 0;
         const x = { n: q.n, type: q.type, marked, correct: q.answers, ok: g.ok, blank: q.type === 'essay' ? false : !marked.length,
-                    points: q.points, earned: round(g.earned, 2), allCorrect: q.allCorrect, tag: q.tag, level: q.level };
+                    points: q.points, earned: round(g.earned, 2), allCorrect: q.allCorrect, tag: q.tag, level: q.level, note: q.note };
         if (q.type === 'essay') { x.partial = !!g.partial; x.scored = !!g.scored; }
         return x;
       });
