@@ -564,29 +564,47 @@
     return [c.length ? c.join(', ') : '', t ? `개별 ${t}명` : ''].filter(Boolean).join(' + ') || '대상 없음';
   }
 
+  // ───────── 과제 (사진·PDF 제출 / OMR 제출) ─────────
+  // OMR 과제(kind:'omr', examId)는 그 시험 OMR을 최종 제출하면 자동으로 완료
+  const HW_DONE = ['submitted', 'approved'];
+  async function studentAssignments(me, base = '') {
+    const qs = await db.collection('omrAssignments').where('className', '==', me.className).get();
+    const list = qs.docs.map(d => ({ id: d.id, ...d.data() }));
+    const subs = await Promise.all(list.map(a => (a.kind === 'omr' && a.examId
+      ? db.collection('omrSubmissions').doc(`${a.examId}_${me.code}`).get()
+      : db.collection('omrAssignSubs').doc(`${a.id}_${me.code}`).get()).then(x => x.exists ? x.data() : null).catch(() => null)));
+    return list.map((a, i) => {
+      const s = subs[i];
+      let status = s ? s.status : 'none';
+      if (a.kind === 'omr') status = !s ? 'none' : s.status === 'submitted' ? 'submitted' : 'in_progress';
+      return { a, s, status, done: HW_DONE.includes(status), omr: a.kind === 'omr',
+        href: a.kind === 'omr' && a.examId ? base + 'index.html?exam=' + encodeURIComponent(a.examId) : base + 'hw.html?id=' + encodeURIComponent(a.id) };
+    }).sort((x, y) => (x.done - y.done) || ((toDate(x.a.dueAt) || new Date(8.64e15)) - (toDate(y.a.dueAt) || new Date(8.64e15))));
+  }
+  const HW_LABEL = { none: ['미제출', 'red'], in_progress: ['진행 중', 'closed'], submitted: ['제출 완료', 'draft'], revise: ['보완 필요', 'red'], approved: ['확인 완료 ✓', 'published'] };
+
   async function studentDashboard(me, base = '', opts = {}) {
     const now = new Date(), in7 = new Date(now.getTime() + 7 * 864e5), today = todayStr();
     const safe = p => p.catch(e => { console.warn(e); return null; });
     const dLabel = d => { const days = Math.ceil((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
       return days < 0 ? '지남' : days === 0 ? '오늘' : 'D-' + days; };
-    const [as, slots, lecs, links, exams] = await Promise.all([
-      safe(db.collection('omrAssignments').where('className', '==', me.className).get()),
+    const [hwAll, slots, lecs, links, exams] = await Promise.all([
+      safe(studentAssignments(me, base)),
       safe(db.collection('clinicSlots').get()),
       safe(db.collection('lectures').get()),
       safe(db.collection('dailyReportLinks').doc(me.code).get()),
       safe(examsForStudent(me)),
     ]);
     const rows = [];
-    if (as) {
-      const list = as.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.status === 'open');
-      const subs = await Promise.all(list.map(a => db.collection('omrAssignSubs').doc(`${a.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
-      list.forEach((a, i) => {
-        const st = subs[i] ? subs[i].status : 'none', due = toDate(a.dueAt);
-        if (!['none', 'in_progress', 'revise'].includes(st) || (due && due > in7)) return;
-        rows.push({ sort: due ? due.getTime() : in7.getTime(), d: due ? dLabel(due) : '과제', cls: !due || due - now < 2 * 864e5 ? 'red' : '',
-          t: a.title, m: st === 'revise' ? '보완 필요' : '과제', href: base + 'hw.html?id=' + encodeURIComponent(a.id) });
-      });
-    }
+    // 과제: 진행 중인 것 + 최근 끝낸 것 (나의 학습 「과제」 배너용), 이번 주 할 일에는 7일 안 기한의 미완료만
+    const hw = (hwAll || []).filter(x => x.a.status === 'open' || x.status === 'revise' || (!x.done && toDate(x.a.dueAt) && toDate(x.a.dueAt) > new Date(now.getTime() - 14 * 864e5))).slice(0, 12);
+    const hwExamIds = new Set((hwAll || []).filter(x => x.omr).map(x => x.a.examId));
+    hw.forEach(x => {
+      const due = toDate(x.a.dueAt);
+      if (x.done || x.a.status !== 'open' || (due && due > in7)) return;
+      rows.push({ sort: due ? due.getTime() : in7.getTime(), d: due ? dLabel(due) : '과제', cls: !due || due - now < 2 * 864e5 ? 'red' : '',
+        t: x.a.title, m: x.status === 'revise' ? '보완 필요' : x.omr ? 'OMR 과제' : '과제', href: x.href });
+    });
     if (slots) {
       const up = slots.docs.map(d => ({ id: d.id, ...d.data() }))
         .filter(s => s.date >= today && s.date <= todayStr(in7) && (s.className === '전체' || s.className === me.className));
@@ -608,9 +626,9 @@
     if (exams) {
       const open = exams.docs.map(d => ({ id: d.id, ...d.data() })).filter(e => e.status === 'open');
       const subs = await Promise.all(open.map(e => db.collection('omrSubmissions').doc(`${e.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
-      open.forEach((e, i) => { if (subs[i] && subs[i].status === 'submitted') return;
+      open.forEach((e, i) => { if ((subs[i] && subs[i].status === 'submitted') || hwExamIds.has(e.id)) return;
         const due = toDate(e.dueAt);
-        rows.push({ sort: due ? due.getTime() : now.getTime(), d: due ? dLabel(due) : 'OMR', cls: 'red', t: e.title, m: '시험 OMR', href: base + 'index.html' }); });
+        rows.push({ sort: due ? due.getTime() : now.getTime(), d: due ? dLabel(due) : 'OMR', cls: 'red', t: e.title, m: '시험 OMR', href: base + 'index.html?exam=' + encodeURIComponent(e.id) }); });
     }
     if (lecs) {
       const mine = lecs.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => l.status === 'open' && (l.className === '전체' || l.className === me.className))
@@ -640,7 +658,7 @@
           sort: dd.getTime() + (t.star ? 0 : 1), d: i === 0 ? '오늘' : DOW[dd.getDay()], cls: 'plan', subj: t.subj, t: t.text, m: t.amount || '', href: base + 'planner.html' }));
       });
     }
-    return { week: rows, latest, trend, plan };
+    return { week: rows, latest, trend, plan, hw };
   }
 
   // 여러 문서 쓰기를 400개씩 나눠 커밋
@@ -707,7 +725,7 @@
     QTYPES, examTypes, examSegments, layoutText, shortEq,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
-    ACADEMIES, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
+    ACADEMIES, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

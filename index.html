@@ -501,6 +501,14 @@
   .wk-i.wk-add .t{ color:var(--dim); }
   .wk-i .d.red{ background:rgba(214,48,31,.1); color:var(--red); } .wk-i .d.ink{ background:var(--ink); color:#fff; } .wk-i .d.ok{ background:rgba(31,122,77,.12); color:#1F7A4D; }
   .wk-i .t{ font-size:13.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bn-hw{ cursor:default; }
+  .bn-hw a.wk-i{ color:inherit; text-decoration:none; transition:border-color .2s; }
+  .bn-hw a.wk-i:hover{ border-color:var(--ink); }
+  .wk-i .st{ flex:0 0 auto; font-size:10.5px; font-weight:800; padding:2px 6px; border-radius:99px; background:var(--bg2); color:var(--dim); }
+  .wk-i .st.red{ background:rgba(214,48,31,.1); color:var(--red); } .wk-i .st.closed{ background:#FFF1DC; color:#B7791F; }
+  .wk-i .st.draft, .wk-i .st.published{ background:rgba(31,122,77,.12); color:#1F7A4D; }
+  .wk-i.done{ opacity:.6; } .wk-i.done .t{ text-decoration:line-through; text-decoration-thickness:1.5px; }
+  .wk-i .om{ font-size:10px; font-weight:900; color:#3b6fe0; }
   /* 데일리 리포트 */
   .dr{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
   .dr .sc{ font-size:40px; font-weight:900; letter-spacing:-.04em; line-height:1; font-variant-numeric:tabular-nums; }
@@ -935,6 +943,12 @@
       <span class="bn-go" aria-hidden="true">→</span>
     </a>
 
+    <div class="bn bn-hw" id="bnHw">
+      <div class="bn-l"><span class="bn-k">Homework</span><b>과제</b><span class="bn-s" id="bnHwCnt">–</span></div>
+      <div class="bn-c"><div class="wk-row" id="bnHwBody"><span class="bn-empty">불러오는 중…</span></div></div>
+      <a class="bn-go" href="omr/" aria-label="과제 전체 보기">→</a>
+    </div>
+
     <a class="bn" id="bnDaily" href="omr/">
       <div class="bn-l"><span class="bn-k">Daily report</span><b>데일리 리포트</b><span class="bn-s" id="bnDailyDate">매 수업 발송</span></div>
       <div class="bn-c" id="bnDailyBody"><span class="bn-empty">불러오는 중…</span></div>
@@ -1225,7 +1239,7 @@
     acadState.admin = !!user; applyAcad();
   });
 </script>
-<script src="omr/common.js?v=15"></script>
+<script src="omr/common.js?v=16"></script>
 <script>
 (function(){
   var btn=document.getElementById('tocBtn'), toc=document.getElementById('toc'),
@@ -1442,8 +1456,25 @@
       + '</div><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMaxYMid meet" role="img" aria-label="최근 복습 테스트 점수">'
       + '<defs><linearGradient id="bnGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0805F"/><stop offset="1" stop-color="#D6301F"/></linearGradient></defs>' + bars + '</svg></div>';
   }
+  function hwHtml(list){
+    if (!list.length) return '<span class="bn-empty">지금 받은 과제가 없어요.</span>';
+    var now = new Date();
+    return list.map(function(x){
+      var lab = (OMR.HW_LABEL[x.status] || [x.status, ''])[0], cls = (OMR.HW_LABEL[x.status] || ['', ''])[1];
+      if (x.omr && x.done) lab = 'OMR 제출 ✓';
+      var due = OMR.toDate(x.a.dueAt), dl = '';
+      if (due && !x.done){ var days = Math.ceil((new Date(due.getFullYear(), due.getMonth(), due.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
+        dl = days < 0 ? '지남' : days === 0 ? '오늘' : 'D-' + days; }
+      return '<a class="wk-i' + (x.done ? ' done' : '') + '" href="' + esc(x.href) + '">'
+        + (dl ? '<span class="d ' + (days <= 1 ? 'red' : '') + '">' + dl + '</span>' : '')
+        + '<span class="t">' + (x.omr ? '<span class="om">OMR </span>' : '') + esc(x.a.title) + '</span><span class="st ' + cls + '">' + esc(lab) + '</span></a>';
+    }).join('');
+  }
   function fill(d, sample){
-    ['bnWeek','bnDaily','bnTrend'].forEach(function(id){ $(id).classList.toggle('sample', !!sample); });
+    ['bnWeek','bnHw','bnDaily','bnTrend'].forEach(function(id){ $(id).classList.toggle('sample', !!sample); });
+    var hw = d.hw || [], left = hw.filter(function(x){ return !x.done; }).length;
+    $('bnHwCnt').textContent = hw.length ? (left ? '남은 과제 ' + left + '개' : '모두 완료 👏') : '없음';
+    $('bnHwBody').innerHTML = hwHtml(hw);
     var planRows = (d.plan && d.plan.rows) || [];
     var rows = planRows.concat(d.week);
     var pt = d.plan && d.plan.today;
@@ -1461,6 +1492,9 @@
   }
   var SAMPLE = {
     week: [{ d:'오늘', cls:'plan', subj:'1', t:'명제 개념 복습' }, { d:'D-1', cls:'red', t:'쎈 B 212~240번 과제 제출' }, { d:'10/4', cls:'ink', t:'토 14:00 클리닉 예약' }, { d:'완강', cls:'ok', t:'명제 3강 — 대우를 이용한 증명' }],
+    hw: [{ a:{ title:'쎈 B 212~240번', dueAt: new Date(Date.now() + 864e5) }, status:'none', done:false, href:'omr/' },
+         { a:{ title:'10월 주간평가 OMR', dueAt: new Date(Date.now() + 2 * 864e5) }, status:'none', omr:true, done:false, href:'omr/' },
+         { a:{ title:'명제 워크북 p.32~40' }, status:'approved', done:true, href:'omr/' }],
     latest: { date:'2026-09-30', title:'13회차', score:88, maxScore:100, avg:80, homework:100, weak:['대우 증명'], attendance:'present' },
     trend: [{ score:72, max:100 }, { score:80, max:100 }, { score:76, max:100 }, { score:88, max:100 }, { score:94, max:100 }],
   };
@@ -1471,6 +1505,9 @@
     $('dashLogin').onclick = function(e){ e.preventDefault(); if (window.openGate) window.openGate(); else location.href = 'omr/'; };
     $('dashWho').textContent = '';
   }
+  $('bnHw').addEventListener('click', function(e){
+    if ($('bnHw').classList.contains('sample') && window.openGate){ e.preventDefault(); window.openGate(); }
+  });
   ['bnWeek','bnDaily','bnTrend'].forEach(function(id){
     $(id).addEventListener('click', function(e){
       if ($(id).classList.contains('sample') && window.openGate){ e.preventDefault(); window.openGate(id === 'bnTrend' ? 'omr/review.html' : id === 'bnWeek' ? 'omr/planner.html' : null); }

@@ -172,7 +172,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=15"></script>
+<script src="common.js?v=16"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast } = OMR;
@@ -237,6 +237,7 @@
       .filter(e => e.status && e.status !== 'draft')
       .sort((a,b) => (toDate(b.createdAt)||0) - (toDate(a.createdAt)||0));
     if (!exams.length){ box.innerHTML = '<div class="empty">아직 응시할 시험이 없습니다.</div>'; return; }
+    const wantExam = new URLSearchParams(location.search).get('exam');
     const subs = await Promise.all(exams.map(e =>
       db.collection('omrSubmissions').doc(`${e.id}_${me.code}`).get().then(s => s.exists ? s.data() : null).catch(() => null)));
     box.innerHTML = '';
@@ -261,7 +262,18 @@
         <span class="pill ${pillCls}" style="margin-left:auto;">${pill}</span>`;
       box.appendChild(el);
     });
+    // 과제·할 일에서 특정 시험으로 들어온 경우 (index.html?exam=시험ID) 바로 열기 — 한 번만
+    if (wantExam && !autoOpened){
+      autoOpened = true;
+      const i = exams.findIndex(e => e.id === wantExam);
+      if (i >= 0){
+        const e = exams[i], sub = subs[i];
+        if (e.status === 'published' && sub && sub.reportToken) location.href = 'report.html?t=' + encodeURIComponent(sub.reportToken);
+        else openExam(e, sub);
+      } else toast('이 시험은 지금 볼 수 없어요', 2600);
+    }
   }
+  let autoOpened = false;
 
   // ───────── 데일리 리포트 (최근 5개) ─────────
   async function loadDaily(){
@@ -337,22 +349,21 @@
       return days < 0 ? '지남' : days === 0 ? '오늘' : 'D-' + days; };
     const safe = p => p.catch(e => { console.warn(e); return null; });
     const [as, slots, lecs, links, exams] = await Promise.all([
-      safe(db.collection('omrAssignments').where('className','==',me.className).get()),
+      safe(OMR.studentAssignments(me)),
       safe(db.collection('clinicSlots').get()),
       safe(db.collection('lectures').get()),
       safe(db.collection('dailyReportLinks').doc(me.code).get()),
       safe(OMR.examsForStudent(me)),
     ]);
-    // 과제: 열려 있고 아직 안 낸 것(또는 보완 요청) 중 기한이 7일 안이거나 지난 것
+    // 과제: 열려 있고 아직 안 낸 것(또는 보완 요청) 중 기한이 7일 안이거나 지난 것 (OMR 과제는 OMR 제출로 완료)
+    const hwExamIds = new Set();
     if (as){
-      const list = as.docs.map(d => ({ id:d.id, ...d.data() })).filter(a => a.status === 'open');
-      const subs = await Promise.all(list.map(a => db.collection('omrAssignSubs').doc(`${a.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
-      list.forEach((a, i) => {
-        const st = subs[i] ? subs[i].status : 'none', due = toDate(a.dueAt);
-        if (!['none','in_progress','revise'].includes(st)) return;
-        if (due && due > in7) return;
+      as.forEach(x => {
+        if (x.omr) hwExamIds.add(x.a.examId);
+        const due = toDate(x.a.dueAt);
+        if (x.done || x.a.status !== 'open' || (due && due > in7)) return;
         rows.push({ sort: due ? due.getTime() : in7.getTime(), d: due ? dLabel(due) : '과제', cls: !due || due - now < 2 * 864e5 ? 'red' : '',
-          t: a.title, m: st === 'revise' ? '보완 필요' : '과제', href: 'hw.html?id=' + encodeURIComponent(a.id) });
+          t: x.a.title, m: x.status === 'revise' ? '보완 필요' : x.omr ? 'OMR 과제' : '과제', href: x.href });
       });
     }
     // 클리닉: 앞으로 7일 안에 예약한 시간
@@ -376,7 +387,7 @@
     if (exams){
       const open = exams.docs.map(d => ({ id:d.id, ...d.data() })).filter(e => e.status === 'open');
       const subs = await Promise.all(open.map(e => db.collection('omrSubmissions').doc(`${e.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
-      open.forEach((e, i) => { if (subs[i] && subs[i].status === 'submitted') return;
+      open.forEach((e, i) => { if ((subs[i] && subs[i].status === 'submitted') || hwExamIds.has(e.id)) return;
         const due = toDate(e.dueAt);
         rows.push({ sort: due ? due.getTime() : now.getTime(), d: due ? dLabel(due) : 'OMR', cls:'red', t: e.title, m: '시험 OMR', href: null, exam: e, sub: subs[i] }); });
     }
@@ -410,30 +421,25 @@
     const seq = ++todoSeq;
     const box = document.createElement('div');   // 다 만든 뒤 한 번에 교체 (중복 표시 방지)
     try {
-      const [cs, as] = await Promise.all([db.collection('omrCodes').doc(me.code).get(),
-        db.collection('omrAssignments').where('className','==',me.className).get()]);
+      const [cs, hwAll] = await Promise.all([db.collection('omrCodes').doc(me.code).get(), OMR.studentAssignments(me)]);
       const clinicIds = (cs.exists && cs.data().clinics) || [];
-      const assigns = as.docs.map(d => ({ id:d.id, ...d.data() }))
-        .sort((a,b) => (toDate(a.dueAt) || new Date(8.64e15)) - (toDate(b.dueAt) || new Date(8.64e15)));
-      const [aSubs, clinics, cSubs] = await Promise.all([
-        Promise.all(assigns.map(a => db.collection('omrAssignSubs').doc(`${a.id}_${me.code}`).get().then(s => s.exists ? s.data() : null).catch(() => null))),
+      const [clinics, cSubs] = await Promise.all([
         Promise.all(clinicIds.map(id => db.collection('omrClinics').doc(id).get().then(s => s.exists ? { id, ...s.data() } : null).catch(() => null))),
         Promise.all(clinicIds.map(id => db.collection('omrClinicSubs').doc(id).get().then(s => s.exists ? s.data() : null).catch(() => null))),
       ]);
-      // 과제: 마감됐고 이미 끝난 과제는 최근 5개만
-      const aRows = assigns.map((a, i) => ({ a, s: aSubs[i] }))
-        .filter(({a, s}) => a.status === 'open' || (s && s.status === 'revise'));
+      // 과제: 진행 중인 것 먼저, 마감됐고 이미 끝난 과제는 최근 5개만. OMR 과제는 OMR을 제출하면 완료
+      const aRows = hwAll.filter(x => x.a.status === 'open' || x.status === 'revise');
       const openIds = new Set(aRows.map(r => r.a.id));
-      const doneRows = assigns.map((a, i) => ({ a, s: aSubs[i] })).filter(r => !openIds.has(r.a.id)).slice(0, 5);
+      const doneRows = hwAll.filter(r => !openIds.has(r.a.id)).slice(0, 5);
       if (aRows.length || doneRows.length){
         box.insertAdjacentHTML('beforeend', '<h2 class="sec-h">과제</h2>');
-        [...aRows, ...doneRows].forEach(({a, s}) => {
-          const st = s ? s.status : 'none';
+        [...aRows, ...doneRows].forEach(x => {
+          const st = x.status, a = x.a;
           const due = toDate(a.dueAt);
-          const [pill, cls] = { none:[a.status === 'open' ? '미제출' : '마감', a.status === 'open' ? 'red' : 'draft'],
-            in_progress:['진행 중','closed'], submitted:['제출 완료','draft'], revise:['보완 필요','red'], approved:['확인 완료 ✓','published'] }[st];
-          box.appendChild(item(`hw.html?id=${encodeURIComponent(a.id)}`, a.title,
-            due ? `기한 ${fmtDateTime(due)}${due < new Date() && st === 'none' ? ' · 지남' : ''}` : '기한 없음', pill, cls));
+          let [pill, cls] = st === 'none' ? [a.status === 'open' ? '미제출' : '마감', a.status === 'open' ? 'red' : 'draft'] : (OMR.HW_LABEL[st] || [st, '']);
+          if (x.omr && x.done) [pill, cls] = ['OMR 제출 ✓', 'published'];
+          box.appendChild(item(x.href, (x.omr ? '[OMR] ' : '') + a.title,
+            (due ? `기한 ${fmtDateTime(due)}${due < new Date() && st === 'none' ? ' · 지남' : ''}` : '기한 없음') + (x.omr && !x.done ? ' · OMR 답안을 제출하면 완료' : ''), pill, cls));
         });
       }
       const cRows = clinics.map((c, i) => c && { c, s: cSubs[i] }).filter(Boolean)

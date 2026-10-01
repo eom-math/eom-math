@@ -89,6 +89,11 @@
       <div><label class="f">반</label><input class="input" id="fClass" list="classList"></div>
       <div><label class="f">제출 기한</label><input class="input" id="fDue" type="datetime-local"></div>
     </div>
+    <div class="grid2">
+      <div><label class="f">제출 방식</label><select class="input" id="fKind"><option value="file">사진·PDF 제출</option><option value="omr">OMR 제출 (시험 연결)</option></select></div>
+      <div id="fExamWrap" class="hidden"><label class="f">연결할 OMR 시험</label><select class="input" id="fExam"></select></div>
+    </div>
+    <p class="muted hidden" id="fKindHint" style="margin-top:-4px;">학생이 이 시험의 OMR 답안을 <b>최종 제출하면 과제가 자동으로 완료</b>돼요. 과제 화면을 누르면 바로 OMR로 연결됩니다. (시험은 「시험·OMR」에서 응시를 열어 두세요)</p>
     <div><label class="f">안내 (선택)</label><textarea class="input" id="fDesc" placeholder="풀이 과정이 보이게 사진을 찍어 올리세요."></textarea></div>
     <p class="muted" id="asMsg"></p>
     <div class="row"><button class="btn grow" data-close>취소</button><button class="btn primary grow" id="asSave">저장</button></div>
@@ -100,7 +105,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=15"></script>
+<script src="common.js?v=16"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast, copyText, fmtPhone, normalizePhone } = OMR;
@@ -110,7 +115,10 @@
   $('remindTpl').textContent = REMIND_TPL;
   const ST = { none:['미제출',''], in_progress:['진행 중','closed'], submitted:['제출 완료','open'], revise:['보완 필요','revise'], approved:['확인 완료','published'] };
 
-  let students = [], assigns = [], cur = null, subs = [], unsub = null;
+  let students = [], assigns = [], exams = [], cur = null, subs = [], unsub = null;
+  const isOmr = a => a && a.kind === 'omr' && a.examId;
+  // OMR 제출 → 과제 상태로 (최종 제출 = 제출 완료, 임시 저장 = 진행 중)
+  const omrToSub = d => ({ id: d.id, ...d.data(), status: d.data().status === 'submitted' ? 'submitted' : 'in_progress', files: [], omr: true });
   const handleErr = (e, m) => { console.error(e); toast(m || ('오류: ' + (e.message || e)), 3500); };
   document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => {
     if (e.target === m || e.target.hasAttribute('data-close')) m.classList.add('hidden'); }));
@@ -120,7 +128,8 @@
     if (!user) return show('vLogin');
     show('vList');
     try {
-      const [st, as] = await Promise.all([db.collection('omrStudents').get(), db.collection('omrAssignments').get()]);
+      const [st, as, ex] = await Promise.all([db.collection('omrStudents').get(), db.collection('omrAssignments').get(), db.collection('omrExams').get().catch(() => ({ docs: [] }))]);
+      exams = ex.docs.map(d => ({ id:d.id, ...d.data() })).sort((a,b) => (toDate(b.createdAt)||0) - (toDate(a.createdAt)||0));
       students = st.docs.map(d => ({ id:d.id, ...d.data() }));
       assigns = as.docs.map(d => ({ id:d.id, ...d.data() }));
     } catch(e){ return handleErr(e, '데이터를 불러오지 못했습니다 (보안 규칙 확인)'); }
@@ -143,8 +152,15 @@
     const box = $('asList');
     if (!list.length){ box.innerHTML = '<div class="empty">과제가 없습니다. <b>+ 새 과제</b>로 등록하세요.</div>'; return; }
     box.innerHTML = '<div class="empty">수거율 계산 중…</div>';
-    const counts = await Promise.all(list.map(a => db.collection('omrAssignSubs').where('assignmentId','==',a.id).get()
-      .then(q => q.docs.filter(d => isDone(d.data())).length).catch(() => 0)));
+    const counts = await Promise.all(list.map(a => {
+      if (isOmr(a)){
+        const codes = new Set(roster(a.className).map(s => s.code));
+        return db.collection('omrSubmissions').where('examId','==',a.examId).get()
+          .then(q => q.docs.filter(d => d.data().status === 'submitted' && codes.has(d.data().code)).length).catch(() => 0);
+      }
+      return db.collection('omrAssignSubs').where('assignmentId','==',a.id).get()
+        .then(q => q.docs.filter(d => isDone(d.data())).length).catch(() => 0);
+    }));
     box.innerHTML = '';
     list.forEach((a, i) => {
       const total = roster(a.className).length, done = counts[i];
@@ -152,7 +168,7 @@
       const due = toDate(a.dueAt), overdue = due && due < new Date();
       const b = document.createElement('button');
       b.className = 'as-row';
-      b.innerHTML = `<div><div class="t">${esc(a.title)} ${a.status === 'closed' ? '<span class="pill closed">마감</span>' : ''}</div>
+      b.innerHTML = `<div><div class="t">${isOmr(a) ? '<span class="pill open">OMR</span> ' : ''}${esc(a.title)} ${a.status === 'closed' ? '<span class="pill closed">마감</span>' : ''}</div>
           <div class="m">${esc(a.className)}${due ? ` · 기한 ${fmtDateTime(due)}${overdue ? ' (지남)' : ''}` : ''}</div></div>
         <div><div class="bar"><i style="width:${pct}%;${pct < 70 && overdue ? 'background:var(--red);' : ''}"></i></div>
           <div class="m" style="margin-top:4px;">수거율 <b style="color:var(--ink);">${pct}%</b> · ${done}/${total}</div></div>
@@ -169,16 +185,40 @@
     $('asModalTitle').textContent = a ? '과제 수정' : '새 과제';
     $('fTitle').value = a ? a.title : ''; $('fClass').value = a ? a.className : $('classSel').value;
     $('fDesc').value = a ? (a.description || '') : '';
+    $('fKind').value = isOmr(a) ? 'omr' : 'file';
+    fillExamSel(a && a.examId); kindUI();
     const d = a && toDate(a.dueAt);
     $('fDue').value = d ? new Date(d.getTime() - d.getTimezoneOffset()*60e3).toISOString().slice(0,16) : '';
     $('asMsg').textContent = ''; $('asModal').classList.remove('hidden');
   }
   $('newBtn').onclick = () => openModal(null);
+  function kindUI(){
+    const omr = $('fKind').value === 'omr';
+    $('fExamWrap').classList.toggle('hidden', !omr); $('fKindHint').classList.toggle('hidden', !omr);
+    $('fDesc').placeholder = omr ? '예: 시험지를 풀고 OMR에 답을 입력해 제출하세요.' : '풀이 과정이 보이게 사진을 찍어 올리세요.';
+  }
+  function fillExamSel(sel){
+    const cls = $('fClass').value.trim();
+    const mine = exams.filter(e => !cls || e.className === cls || (e.classNames || []).includes(cls));
+    const list = mine.length ? mine : exams;
+    const ST_X = { draft:'출제 중', open:'응시 중', closed:'마감', published:'결과 공개' };
+    $('fExam').innerHTML = (list.length ? '' : '<option value="">시험이 없어요 — 「시험·OMR」에서 먼저 만드세요</option>') +
+      list.map(e => `<option value="${esc(e.id)}" ${e.id === sel ? 'selected' : ''}>${esc(e.title)} · ${esc(e.className)} (${ST_X[e.status] || e.status})</option>`).join('');
+  }
+  $('fKind').onchange = () => { kindUI(); if (!$('fTitle').value.trim() && $('fKind').value === 'omr'){ const e = exams.find(x => x.id === $('fExam').value); if (e) $('fTitle').value = e.title; } };
+  $('fClass').addEventListener('change', () => fillExamSel($('fExam').value));
+  $('fExam').onchange = () => { const e = exams.find(x => x.id === $('fExam').value); if (e && !$('fTitle').value.trim()) $('fTitle').value = e.title; };
   $('asSave').onclick = async () => {
     const title = $('fTitle').value.trim(), className = $('fClass').value.trim();
     if (!title || !className){ $('asMsg').textContent = '제목과 반을 입력하세요.'; return; }
     const data = { title, className, description: $('fDesc').value.trim(),
-      dueAt: $('fDue').value ? firebase.firestore.Timestamp.fromDate(new Date($('fDue').value)) : null };
+      dueAt: $('fDue').value ? firebase.firestore.Timestamp.fromDate(new Date($('fDue').value)) : null, kind: $('fKind').value };
+    if (data.kind === 'omr'){
+      const e = exams.find(x => x.id === $('fExam').value);
+      if (!e){ $('asMsg').textContent = '연결할 OMR 시험을 고르세요.'; return; }
+      data.examId = e.id; data.examTitle = e.title;
+      if (e.status === 'draft') setTimeout(() => toast('연결한 시험이 아직 「출제 중」이에요. 응시를 열어야 학생이 제출할 수 있어요', 4000), 700);
+    } else { data.examId = null; data.examTitle = null; }
     try {
       if (editing){ await db.collection('omrAssignments').doc(editing.id).update(data); Object.assign(editing, data); }
       else {
@@ -197,14 +237,19 @@
     show('vDetail');
     renderHead();
     if (unsub) unsub();
-    unsub = db.collection('omrAssignSubs').where('assignmentId','==',id).onSnapshot(q => {
-      subs = q.docs.map(d => ({ id:d.id, ...d.data() })); renderDetail();
-    }, e => handleErr(e));
+    unsub = isOmr(cur)
+      ? db.collection('omrSubmissions').where('examId','==',cur.examId).onSnapshot(q => {
+          const codes = new Set(roster(cur.className).map(s => s.code));
+          subs = q.docs.map(omrToSub).filter(s => codes.has(s.code)); renderDetail();
+        }, e => handleErr(e))
+      : db.collection('omrAssignSubs').where('assignmentId','==',id).onSnapshot(q => {
+          subs = q.docs.map(d => ({ id:d.id, ...d.data() })); renderDetail();
+        }, e => handleErr(e));
   }
   function renderHead(){
     $('dTitle').textContent = cur.title;
     const due = toDate(cur.dueAt);
-    $('dMeta').textContent = `${cur.className}${due ? ' · 기한 ' + fmtDateTime(due) : ' · 기한 없음'}${cur.description ? ' · ' + cur.description : ''}`;
+    $('dMeta').textContent = `${cur.className}${isOmr(cur) ? ` · OMR 제출: 「${cur.examTitle || '시험'}」 최종 제출 시 자동 완료` : ''}${due ? ' · 기한 ' + fmtDateTime(due) : ' · 기한 없음'}${cur.description ? ' · ' + cur.description : ''}`;
     $('dActions').innerHTML = `<span class="pill ${cur.status === 'open' ? 'open' : 'closed'}">${cur.status === 'open' ? '제출 받는 중' : '마감'}</span>
       <span class="grow"></span>
       <button class="btn sm" data-a="toggle">${cur.status === 'open' ? '제출 마감' : '다시 열기'}</button>
@@ -219,13 +264,15 @@
         const status = cur.status === 'open' ? 'closed' : 'open';
         await db.collection('omrAssignments').doc(cur.id).update({ status }); cur.status = status; renderHead();
       } else if (b.dataset.a === 'link'){
-        copyText(`[엄형국 수학] 과제 '${cur.title}' 제출 안내\n${new URL('./', location.href).href}\n학생 코드로 입장해 사진이나 PDF로 제출하세요.`);
+        copyText(isOmr(cur)
+          ? `[엄형국 수학] 과제 '${cur.title}' 안내\n${new URL('./', location.href).href}?exam=${encodeURIComponent(cur.examId)}\n학생 코드로 입장해 OMR 답안을 제출하면 과제가 완료돼요.`
+          : `[엄형국 수학] 과제 '${cur.title}' 제출 안내\n${new URL('./', location.href).href}\n학생 코드로 입장해 사진이나 PDF로 제출하세요.`);
       } else if (b.dataset.a === 'edit') openModal(cur);
       else if (b.dataset.a === 'del'){
-        if (!confirm(`'${cur.title}' 과제와 제출 기록을 삭제할까요? (올라온 파일은 Storage에 남습니다)`)) return;
+        if (!confirm(isOmr(cur) ? `'${cur.title}' 과제를 삭제할까요? (연결된 OMR 시험과 답안은 그대로 남습니다)` : `'${cur.title}' 과제와 제출 기록을 삭제할까요? (올라온 파일은 Storage에 남습니다)`)) return;
         if (unsub) unsub(); unsub = null;
         await OMR.commitOps([['delete', db.collection('omrAssignments').doc(cur.id)],
-          ...subs.map(s => ['delete', db.collection('omrAssignSubs').doc(s.id)])]);
+          ...(isOmr(cur) ? [] : subs.map(s => ['delete', db.collection('omrAssignSubs').doc(s.id)]))]);
         assigns = assigns.filter(a => a.id !== cur.id); toast('삭제했습니다'); show('vList'); renderList();
       }
     } catch(err){ handleErr(err); }
@@ -248,16 +295,16 @@
       ['보완 필요', c('revise')], ['미제출', c('none')], ['기한 후 제출', late]]
       .map(([k,v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
     $('dBar').style.width = pct + '%';
-    $('dTbl').innerHTML = `<tr><th>이름</th><th>상태</th><th>파일</th><th>메모·피드백</th><th>제출 시각</th><th></th></tr>` +
+    $('dTbl').innerHTML = `<tr><th>이름</th><th>상태</th><th>${isOmr(cur) ? "점수" : "파일"}</th><th>메모·피드백</th><th>제출 시각</th><th></th></tr>` +
       list.map(({st, s}) => {
         const k = s ? s.status : 'none', [lab, cls] = ST[k] || [k, ''];
         const files = (s && s.files || []).map((f, i) => `<button class="file-link" data-file="${esc(s.id)}|${i}" title="${esc(f.name)}">${f.type === 'application/pdf' ? '📄' : '🖼'} ${esc(f.name)}</button>`).join('');
         return `<tr><td><b>${esc(st.name)}</b>${st._gone ? ' <span class="pill">명단 외</span>' : ''}</td>
           <td><span class="pill ${cls}">${lab}</span>${isDone(s) && isLate(cur, s) ? ' <span class="pill late">기한 후</span>' : ''}</td>
-          <td>${files || '<span class="muted">-</span>'}</td>
+          <td>${s && s.omr ? (s.score != null ? `<b>${s.score}점</b>` : '<span class="muted">OMR</span>') : (files || '<span class="muted">-</span>')}</td>
           <td style="max-width:260px;">${s && s.memo ? `<div>${esc(s.memo)}</div>` : ''}${s && s.feedback ? `<div style="color:var(--red);font-size:12.5px;">↳ ${esc(s.feedback)}</div>` : ''}</td>
           <td class="muted">${s && s.submittedAt ? fmtDateTime(s.submittedAt) : ''}</td>
-          <td style="white-space:nowrap;text-align:right;">${s && (k === 'submitted' || k === 'approved' || k === 'revise') ? `
+          <td style="white-space:nowrap;text-align:right;">${s && !s.omr && (k === 'submitted' || k === 'approved' || k === 'revise') ? `
             ${k !== 'approved' ? `<button class="btn sm" data-ok="${esc(s.id)}">확인</button>` : ''}
             <button class="btn sm ghost" data-rev="${esc(s.id)}" style="color:var(--red);">보완 요청</button>` : ''}</td></tr>`;
       }).join('');
