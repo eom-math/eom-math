@@ -420,6 +420,63 @@
   .gate-foot{ margin-top:22px; font-size:12px; color:var(--dim); line-height:1.6; text-align:center; }
   body.gate-open{ overflow:hidden; }
 
+
+  /* ---------- 나의 학습 배너 (가로형) ---------- */
+  .dash{ padding:56px 0 8px; }
+  .dash-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:16px; }
+  .dash-who{ font-size:12.5px; font-weight:700; color:var(--dim); white-space:nowrap; }
+  .dash-note{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:13px; color:var(--dim); background:var(--bg2); padding:10px 14px; margin-bottom:10px; }
+  .dash-note[hidden]{ display:none; }
+  .dash-note b{ color:var(--ink); }
+  .dash-note button{ margin-left:auto; border:0; background:var(--ink); color:#fff; font:inherit; font-size:12.5px; font-weight:800; padding:8px 12px; cursor:pointer; }
+  .dash-note button:hover{ background:var(--red); }
+  .bn{ position:relative; display:grid; grid-template-columns:150px minmax(0,1fr) 28px; align-items:center; gap:18px;
+    background:#fff; border:1px solid var(--line); padding:18px 18px 18px 20px; margin-bottom:10px; color:var(--ink);
+    transition:border-color .2s, transform .2s, box-shadow .2s; }
+  .bn::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--red); transform:scaleY(0); transform-origin:top; transition:transform .3s; }
+  .bn:hover{ border-color:rgba(17,17,20,.35); transform:translateY(-2px); box-shadow:0 10px 24px rgba(17,17,20,.06); }
+  .bn:hover::before{ transform:scaleY(1); }
+  .bn-l{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .bn-k{ font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--red); }
+  .bn-l b{ font-size:17px; font-weight:900; letter-spacing:-.02em; }
+  .bn-s{ font-size:12px; font-weight:700; color:var(--dim); }
+  .bn-c{ min-width:0; }
+  .bn-go{ font-size:20px; color:var(--dim); text-align:right; transition:transform .2s, color .2s; }
+  .bn:hover .bn-go{ color:var(--red); transform:translateX(3px); }
+  .bn-empty{ font-size:13.5px; color:var(--dim); }
+  .bn.sample .bn-l b::after{ content:"예시"; display:inline-block; vertical-align:2px; margin-left:6px; font-size:10.5px; font-weight:800; letter-spacing:0; color:var(--dim); background:var(--bg2); padding:2px 6px; }
+  /* 할 일: 가로로 이어지는 칩 */
+  .wk-row{ display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px 0; -webkit-mask-image:linear-gradient(90deg,#000 88%,transparent); mask-image:linear-gradient(90deg,#000 88%,transparent); }
+  .wk-row::-webkit-scrollbar{ display:none; }
+  .wk-i{ flex:0 0 auto; display:flex; align-items:center; gap:8px; max-width:250px; border:1px solid var(--line); padding:8px 11px 8px 8px; background:var(--bg); }
+  .wk-i .d{ flex:0 0 auto; font-size:11px; font-weight:900; padding:4px 7px; background:var(--bg2); color:var(--dim); font-variant-numeric:tabular-nums; }
+  .wk-i .d.red{ background:rgba(214,48,31,.1); color:var(--red); } .wk-i .d.ink{ background:var(--ink); color:#fff; } .wk-i .d.ok{ background:rgba(31,122,77,.12); color:#1F7A4D; }
+  .wk-i .t{ font-size:13.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* 데일리 리포트 */
+  .dr{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  .dr .sc{ font-size:40px; font-weight:900; letter-spacing:-.04em; line-height:1; font-variant-numeric:tabular-nums; }
+  .dr .sc small{ font-size:14px; color:var(--dim); font-weight:800; letter-spacing:0; }
+  .dr .meta{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .dr .m{ font-size:13px; color:var(--dim); }
+  .dr .hl{ display:flex; flex-wrap:wrap; gap:4px 10px; }
+  .dr .hl span{ font-size:14.5px; font-weight:800; padding:0 2px; background:linear-gradient(transparent 52%, #FFE45C 52%); }
+  /* 추이 */
+  .tr{ display:flex; align-items:center; gap:18px; }
+  .tr .now{ flex:0 0 auto; }
+  .tr .now b{ display:block; font-size:30px; font-weight:900; letter-spacing:-.03em; line-height:1; font-variant-numeric:tabular-nums; }
+  .tr .now span{ font-size:12px; font-weight:800; }
+  .tr .now span.up{ color:#1F7A4D; } .tr .now span.down{ color:var(--red); }
+  .tr svg{ flex:1; min-width:0; height:64px; display:block; }
+  @media (max-width:640px){
+    .bn{ grid-template-columns:minmax(0,1fr) 22px; gap:12px; padding:16px; }
+    .bn-l{ grid-column:1 / -1; flex-direction:row; align-items:baseline; gap:8px; flex-wrap:wrap; }
+    .bn-l .bn-k{ display:none; }
+    .bn-l .bn-s{ margin-left:auto; }
+    .bn-c{ grid-column:1; }
+    .bn-go{ grid-column:2; grid-row:2; }
+    .dr .sc{ font-size:34px; }
+  }
+
   /* ---------- hero slider ---------- */
   .hero-slider{ position:relative; }
   .slides{ display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth;
@@ -807,6 +864,32 @@
     </div>
   </section>
 
+  <section class="dash" id="dash" aria-label="나의 학습">
+    <div class="dash-head">
+      <div><p class="hub-kicker">My Study</p><h2 class="hub-title" id="dashTitle">나의 학습 한눈에</h2></div>
+      <span class="dash-who" id="dashWho"></span>
+    </div>
+    <p class="dash-note" id="dashNote" hidden></p>
+
+    <a class="bn" id="bnWeek" href="omr/">
+      <div class="bn-l"><span class="bn-k">This week</span><b>이번 주 할 일</b><span class="bn-s" id="bnWeekCnt">–</span></div>
+      <div class="bn-c"><div class="wk-row" id="bnWeekBody"><span class="bn-empty">불러오는 중…</span></div></div>
+      <span class="bn-go" aria-hidden="true">→</span>
+    </a>
+
+    <a class="bn" id="bnDaily" href="omr/">
+      <div class="bn-l"><span class="bn-k">Daily report</span><b>데일리 리포트</b><span class="bn-s" id="bnDailyDate">매 수업 발송</span></div>
+      <div class="bn-c" id="bnDailyBody"><span class="bn-empty">불러오는 중…</span></div>
+      <span class="bn-go" aria-hidden="true">→</span>
+    </a>
+
+    <a class="bn" id="bnTrend" href="omr/">
+      <div class="bn-l"><span class="bn-k">Review test</span><b>복습 테스트 추이</b><span class="bn-s" id="bnTrendCnt">최근 5회</span></div>
+      <div class="bn-c" id="bnTrendBody"><span class="bn-empty">불러오는 중…</span></div>
+      <span class="bn-go" aria-hidden="true">→</span>
+    </a>
+  </section>
+
   <footer>
     <span>© 2026 엄형국 수학</span>
     <span>내신성공의 방정식</span>
@@ -999,6 +1082,7 @@
     setAdminUI(!!user);
   });
 </script>
+<script src="omr/common.js?v=7"></script>
 <script>
 (function(){
   var btn=document.getElementById('tocBtn'), toc=document.getElementById('toc'),
@@ -1121,8 +1205,8 @@
   };
   var qs = new URLSearchParams(location.search);
   // 이번 방문에서 이미 골랐거나, 링크로 특정 위치(#…)를 열었거나, ?visit 로 들어오면 건너뜀
-  if (store.get('sessionStorage', 'gateChoice') || qs.has('visit') || (location.hash && location.hash.length > 1)) return;
-  gate.hidden = false; document.body.classList.add('gate-open');
+  var skip = !!(store.get('sessionStorage', 'gateChoice') || qs.has('visit') || (location.hash && location.hash.length > 1));
+  if (!skip){ gate.hidden = false; document.body.classList.add('gate-open'); }
   var codeIn = document.getElementById('gateCode'), go = document.getElementById('gateGo'), msg = document.getElementById('gateMsg');
   var saved = store.get('localStorage', 'omrStudentCode'), savedName = store.get('localStorage', 'omrStudentName');
   if (saved){
@@ -1130,9 +1214,10 @@
     sb.hidden = false;
     sb.innerHTML = (savedName ? savedName.replace(/[<>&]/g, '') + ' 학생으로' : saved + ' 코드로') + ' 계속하기<span>→</span>';
     sb.onclick = function(){ store.set('sessionStorage', 'gateChoice', 'student'); location.href = 'omr/'; };
-  } else {
+  } else if (!skip) {
     setTimeout(function(){ try { codeIn.focus({ preventScroll:true }); } catch(e){} }, 60);
   }
+  window.openGate = function(){ gate.hidden = false; document.body.classList.add('gate-open'); setTimeout(function(){ try { codeIn.focus(); } catch(e){} }, 60); };
   function close(){
     store.set('sessionStorage', 'gateChoice', 'visitor');
     gate.classList.add('out'); document.body.classList.remove('gate-open');
@@ -1160,6 +1245,86 @@
     go.disabled = false; go.textContent = '학생 코드로 입장';
   };
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !gate.hidden) close(); });
+})();
+</script>
+<script>
+// 나의 학습 배너: 학생 코드로 입장한 기기면 내 데이터, 아니면 예시
+(function(){
+  if (!window.OMR || !document.getElementById('dash')) return;
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = OMR.esc;
+  function wkHtml(rows){
+    if (!rows.length) return '<span class="bn-empty">이번 주에 남은 할 일이 없어요. 👏</span>';
+    return rows.map(function(r){ return '<span class="wk-i"><span class="d ' + (r.cls || '') + '">' + esc(r.d) + '</span><span class="t">' + esc(r.t) + '</span></span>'; }).join('');
+  }
+  function drHtml(r){
+    if (!r) return '<span class="bn-empty">아직 받은 데일리 리포트가 없어요.</span>';
+    var weak = r.weak || [];
+    var sc = r.attendance === 'absent' ? '<div class="sc" style="font-size:24px;">결석</div>'
+      : r.score != null ? '<div class="sc">' + r.score + '<small>/' + (r.maxScore || 100) + '</small></div>' : '';
+    var parts = [];
+    if (r.avg != null && r.score != null) parts.push('반 평균 ' + r.avg);
+    if (r.homework != null) parts.push('과제 ' + r.homework + '%');
+    if (weak.length) parts.push('보완할 유형');
+    return '<div class="dr">' + sc + '<div class="meta"><div class="m">' + esc(parts.join(' · ')) + '</div>'
+      + (weak.length ? '<div class="hl">' + weak.map(function(w){ return '<span>' + esc(w) + '</span>'; }).join('') + '</div>'
+        : '<div class="m" style="color:var(--ink);font-weight:700;">' + (r.attendance === 'absent' ? '진도와 과제를 확인해 주세요' : '보완할 유형 없음 👏') + '</div>')
+      + '</div></div>';
+  }
+  function trHtml(list){
+    if (!list.length) return '<span class="bn-empty">복습 테스트 기록이 쌓이면 여기에 그래프가 나와요.</span>';
+    var pct = function(x){ return x.max ? x.score / x.max * 100 : x.score; };
+    var last = list[list.length - 1], prev = list[list.length - 2];
+    var diff = prev ? Math.round((pct(last) - pct(prev)) * 10) / 10 : null;
+    var W = 300, H = 64, n = list.length, gap = 8, bw = Math.min(46, (W - gap * (n - 1)) / n);
+    var x0 = W - (bw * n + gap * (n - 1));
+    var lo = Math.max(0, Math.floor((Math.min.apply(null, list.map(pct)) - 15) / 10) * 10);
+    var bars = list.map(function(x, i){
+      var h = 6 + Math.max(0, pct(x) - lo) / Math.max(1, 100 - lo) * (H - 22), on = i === n - 1, x1 = x0 + i * (bw + gap);
+      return '<rect x="' + x1.toFixed(1) + '" y="' + (H - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3" fill="' + (on ? 'url(#bnGrad)' : '#E4E3DF') + '"/>'
+        + '<text x="' + (x1 + bw / 2).toFixed(1) + '" y="' + (H - h - 4).toFixed(1) + '" text-anchor="middle" font-size="10" font-weight="800" fill="' + (on ? '#D6301F' : '#63636B') + '">' + x.score + '</text>';
+    }).join('');
+    return '<div class="tr"><div class="now"><b>' + last.score + '</b>'
+      + (diff != null && diff !== 0 ? '<span class="' + (diff > 0 ? 'up' : 'down') + '">' + (diff > 0 ? '▲ ' : '▼ ') + Math.abs(diff) + '%p</span>' : '<span style="color:var(--dim);">/ ' + last.max + '점</span>')
+      + '</div><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMaxYMid meet" role="img" aria-label="최근 복습 테스트 점수">'
+      + '<defs><linearGradient id="bnGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0805F"/><stop offset="1" stop-color="#D6301F"/></linearGradient></defs>' + bars + '</svg></div>';
+  }
+  function fill(d, sample){
+    ['bnWeek','bnDaily','bnTrend'].forEach(function(id){ $(id).classList.toggle('sample', !!sample); });
+    $('bnWeekCnt').textContent = d.week.length + '개';
+    $('bnWeekBody').innerHTML = wkHtml(d.week);
+    $('bnDailyBody').innerHTML = drHtml(d.latest);
+    $('bnDailyDate').textContent = d.latest ? (OMR.fmtKDate(d.latest.date) + (d.latest.title ? ' · ' + d.latest.title : '')) : '매 수업 발송';
+    $('bnTrendBody').innerHTML = trHtml(d.trend);
+    $('bnTrendCnt').textContent = d.trend.length ? '최근 ' + d.trend.length + '회' : '최근 5회';
+    if (!sample){
+      if (d.latest) $('bnDaily').href = 'omr/daily-report.html?t=' + encodeURIComponent(d.latest.token);
+      var last = d.trend[d.trend.length - 1];
+      if (last && last.token) $('bnTrend').href = 'omr/daily-report.html?t=' + encodeURIComponent(last.token);
+      var first = d.week[0];
+      $('bnWeek').href = first && first.href ? first.href : 'omr/';
+    }
+  }
+  var SAMPLE = {
+    week: [{ d:'D-1', cls:'red', t:'쎈 B 212~240번 과제 제출' }, { d:'10/4', cls:'ink', t:'토 14:00 클리닉 예약' }, { d:'완강', cls:'ok', t:'명제 3강 — 대우를 이용한 증명' }],
+    latest: { date:'2026-09-30', title:'13회차', score:88, maxScore:100, avg:80, homework:100, weak:['대우 증명'], attendance:'present' },
+    trend: [{ score:72, max:100 }, { score:80, max:100 }, { score:76, max:100 }, { score:88, max:100 }, { score:94, max:100 }],
+  };
+  function showSample(){
+    fill(SAMPLE, true);
+    $('dashNote').hidden = false;
+    $('dashNote').innerHTML = '<span>재원생은 <b>학생 코드로 입장</b>하면 내 할 일·리포트·점수 추이가 여기에 나와요.</span><button type="button" id="dashLogin">학생 코드로 입장</button>';
+    $('dashLogin').onclick = function(e){ e.preventDefault(); if (window.openGate) window.openGate(); else location.href = 'omr/'; };
+    $('dashWho').textContent = '';
+  }
+  var code = null; try { code = localStorage.getItem('omrStudentCode'); } catch(e){}
+  if (!code){ showSample(); return; }
+  OMR.studentByCode(code).then(function(me){
+    if (!me){ showSample(); return; }
+    $('dashTitle').textContent = me.name + ' 학생의 학습';
+    $('dashWho').textContent = me.className;
+    return OMR.studentDashboard(me, 'omr/').then(function(d){ fill(d, false); });
+  }).catch(function(e){ console.warn(e); showSample(); });
 })();
 </script>
 </body>

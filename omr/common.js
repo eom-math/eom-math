@@ -434,6 +434,70 @@
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
 
+  // ───────── 학생 대시보드 데이터 (메인 화면 배너용) ─────────
+  // base: 학생 페이지까지의 경로 접두사 (메인에서는 'omr/')
+  // 반환: { week:[{d,cls,t,m,href}], latest:{token,...report}|null, trend:[{date,score,max,avg,token}] }
+  async function studentDashboard(me, base = '') {
+    const now = new Date(), in7 = new Date(now.getTime() + 7 * 864e5), today = todayStr();
+    const safe = p => p.catch(e => { console.warn(e); return null; });
+    const dLabel = d => { const days = Math.ceil((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
+      return days < 0 ? '지남' : days === 0 ? '오늘' : 'D-' + days; };
+    const [as, slots, lecs, links, exams] = await Promise.all([
+      safe(db.collection('omrAssignments').where('className', '==', me.className).get()),
+      safe(db.collection('clinicSlots').get()),
+      safe(db.collection('lectures').get()),
+      safe(db.collection('dailyReportLinks').doc(me.code).get()),
+      safe(db.collection('omrExams').where('className', '==', me.className).get()),
+    ]);
+    const rows = [];
+    if (as) {
+      const list = as.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.status === 'open');
+      const subs = await Promise.all(list.map(a => db.collection('omrAssignSubs').doc(`${a.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
+      list.forEach((a, i) => {
+        const st = subs[i] ? subs[i].status : 'none', due = toDate(a.dueAt);
+        if (!['none', 'in_progress', 'revise'].includes(st) || (due && due > in7)) return;
+        rows.push({ sort: due ? due.getTime() : in7.getTime(), d: due ? dLabel(due) : '과제', cls: !due || due - now < 2 * 864e5 ? 'red' : '',
+          t: a.title, m: st === 'revise' ? '보완 필요' : '과제', href: base + 'hw.html?id=' + encodeURIComponent(a.id) });
+      });
+    }
+    if (slots) {
+      const up = slots.docs.map(d => ({ id: d.id, ...d.data() }))
+        .filter(s => s.date >= today && s.date <= todayStr(in7) && (s.className === '전체' || s.className === me.className));
+      const got = await Promise.all(up.map(s => db.collection('clinicBookings').doc(`${s.id}_${me.code}`).get().then(x => x.exists).catch(() => false)));
+      up.forEach((s, i) => { if (!got[i]) return;
+        const t = new Date(`${s.date}T${s.start}:00`);
+        rows.push({ sort: t.getTime(), d: `${t.getMonth() + 1}/${t.getDate()}`, cls: 'ink', t: `클리닉 ${s.start}–${s.end}`, m: s.place || '클리닉', href: base + 'book.html' }); });
+    }
+    const items = links && links.exists ? (links.data().items || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')) : [];
+    let latest = null;
+    if (items.length) {
+      const r = await db.collection('dailyReports').doc(items[0].token).get().then(x => x.exists ? x.data() : null).catch(() => null);
+      if (r) {
+        latest = { token: items[0].token, ...r };
+        if (r.extra && r.extra.needed && items[0].date >= todayStr(new Date(now.getTime() - 7 * 864e5)))
+          rows.push({ sort: now.getTime() - 1, d: '추가학습', cls: 'red', t: r.extra.reason || '추가학습이 필요해요', m: r.extra.when || '', href: base + 'daily-report.html?t=' + encodeURIComponent(items[0].token) });
+      }
+    }
+    if (exams) {
+      const open = exams.docs.map(d => ({ id: d.id, ...d.data() })).filter(e => e.status === 'open');
+      const subs = await Promise.all(open.map(e => db.collection('omrSubmissions').doc(`${e.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
+      open.forEach((e, i) => { if (subs[i] && subs[i].status === 'submitted') return;
+        const due = toDate(e.dueAt);
+        rows.push({ sort: due ? due.getTime() : now.getTime(), d: due ? dLabel(due) : 'OMR', cls: 'red', t: e.title, m: '시험 OMR', href: base + 'index.html' }); });
+    }
+    if (lecs) {
+      const mine = lecs.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => l.status === 'open' && (l.className === '전체' || l.className === me.className))
+        .sort((a, b) => (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0)).slice(0, 6);
+      const vs = await Promise.all(mine.map(l => db.collection('lectureViews').doc(`${l.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
+      mine.forEach((l, i) => { if (vs[i] && vs[i].completed) return;
+        if (rows.filter(r => r.m.includes('시청') || r.m === '안 봤어요').length >= 3) return;
+        rows.push({ sort: in7.getTime() + 1, d: '영상', cls: '', t: l.title, m: vs[i] ? Math.round(vs[i].percent) + '% 시청' : '안 봤어요', href: base + 'watch.html?id=' + encodeURIComponent(l.id) }); });
+    }
+    rows.sort((a, b) => a.sort - b.sort);
+    const trend = items.filter(x => x.score != null && !x.absent).slice(0, 5).reverse();
+    return { week: rows, latest, trend };
+  }
+
   // 여러 문서 쓰기를 400개씩 나눠 커밋
   async function commitOps(ops) {
     for (let i = 0; i < ops.length; i += 400) {
@@ -497,7 +561,7 @@
     normalizePhone, fmtPhone, round, toast, copyText, normalizeAnswers, gradeOne, gradeExam,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
-    detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
+    studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
