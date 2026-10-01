@@ -583,6 +583,15 @@
   }
   const HW_LABEL = { none: ['미제출', 'red'], in_progress: ['진행 중', 'closed'], submitted: ['제출 완료', 'draft'], revise: ['보완 필요', 'red'], approved: ['확인 완료 ✓', 'published'] };
 
+  // 클리닉 시간이 이 반 대상인지 ('전체' / 한 반 / 여러 반 classNames)
+  function slotForClass(s, cls) {
+    return s.className === '전체' || s.className === cls || (Array.isArray(s.classNames) && s.classNames.includes(cls));
+  }
+  function slotClassLabel(s) {
+    if (s.className === '전체') return '전체 반';
+    return Array.isArray(s.classNames) && s.classNames.length > 1 ? s.classNames.join(' · ') : s.className;
+  }
+
   async function studentDashboard(me, base = '', opts = {}) {
     const now = new Date(), in7 = new Date(now.getTime() + 7 * 864e5), today = todayStr();
     const safe = p => p.catch(e => { console.warn(e); return null; });
@@ -607,7 +616,7 @@
     });
     if (slots) {
       const up = slots.docs.map(d => ({ id: d.id, ...d.data() }))
-        .filter(s => s.date >= today && s.date <= todayStr(in7) && (s.className === '전체' || s.className === me.className));
+        .filter(s => s.date >= today && s.date <= todayStr(in7) && slotForClass(s, me.className));
       const got = await Promise.all(up.map(s => db.collection('clinicBookings').doc(`${s.id}_${me.code}`).get().then(x => x.exists).catch(() => false)));
       up.forEach((s, i) => { if (!got[i]) return;
         const t = new Date(`${s.date}T${s.start}:00`);
@@ -725,7 +734,7 @@
     QTYPES, examTypes, examSegments, layoutText, shortEq,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
-    ACADEMIES, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
+    ACADEMIES, slotForClass, slotClassLabel, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

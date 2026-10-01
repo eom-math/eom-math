@@ -68,7 +68,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=17"></script>
+<script src="common.js?v=18"></script>
 <script>
 (async function(){
   const { db, FV, esc, toast } = OMR;
@@ -83,7 +83,7 @@
     try {
       const today = OMR.todayStr();
       slots = (await db.collection('clinicSlots').get()).docs.map(d => ({ id:d.id, ...d.data() }))
-        .filter(s => s.date >= today && (s.className === '전체' || s.className === me.className) && !past(s))
+        .filter(s => s.date >= today && OMR.slotForClass(s, me.className) && !past(s))
         .sort((a,b) => (a.date + a.start).localeCompare(b.date + b.start));
       const got = await Promise.all(slots.map(s => db.collection('clinicBookings').doc(`${s.id}_${me.code}`).get().then(x => x.exists).catch(() => false)));
       mine = new Set(slots.filter((s, i) => got[i]).map(s => s.id));

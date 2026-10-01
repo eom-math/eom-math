@@ -52,6 +52,9 @@
   .q .txt{white-space:pre-wrap;font-size:14.5px;line-height:1.6;word-break:keep-all;}
   .thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
   .thumbs img{width:92px;height:92px;object-fit:cover;border-radius:8px;border:1px solid var(--line);}
+  .cls-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .cls-chips button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer;}
+  .cls-chips button.on{background:var(--ink);border-color:var(--ink);color:#fff;}
   .ans{background:var(--bg2);border-radius:8px;padding:10px 12px;margin-top:10px;}
   .ans .by{font-size:12px;color:var(--dim);margin-bottom:4px;font-weight:700;}
   .att{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line2);font-size:14px;}
@@ -240,9 +243,9 @@
         <div><label class="f">끝</label><input class="input" type="time" id="sEnd" value="19:00"></div>
       </div>
       <div class="grid2">
-        <div><label class="f">대상 반</label><select class="input" id="sClass"></select></div>
         <div><label class="f">정원</label><input class="input" type="number" id="sCap" value="6" min="1" max="60"></div>
       </div>
+      <div><label class="f">대상 반 <span class="muted" style="font-weight:600;">— 여러 반을 고를 수 있어요</span></label><div class="cls-chips" id="sClassChips"></div></div>
       <div class="grid2">
         <div><label class="f">장소</label><input class="input" id="sPlace" placeholder="예: 2강의실"></div>
         <div><label class="f">담당</label><input class="input" id="sStaff" placeholder="예: 김조교"></div>
@@ -278,7 +281,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=17"></script>
+<script src="common.js?v=18"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, round } = OMR;
@@ -318,7 +321,7 @@
         .filter(s => s.name && s.className).sort((a,b) => a.name.localeCompare(b.name, 'ko'));
     } catch(e){ roster = []; handleErr(e); }
     classes = [...new Set(roster.map(s => s.className))].sort((a,b) => a.localeCompare(b, 'ko'));
-    $('sClass').innerHTML = classOpts('전체', '전체 반');
+    renderSlotClasses();
     $('lClass2').innerHTML = classOpts('전체', '전체 반');
     $('lecClass').innerHTML = classOpts('*', '모든 강의');
     $('attClass').innerHTML = classOpts('*', '전체 반');
@@ -403,7 +406,7 @@
     el.innerHTML = `
       <button class="slot-h">
         <span class="tm">${esc(s.start)}–${esc(s.end)}</span>
-        <span><b>${esc(s.className === '전체' ? '전체 반' : s.className)}</b> <span class="pill ${s.status === 'open' ? (full ? 'closed' : 'open') : 'draft'}">${s.status !== 'open' ? '예약 닫힘' : full ? '마감' : '예약 중'}</span>
+        <span><b>${esc(OMR.slotClassLabel(s))}</b> <span class="pill ${s.status === 'open' ? (full ? 'closed' : 'open') : 'draft'}">${s.status !== 'open' ? '예약 닫힘' : full ? '마감' : '예약 중'}</span>
           <div class="m">${[s.place, s.staff, s.note].filter(Boolean).map(esc).join(' · ') || '&nbsp;'}</div></span>
         <span class="cap"><b>${s.count || 0}</b><span class="muted">/${s.capacity}</span><div class="bar"><i style="width:${Math.min(100, (s.count||0) / s.capacity * 100)}%;${full ? 'background:var(--red);' : ''}"></i></div></span>
       </button>
@@ -457,6 +460,25 @@
     return el;
   }
 
+  // ───────── 클리닉 대상 반 (여러 반 선택) ─────────
+  let slotCls = new Set();     // 비어 있으면 전체 반
+  function renderSlotClasses(){
+    const box = $('sClassChips'); if (!box) return;
+    const extra = [...slotCls].filter(c => !classes.includes(c));
+    box.innerHTML = `<button type="button" class="${slotCls.size ? '' : 'on'}" data-c="*">전체 반</button>` +
+      [...classes, ...extra].map(c => `<button type="button" class="${slotCls.has(c) ? 'on' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
+  }
+  $('sClassChips').addEventListener('click', e => {
+    const b = e.target.closest('button[data-c]'); if (!b) return;
+    const c = b.dataset.c;
+    if (c === '*') slotCls.clear(); else slotCls.has(c) ? slotCls.delete(c) : slotCls.add(c);
+    renderSlotClasses();
+  });
+  function slotClassFields(){
+    const list = [...slotCls];
+    return list.length ? { className: list[0], classNames: list } : { className: '전체', classNames: [] };
+  }
+
   // ───────── 클리닉 시간 수정 ─────────
   let editingSlot = null, editingBks = [];
   function openSlotEdit(s, bks){
@@ -465,13 +487,13 @@
     $('slotSave').textContent = '저장';
     $('sRepeatWrap').classList.add('hidden');
     $('sDate').value = s.date; $('sStart').value = s.start; $('sEnd').value = s.end;
-    $('sClass').value = s.className; if ($('sClass').value !== s.className) $('sClass').insertAdjacentHTML('beforeend', `<option selected>${esc(s.className)}</option>`);
+    slotCls = new Set(s.className === '전체' ? [] : (Array.isArray(s.classNames) && s.classNames.length ? s.classNames : [s.className])); renderSlotClasses();
     $('sCap').value = s.capacity; $('sPlace').value = s.place || ''; $('sStaff').value = s.staff || ''; $('sNote').value = s.note || '';
     $('slotMsg').textContent = editingBks.length ? `예약한 학생 ${editingBks.length}명이 있어요. 정원은 ${s.count || 0}명보다 적게 줄일 수 없어요.` : '';
     openModal('slotModal');
   }
   $('newSlotBtn').onclick = () => {
-    editingSlot = null; editingBks = [];
+    editingSlot = null; editingBks = []; slotCls = new Set(); renderSlotClasses();
     $('slotTitle').textContent = '클리닉 시간 열기'; $('slotSave').textContent = '열기'; $('sRepeatWrap').classList.remove('hidden');
     const d = new Date(); d.setDate(d.getDate() + 1);
     $('sDate').value = OMR.todayStr(d); $('slotMsg').textContent = '';
@@ -485,7 +507,7 @@
     if (editingSlot){
       const s = editingSlot;
       if (cap < (s.count || 0)){ $('slotMsg').textContent = `이미 ${s.count}명이 예약했어요. 정원을 ${s.count}명 이상으로 해 주세요.`; return; }
-      const patch = { date, start, end, capacity: cap, className: $('sClass').value,
+      const patch = { date, start, end, capacity: cap, ...slotClassFields(),
         place: $('sPlace').value.trim(), staff: $('sStaff').value.trim(), note: $('sNote').value.trim(),
         updatedAt: FV.serverTimestamp(), updatedBy: { uid: me.uid, name: me.name } };
       const moved = date !== s.date || start !== s.start || end !== s.end || patch.place !== (s.place || '');
@@ -505,7 +527,7 @@
       const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() + 7 * i);
       ops.push(['set', db.collection('clinicSlots').doc(), {
         date: OMR.todayStr(d), start, end, capacity: cap, count: 0, status: 'open',
-        className: $('sClass').value, place: $('sPlace').value.trim(), staff: $('sStaff').value.trim(), note: $('sNote').value.trim(),
+        ...slotClassFields(), place: $('sPlace').value.trim(), staff: $('sStaff').value.trim(), note: $('sNote').value.trim(),
         createdAt: FV.serverTimestamp(), createdBy: { uid: me.uid, name: me.name } }]);
     }
     try { await OMR.commitOps(ops); closeModal('slotModal'); toast(n > 1 ? `${n}주 시간을 열었습니다` : '시간을 열었습니다'); loadClinic(); }

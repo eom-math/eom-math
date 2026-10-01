@@ -211,7 +211,8 @@
         let d = request.resource.data;
         let s = get(slotPath()).data;
         return bid == d.slotId + '_' + d.code && stuOk(d)
-          && s.status == 'open' && (s.className == '전체' || s.className == d.className)
+          && s.status == 'open' && (s.className == '전체' || s.className == d.className
+              || (s.classNames is list && d.className in s.classNames))   // 여러 반 대상 클리닉
           && getAfter(slotPath()).data.count == s.count + 1
           && d.keys().hasOnly(['slotId', 'code', 'name', 'className', 'memo', 'bookedAt'])
           && d.memo is string && d.memo.size() <= 200
