@@ -337,8 +337,8 @@
   }
 
   // ───────── 관리자 공통: 로그인·상단 메뉴 ─────────
-  const ADMIN_PAGES = [['admin.html', '시험·OMR'], ['clinic.html', '오답 클리닉'], ['assign.html', '과제'], ['daily.html', '데일리 리포트'], ['ops.html', '운영']];
-  const STAFF_PAGES = [['daily.html', '데일리 리포트'], ['ops.html', '운영']];
+  const ADMIN_PAGES = [['admin.html', '시험·OMR'], ['clinic.html', '오답 클리닉'], ['assign.html', '과제'], ['daily.html', '데일리 리포트'], ['ops.html', '운영'], ['study.html', '플래너·순공']];
+  const STAFF_PAGES = [['daily.html', '데일리 리포트'], ['ops.html', '운영'], ['study.html', '플래너·순공']];
   function adminNav(current) {
     return ADMIN_PAGES.map(([href, label]) =>
       `<a class="btn sm ${href === current ? 'primary' : 'ghost'}" href="${href}">${label}</a>`).join('');
@@ -434,6 +434,30 @@
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
 
+  // ───────── 순공 랭킹 ─────────
+  // 날짜(YYYY-MM-DD) → [하루 키, 주 키(월요일), 달 키]
+  function rankKeys(date) {
+    const d = new Date(date + 'T00:00:00'), w = (d.getDay() + 6) % 7;
+    const mon = new Date(d); mon.setDate(d.getDate() - w);
+    return ['d' + date, 'w' + todayStr(mon), 'm' + date.slice(0, 7)];
+  }
+  // 김민준 → 김*준, 이서 → 이*, 남궁민수 → 남**수
+  function maskName(n) {
+    n = String(n || '').trim();
+    if (n.length <= 1) return n || '학생';
+    if (n.length === 2) return n[0] + '*';
+    return n[0] + '*'.repeat(n.length - 2) + n[n.length - 1];
+  }
+  // 플래너 하루치에서 할 일 합치기 (학생 할 일 + 선생님 할 일)
+  function plannerTodos(p) {
+    p = p || {};
+    const tdone = new Set(p.tdone || []);
+    const mine = (p.todos || []).map(t => ({ ...t, teacher: false }));
+    const tt = (p.ttodos || []).map(t => ({ ...t, teacher: true, done: tdone.has(t.id), star: false, from: 'teacher' }));
+    const all = [...tt, ...mine];
+    return { all, done: all.filter(t => t.done).length, total: all.length };
+  }
+
   // ───────── 학생 대시보드 데이터 (메인 화면 배너용) ─────────
   // base: 학생 페이지까지의 경로 접두사 (메인에서는 'omr/')
   // 반환: { week:[{d,cls,t,m,href}], latest:{token,...report}|null, trend:[{date,score,max,avg,token}] }
@@ -504,11 +528,12 @@
       for (let i = 0; i <= left; i++) { const d = new Date(d0); d.setDate(d.getDate() + i); days.push(todayStr(d)); }
       const docs = await Promise.all(days.map(d => db.collection('planners').doc(`${me.code}_${d}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
       const todayDoc = docs[0] || null;
-      plan = { today: todayDoc ? { done: todayDoc.done || 0, total: todayDoc.total || 0, studyMin: todayDoc.studyMin || 0 } : { done: 0, total: 0, studyMin: 0 }, rows: [] };
+      const tsum = plannerTodos(todayDoc);
+      plan = { today: { done: tsum.done, total: tsum.total, studyMin: (todayDoc && todayDoc.studyMin) || 0 }, rows: [] };
       docs.forEach((doc, i) => {
         if (!doc) return;
         const dd = new Date(days[i] + 'T00:00:00');
-        (doc.todos || []).filter(t => !t.done && t.from !== 'teacher').forEach(t => plan.rows.push({
+        plannerTodos(doc).all.filter(t => !t.done).forEach(t => plan.rows.push({
           sort: dd.getTime() + (t.star ? 0 : 1), d: i === 0 ? '오늘' : DOW[dd.getDay()], cls: 'plan', subj: t.subj, t: t.text, m: t.amount || '', href: base + 'planner.html' }));
       });
     }
@@ -578,7 +603,7 @@
     normalizePhone, fmtPhone, round, toast, copyText, normalizeAnswers, gradeOne, gradeExam,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
-    studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
+    rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -39,6 +39,25 @@
   .today li{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:8px 0;border-bottom:1px solid var(--line2);}
   .today li:last-child{border-bottom:0;}
   .today{list-style:none;}
+  .seg{display:inline-flex;background:var(--bg2);border-radius:10px;padding:3px;gap:2px;}
+  .seg button{border:0;background:none;padding:6px 11px;border-radius:8px;font-size:12.5px;font-weight:800;color:var(--dim);}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(17,17,20,.1);}
+  .seg.wide{display:flex;margin-bottom:12px;} .seg.wide button{flex:1;}
+  .rk{list-style:none;display:flex;flex-direction:column;gap:4px;}
+  .rk li{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;font-size:14px;}
+  .rk li .no{font-weight:900;text-align:center;font-variant-numeric:tabular-nums;color:var(--dim);}
+  .rk li .no.m{font-size:20px;}
+  .rk li .nm{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rk li .nm small{color:var(--dim);font-weight:600;margin-left:4px;}
+  .rk li .tm{font-weight:900;font-variant-numeric:tabular-nums;}
+  .rk li .bar{grid-column:2 / -1;height:5px;border-radius:99px;background:var(--bg2);overflow:hidden;margin-top:-4px;}
+  .rk li .bar i{display:block;height:100%;background:var(--ink);border-radius:99px;}
+  .rk li.me{background:var(--red-soft);} .rk li.me .bar i{background:var(--red);}
+  .rk li.top1{background:linear-gradient(90deg,#FFF4D6,#fff);}
+  #rkMe .mine{display:flex;align-items:center;gap:12px;background:var(--ink);color:#fff;border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+  #rkMe .mine b{font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;}
+  #rkMe .mine span{font-size:12.5px;opacity:.75;}
+  #rkMe .mine .r{margin-left:auto;text-align:right;}
   @media (prefers-reduced-motion:reduce){.ring-fg{transition:none;}}
 </style>
 </head>
@@ -116,12 +135,22 @@
     <h3>오늘 공부 기록 <span class="muted" id="todaySum"></span></h3>
     <ul class="today" id="today"></ul>
   </div>
+  <div class="card rank">
+    <div class="row between" style="margin-bottom:10px;">
+      <h3 style="margin:0;">🏆 순공 랭킹</h3>
+      <div class="seg" id="rkScope"><button class="on" data-v="class">우리 반</button><button data-v="all">전체</button></div>
+    </div>
+    <div class="seg wide" id="rkPeriod"><button class="on" data-v="d">오늘</button><button data-v="w">이번 주</button><button data-v="m">이번 달</button></div>
+    <div id="rkMe"></div>
+    <ol class="rk" id="rkList"><li class="muted">불러오는 중…</li></ol>
+    <p class="muted" style="font-size:11.5px;margin-top:8px;">타이머로 기록한 순수 집중 시간(이탈 제외) 기준이에요. 이름은 가운데 글자를 가려서 보여줘요.</p>
+  </div>
 </div>
 
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=8"></script>
+<script src="common.js?v=9"></script>
 <script>
 (async function(){
   const $ = id => document.getElementById(id);
@@ -216,13 +245,29 @@
     if (el < 60000) { toast('1분 미만 기록은 선생님께 보내지 않아요'); return; }
     const sec = ms => Math.round(ms/1000);
     try {
-      await db.collection('studySessions').add({
-        code: me.code, name: me.name, className: me.className, date: OMR.todayStr(s),
+      const date = OMR.todayStr(s), fsec = sec(focus);
+      const ref = db.collection('studySessions').doc();
+      const bt = db.batch();
+      bt.set(ref, {
+        code: me.code, name: me.name, className: me.className, date,
         startedAt: firebase.firestore.Timestamp.fromDate(s), endedAt: FV.serverTimestamp(),
-        plannedSec: sec(T.duration), elapsedSec: sec(el), focusSec: sec(focus),
+        plannedSec: sec(T.duration), elapsedSec: sec(el), focusSec: fsec,
         awayCount: T.awayCount, awaySec: sec(T.awayMs), mode: T.mode, completed,
       });
+      // 순공 랭킹판(하루·주·달)에 같이 더하기 — studentId와 가린 이름만 공개
+      if (me.studentId){
+        OMR.rankKeys(date).forEach(key => bt.set(db.collection('studyBoard').doc(`${key}_${me.studentId}`), {
+          key, sid: me.studentId, nick: OMR.maskName(me.name), className: me.className,
+          focusSec: FV.increment(fsec), sessions: FV.increment(1), lastSid: ref.id, updatedAt: FV.serverTimestamp() }, { merge: true }));
+      }
+      try { await bt.commit(); }
+      catch(e1){ console.warn('랭킹 반영 실패, 기록만 저장', e1); await ref.set({
+        code: me.code, name: me.name, className: me.className, date,
+        startedAt: firebase.firestore.Timestamp.fromDate(s), endedAt: FV.serverTimestamp(),
+        plannedSec: sec(T.duration), elapsedSec: sec(el), focusSec: fsec,
+        awayCount: T.awayCount, awaySec: sec(T.awayMs), mode: T.mode, completed }); }
       toast('공부 기록을 선생님께 보냈어요');
+      loadRank();
     } catch(e){ console.error(e); toast('기록을 보내지 못했어요. 인터넷 연결을 확인해 주세요.'); }
   }
 
@@ -276,6 +321,37 @@
   document.addEventListener('fullscreenchange', () => { $('btnFull').textContent = document.fullscreenElement ? '전체 화면 끄기' : '전체 화면'; });
 
   render();
+
+  // ───────── 순공 랭킹 ─────────
+  let rkScope = 'class', rkPeriod = 'd';
+  const fmtHM = sec => { const m = Math.round(sec / 60); return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`; };
+  document.getElementById('rkScope').onclick = e => { const b = e.target.closest('button'); if (!b) return; rkScope = b.dataset.v;
+    [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b)); loadRank(); };
+  document.getElementById('rkPeriod').onclick = e => { const b = e.target.closest('button'); if (!b) return; rkPeriod = b.dataset.v;
+    [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b)); loadRank(); };
+  async function loadRank(){
+    const list = document.getElementById('rkList'), mine = document.getElementById('rkMe');
+    const key = OMR.rankKeys(OMR.todayStr()).find(k => k[0] === rkPeriod);
+    try {
+      let rows = (await db.collection('studyBoard').where('key', '==', key).get()).docs.map(d => d.data());
+      if (rkScope === 'class') rows = rows.filter(r => r.className === me.className);
+      rows.sort((a, b) => b.focusSec - a.focusSec);
+      const top = rows[0] ? rows[0].focusSec : 1;
+      const myIdx = rows.findIndex(r => r.sid === me.studentId);
+      const label = { d: '오늘', w: '이번 주', m: '이번 달' }[rkPeriod];
+      mine.innerHTML = myIdx >= 0
+        ? `<div class="mine"><div><span>${label} 내 순위</span><br><b>${myIdx + 1}위</b> <span>/ ${rows.length}명</span></div><div class="r"><span>순공 시간</span><br><b style="font-size:18px;">${fmtHM(rows[myIdx].focusSec)}</b></div></div>`
+        : `<div class="mine"><div><span>${label} 내 순위</span><br><b style="font-size:16px;">아직 기록이 없어요</b></div><div class="r"><span>타이머를 끝까지 하면<br>랭킹에 올라가요</span></div></div>`;
+      const show = rows.slice(0, 10);
+      if (myIdx >= 10) show.push(rows[myIdx]);
+      list.innerHTML = show.length ? show.map(r => { const i = rows.indexOf(r);
+        return `<li class="${r.sid === me.studentId ? 'me' : ''} ${i === 0 ? 'top1' : ''}"><span class="no ${i < 3 ? 'm' : ''}">${['🥇','🥈','🥉'][i] || i + 1}</span>
+          <span class="nm">${r.sid === me.studentId ? '나' : OMR.esc(r.nick)}${rkScope === 'all' ? `<small>${OMR.esc(r.className)}</small>` : ''}</span>
+          <span class="tm">${fmtHM(r.focusSec)}</span><span class="bar"><i style="width:${Math.max(3, r.focusSec / top * 100)}%"></i></span></li>`; }).join('')
+        : '<li class="muted">아직 아무도 기록하지 않았어요. 첫 번째가 되어 보세요!</li>';
+    } catch(e){ console.warn(e); list.innerHTML = '<li class="muted">랭킹을 불러오지 못했어요.</li>'; mine.innerHTML = ''; }
+  }
+  loadRank();
 })();
 </script>
 </body>

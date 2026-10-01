@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>플래너·순공 관리 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&family=Gaegu:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=5">
+<style>
+  :root{ --s1:#FF7B63; --s2:#F2B92B; --s3:#5BB2E0; --s4:#5DBE7E; --s5:#A88BE8; }
+  .who-badge{font-size:12px;font-weight:800;padding:4px 9px;border-radius:99px;background:var(--bg2);}
+  .who-badge.admin{background:var(--ink);color:#fff;}
+  .bar2{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+  .bar2 .input{width:auto;}
+  .wk-nav{display:inline-flex;align-items:center;gap:4px;}
+  .wk-nav b{font-size:14px;min-width:120px;text-align:center;font-variant-numeric:tabular-nums;}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+  @media (max-width:600px){ .kpis{grid-template-columns:repeat(2,1fr);} }
+
+  /* 주간 현황 표 */
+  .tbl td.day{text-align:center;padding:6px 3px;}
+  .cell{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:42px;height:38px;border-radius:8px;font-size:11px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums;cursor:pointer;border:0;}
+  .cell small{font-size:9.5px;font-weight:700;opacity:.75;}
+  .cell.c0{background:var(--bg2);color:var(--faint);} .cell.c1{background:#FFE6DF;color:#B4301F;} .cell.c2{background:#FFB4A3;color:#7A1C10;} .cell.c3{background:#E8432F;color:#fff;}
+  .cell.today{box-shadow:0 0 0 2px var(--ink) inset;}
+  .legend{display:flex;gap:10px;font-size:11.5px;color:var(--dim);flex-wrap:wrap;margin:8px 0 0;}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:3px;}
+
+  /* 플래너 카드 보드 */
+  .board{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
+  .pc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;position:relative;}
+  .pc.sel{box-shadow:0 0 0 2px var(--ink);}
+  .pc .h{display:flex;align-items:center;gap:8px;}
+  .pc .h input{width:18px;height:18px;accent-color:var(--ink);}
+  .pc .h b{font-size:15px;} .pc .h .m{margin-left:auto;font-size:12px;color:var(--dim);font-weight:700;font-variant-numeric:tabular-nums;}
+  .pc .pl{font-family:'Gaegu',cursive;font-size:18px;line-height:1.2;color:var(--ink);}
+  .pc .pg{height:6px;border-radius:99px;background:var(--bg2);overflow:hidden;} .pc .pg i{display:block;height:100%;background:#E8432F;border-radius:99px;}
+  .pc ul{list-style:none;display:flex;flex-direction:column;gap:3px;font-size:13px;max-height:150px;overflow:auto;}
+  .pc li{display:flex;gap:6px;align-items:baseline;} .pc li.dn{color:var(--faint);text-decoration:line-through;}
+  .pc li i{flex:0 0 auto;width:8px;height:8px;border-radius:2px;display:inline-block;transform:translateY(1px);}
+  .pc li .t{font-size:10px;font-weight:800;color:var(--red);background:var(--red-soft);border-radius:99px;padding:0 5px;}
+  .pc .fb{font-size:12.5px;color:var(--dim);font-style:italic;}
+  .pc .none{font-size:13px;color:var(--faint);padding:10px 0;text-align:center;}
+  .pc .stk{position:absolute;right:12px;top:40px;font-size:22px;}
+  .stamps{display:flex;gap:4px;flex-wrap:wrap;}
+  .stamps button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:4px 9px;font-size:12.5px;font-weight:700;}
+  .stamps button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .cm{display:flex;gap:4px;} .cm .input{padding:7px 9px;font-size:13px;}
+  .cm .btn{padding:7px 10px;}
+  .tdone{font-size:11.5px;color:var(--ok);font-weight:700;}
+
+  /* 일괄 배포 */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (max-width:600px){ .grid2{grid-template-columns:1fr;} }
+  .pick{display:flex;flex-wrap:wrap;gap:6px;}
+  .pick label{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:99px;padding:5px 10px;font-size:13px;font-weight:700;background:#fff;cursor:pointer;}
+  .pick label:has(input:checked){background:var(--ink);color:#fff;border-color:var(--ink);}
+  .pick input{display:none;}
+  .subs{display:flex;gap:6px;flex-wrap:wrap;}
+  .subs button{border:1.5px solid transparent;border-radius:99px;padding:5px 11px;font-size:12.5px;font-weight:800;background:var(--bg2);}
+  .subs button.on{border-color:var(--ink);background:#fff;}
+  .dist{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line2);font-size:13.5px;}
+  .dist:last-child{border-bottom:0;}
+  .dist .p{font-size:12px;color:var(--dim);}
+
+  /* 순공 랭킹 */
+  .rk{display:grid;grid-template-columns:44px minmax(0,1.3fr) minmax(0,2fr) 80px 64px 64px;gap:10px;align-items:center;padding:9px 6px;border-bottom:1px solid var(--line2);font-size:13.5px;}
+  .rk.h{font-size:11.5px;color:var(--dim);font-weight:800;background:var(--bg2);border-radius:8px;border:0;}
+  .rk .no{text-align:center;font-weight:900;font-size:16px;font-variant-numeric:tabular-nums;}
+  .rk .nm b{display:block;} .rk .nm small{color:var(--dim);}
+  .rk .bar{height:10px;border-radius:99px;background:var(--bg2);overflow:hidden;} .rk .bar i{display:block;height:100%;border-radius:99px;background:var(--ink);}
+  .rk.top .bar i{background:linear-gradient(90deg,#FF9C7F,#E8432F);}
+  .rk .n{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;}
+  .rk .n small{display:block;font-size:10.5px;color:var(--dim);font-weight:700;}
+  @media (max-width:600px){ .rk{grid-template-columns:34px minmax(0,1fr) 72px;} .rk .bar,.rk .bh,.rk .c4,.rk .c5{display:none;} }
+</style>
+</head>
+<body>
+<div class="wrap wide">
+  <div class="topbar">
+    <a class="brand" href="../index.html">엄형국 <span>수학</span></a>
+    <div class="row" style="gap:8px;">
+      <span class="who-badge hidden" id="whoBadge"></span>
+      <span class="sub" id="adminEmail"></span>
+      <button class="btn sm hidden" id="logoutBtn">로그아웃</button>
+    </div>
+  </div>
+
+  <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
+    <div class="kicker">PLANNER · FOCUS</div>
+    <h1>플래너·순공 관리</h1>
+    <p class="lead">선생님 이메일 또는 조교 아이디로 로그인하세요.</p>
+    <div class="card stack">
+      <input class="input" id="loginEmail" placeholder="이메일 또는 조교 아이디" autocomplete="username" autocapitalize="none">
+      <input class="input" type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
+      <button class="btn primary block" id="loginBtn">로그인</button>
+      <p class="muted" id="loginMsg"></p>
+    </div>
+  </section>
+  <section id="vDenied" class="hidden"><div class="empty">이 계정은 관리 권한이 없습니다.</div></section>
+
+  <section id="vMain" class="hidden">
+    <div class="row" id="nav" style="margin-bottom:12px;gap:4px;"></div>
+    <div class="tabs" id="tabs">
+      <button class="on" data-tab="week">주간 현황</button>
+      <button data-tab="board">플래너 확인·도장</button>
+      <button data-tab="assign">할 일 일괄 배포</button>
+      <button data-tab="rank">순공 랭킹</button>
+    </div>
+
+    <!-- 주간 현황 -->
+    <div data-pane="week">
+      <div class="bar2">
+        <select class="input" id="wkClass"></select>
+        <span class="wk-nav"><button class="btn sm" id="wkPrev">‹</button><b id="wkLabel"></b><button class="btn sm" id="wkNext">›</button></span>
+        <button class="btn sm" id="wkRemind">오늘 미작성 학생 안내 문구 복사</button>
+        <button class="btn sm" id="wkCsv">CSV</button>
+      </div>
+      <div class="kpis" id="wkKpis"></div>
+      <div class="tbl-wrap"><table class="tbl" id="wkTbl"></table></div>
+      <div class="legend"><span><i style="background:var(--bg2)"></i>기록 없음</span><span><i style="background:#FFE6DF"></i>달성 50% 미만</span><span><i style="background:#FFB4A3"></i>50% 이상</span><span><i style="background:#E8432F"></i>모두 완료</span><span>칸 아래 숫자 = 플래너 공부 시간 · 칸을 누르면 그날 플래너로 이동</span></div>
+    </div>
+
+    <!-- 플래너 확인·도장 -->
+    <div data-pane="board" class="hidden">
+      <div class="bar2">
+        <input class="input" type="date" id="bdDate">
+        <select class="input" id="bdClass"></select>
+        <label class="row" style="gap:6px;font-size:13px;font-weight:700;"><input type="checkbox" id="bdAll" style="width:18px;height:18px;"> 전체 선택</label>
+        <span class="muted">선택한 학생에게</span>
+        <div class="stamps" id="bdBulk">
+          <button data-s="good">👍 확인</button><button data-s="best">💯 최고</button><button data-s="fire">🔥 분발</button><button data-s="heart">💖 응원</button>
+        </div>
+      </div>
+      <div class="board" id="board"></div>
+    </div>
+
+    <!-- 할 일 일괄 배포 -->
+    <div data-pane="assign" class="hidden">
+      <div class="card">
+        <h2>할 일 보내기</h2>
+        <p class="muted" style="margin-bottom:12px;">고른 학생들의 플래너에 ‘선생님’ 할 일로 들어가요. 학생은 체크만 할 수 있고, 지우거나 고칠 수 없어요.</p>
+        <div class="stack">
+          <div><label class="f">반</label><div class="pick" id="asClasses"></div></div>
+          <div><label class="f">학생 <span class="muted" id="asCnt"></span></label><div class="pick" id="asStudents"><span class="muted">반을 고르세요.</span></div></div>
+          <div class="grid2">
+            <div><label class="f">시작 날짜</label><input class="input" type="date" id="asFrom"></div>
+            <div><label class="f">끝 날짜</label><input class="input" type="date" id="asTo"></div>
+          </div>
+          <div><label class="f">요일</label><div class="pick" id="asDow"></div></div>
+          <div><label class="f">과목</label><div class="subs" id="asSubj"></div></div>
+          <div class="grid2">
+            <div><label class="f">할 일</label><input class="input" id="asText" maxlength="80" placeholder="예: 쎈 B 212~240번"></div>
+            <div><label class="f">분량 (선택)</label><input class="input" id="asAmt" maxlength="20" placeholder="예: 29문항"></div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:14px;">
+          <button class="btn primary" id="asGo">보내기</button>
+          <span class="muted" id="asMsg"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row between"><h2 style="margin:0;">보낸 할 일</h2><span class="muted">최근 2주 · 완료율</span></div>
+        <div id="asList" style="margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <!-- 순공 랭킹 -->
+    <div data-pane="rank" class="hidden">
+      <div class="bar2">
+        <select class="input" id="rkPeriod"><option value="d">오늘</option><option value="w" selected>이번 주</option><option value="m">이번 달</option><option value="c">직접 기간</option></select>
+        <span id="rkCustom" class="row hidden" style="gap:4px;"><input class="input" type="date" id="rkFrom"><span>~</span><input class="input" type="date" id="rkTo"></span>
+        <select class="input" id="rkClass"></select>
+        <button class="btn sm" id="rkCopy">TOP 5 공지 문구 복사</button>
+        <button class="btn sm" id="rkCsv">CSV</button>
+      </div>
+      <div class="kpis" id="rkKpis"></div>
+      <div class="card" id="rkList"></div>
+      <p class="muted" style="font-size:12px;">순공 = 집중 타이머로 잰 시간에서 화면을 벗어난 시간을 뺀 순수 집중 시간이에요. 1분 미만 세션은 기록되지 않아요. 학생은 타이머 화면에서 가린 이름으로 랭킹을 봐요.</p>
+    </div>
+  </section>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=9"></script>
+<script>
+(function(){
+  const { db, FV, esc, toast, copyText } = OMR;
+  const $ = id => document.getElementById(id);
+  const VIEWS = ['vLogin','vDenied','vMain'];
+  const show = v => VIEWS.forEach(x => $(x).classList.toggle('hidden', x !== v));
+  const SUBJ = { '1':['수학','var(--s1)'], '2':['국어','var(--s2)'], '3':['영어','var(--s3)'], '4':['탐구','var(--s4)'], '5':['기타','var(--s5)'] };
+  const STAMP = { good:['👍','확인'], best:['💯','최고'], fire:['🔥','분발'], heart:['💖','응원'] };
+  const DOWK = '월화수목금토일';
+  const pad = n => String(n).padStart(2, '0');
+  const ds = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = s => new Date(s + 'T00:00:00');
+  const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return ds(d); };
+  const monday = s => { const d = parse(s); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return ds(d); };
+  const today = OMR.todayStr();
+  const hm = min => min >= 60 ? `${Math.floor(min / 60)}h${min % 60 ? ' ' + (min % 60) + 'm' : ''}` : `${min}m`;
+  const hmK = sec => { const m = Math.round(sec / 60); return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`; };
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  let me = null, roster = [], classes = [];
+  function handleErr(e){ console.error(e); toast(e && e.code === 'permission-denied' ? '권한이 없습니다 (Firebase 규칙을 게시했는지 확인하세요)' : '오류: ' + (e.message || e)); }
+  const classOpts = (allVal, allLabel) => `<option value="${allVal}">${allLabel}</option>` + classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+
+  OMR.mountStaffLogin(async (m, user) => {
+    me = m;
+    $('whoBadge').classList.add('hidden');
+    if (!user){ show('vLogin'); return; }
+    if (!me){ show('vDenied'); return; }
+    $('whoBadge').textContent = me.role === 'admin' ? '선생님' : '조교 · ' + me.name;
+    $('whoBadge').className = 'who-badge' + (me.role === 'admin' ? ' admin' : '');
+    $('nav').innerHTML = OMR.staffNav('study.html', me.role);
+    show('vMain');
+    try {
+      roster = (await db.collection('omrCodes').get()).docs.map(d => ({ code: d.id, ...d.data() }))
+        .filter(s => s.name && s.className).sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+    } catch(e){ roster = []; handleErr(e); }
+    classes = [...new Set(roster.map(s => s.className))].sort((a,b) => a.localeCompare(b, 'ko'));
+    ['wkClass','bdClass','rkClass'].forEach(id => $(id).innerHTML = classOpts('*', '전체 반'));
+    initAssign();
+    const tab = (location.hash || '#week').slice(1);
+    selectTab(['week','board','assign','rank'].includes(tab) ? tab : 'week');
+  });
+  function selectTab(t){
+    [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+    document.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('hidden', p.dataset.pane !== t));
+    history.replaceState(null, '', '#' + t);
+    ({ week: loadWeek, board: loadBoard, assign: loadAssigned, rank: loadRank })[t]();
+  }
+  $('tabs').onclick = e => { const b = e.target.closest('button'); if (b) selectTab(b.dataset.tab); };
+  const inClass = (cf) => roster.filter(s => cf === '*' || s.className === cf);
+  async function plannersBetween(a, b){
+    const docs = (await db.collection('planners').where('date', '>=', a).where('date', '<=', b).get()).docs.map(d => d.data());
+    const by = {}; docs.forEach(p => { (by[p.code] = by[p.code] || {})[p.date] = p; });
+    return by;
+  }
+  async function sessionsBetween(a, b){
+    return (await db.collection('studySessions').where('date', '>=', a).where('date', '<=', b).get()).docs.map(d => d.data());
+  }
+
+  // ═════════ 주간 현황 ═════════
+  let wkStart = monday(today), wkRows = [];
+  $('wkPrev').onclick = () => { wkStart = addDays(wkStart, -7); loadWeek(); };
+  $('wkNext').onclick = () => { wkStart = addDays(wkStart, 7); loadWeek(); };
+  $('wkClass').onchange = () => loadWeek();
+  async function loadWeek(){
+    const days = [...Array(7)].map((_, i) => addDays(wkStart, i));
+    $('wkLabel').textContent = `${days[0].slice(5).replace('-', '/')} ~ ${days[6].slice(5).replace('-', '/')}`;
+    $('wkTbl').innerHTML = '<tr><td class="muted">불러오는 중…</td></tr>';
+    try {
+      const [by, ss] = await Promise.all([plannersBetween(days[0], days[6]), sessionsBetween(days[0], days[6]).catch(() => [])]);
+      const focus = {}; ss.forEach(s => { focus[s.code] = (focus[s.code] || 0) + (s.focusSec || 0); });
+      wkRows = inClass($('wkClass').value).map(s => {
+        const ps = by[s.code] || {};
+        const cells = days.map(d => { const p = ps[d]; if (!p) return null; const sm = OMR.plannerTodos(p); return { d, done: sm.done, total: sm.total, min: p.studyMin || 0, p }; });
+        const tot = cells.reduce((a, c) => a + (c ? c.total : 0), 0), dn = cells.reduce((a, c) => a + (c ? c.done : 0), 0);
+        return { s, cells, tot, dn, min: cells.reduce((a, c) => a + (c ? c.min : 0), 0), focus: focus[s.code] || 0, daysOn: cells.filter(c => c && (c.total || c.min)).length };
+      });
+      const n = wkRows.length || 1;
+      const todayIdx = days.indexOf(today);
+      const wroteToday = todayIdx >= 0 ? wkRows.filter(r => r.cells[todayIdx] && (r.cells[todayIdx].total || r.cells[todayIdx].min)).length : null;
+      $('wkKpis').innerHTML = `
+        <div class="stat"><div class="k">평균 달성률</div><div class="v">${Math.round(wkRows.reduce((a, r) => a + (r.tot ? r.dn / r.tot : 0), 0) / n * 100)}<small>%</small></div></div>
+        <div class="stat"><div class="k">평균 플래너 공부</div><div class="v">${hm(Math.round(wkRows.reduce((a, r) => a + r.min, 0) / n))}</div></div>
+        <div class="stat"><div class="k">평균 순공(타이머)</div><div class="v">${hmK(wkRows.reduce((a, r) => a + r.focus, 0) / n)}</div></div>
+        <div class="stat"><div class="k">${wroteToday != null ? '오늘 작성' : '플래너 쓴 학생'}</div><div class="v">${wroteToday != null ? wroteToday : wkRows.filter(r => r.daysOn).length}<small>/${wkRows.length}명</small></div></div>`;
+      $('wkTbl').innerHTML = `<tr><th>이름</th>${days.map((d, i) => `<th style="text-align:center;">${DOWK[i]}<br><span class="muted" style="font-weight:600;">${+d.slice(8)}</span></th>`).join('')}<th class="num">달성</th><th class="num">플래너</th><th class="num">순공</th></tr>`
+        + wkRows.sort((a, b) => b.min - a.min || b.dn - a.dn).map(r => `<tr><td><b>${esc(r.s.name)}</b><br><span class="muted" style="font-size:11.5px;">${esc(r.s.className)}</span></td>
+          ${r.cells.map((c, i) => { const pc = c && c.total ? c.done / c.total : 0;
+            const cls = !c || (!c.total && !c.min) ? 'c0' : pc >= 1 ? 'c3' : pc >= .5 ? 'c2' : 'c1';
+            return `<td class="day"><button class="cell ${cls} ${days[i] === today ? 'today' : ''}" data-code="${esc(r.s.code)}" data-d="${days[i]}" title="${c ? `${c.done}/${c.total} 완료 · ${c.min}분` : '기록 없음'}">${c && c.total ? `${c.done}/${c.total}` : '–'}<small>${c && c.min ? hm(c.min) : ''}</small></button></td>`; }).join('')}
+          <td class="num"><b>${r.tot ? Math.round(r.dn / r.tot * 100) + '%' : '–'}</b></td><td class="num">${hm(r.min)}</td><td class="num">${hmK(r.focus)}</td></tr>`).join('');
+      $('wkTbl').querySelectorAll('.cell').forEach(b => b.onclick = () => { $('bdDate').value = b.dataset.d; $('bdClass').value = '*'; focusCode = b.dataset.code; selectTab('board'); });
+    } catch(e){ $('wkTbl').innerHTML = '<tr><td class="muted">불러오지 못했습니다.</td></tr>'; handleErr(e); }
+  }
+  $('wkRemind').onclick = () => {
+    const i = [...Array(7)].map((_, k) => addDays(wkStart, k)).indexOf(today);
+    if (i < 0) return toast('이번 주를 보고 있을 때만 쓸 수 있어요');
+    const miss = wkRows.filter(r => !(r.cells[i] && (r.cells[i].total || r.cells[i].min))).map(r => r.s.name);
+    if (!miss.length) return toast('오늘 모두 플래너를 썼어요 👏');
+    copyText(`[엄형국 수학] 오늘 스터디 플래너를 아직 쓰지 않았어요 ✏️\n${miss.join(', ')}\n오늘 할 일을 적고 공부한 시간을 칠해 주세요!\n${new URL('planner.html', location.href).href}`);
+  };
+  $('wkCsv').onclick = () => {
+    const days = [...Array(7)].map((_, i) => addDays(wkStart, i));
+    OMR.downloadCsv(`플래너_${days[0]}.csv`, [['이름','반', ...days.map((d, i) => `${DOWK[i]} ${d.slice(5)}`), '달성률','플래너 공부(분)','순공(분)'],
+      ...wkRows.map(r => [r.s.name, r.s.className, ...r.cells.map(c => c ? `${c.done}/${c.total} ${c.min}분` : ''), r.tot ? Math.round(r.dn / r.tot * 100) + '%' : '', r.min, Math.round(r.focus / 60)])]);
+  };
+
+  // ═════════ 플래너 확인·도장 ═════════
+  let focusCode = null, bdRows = [];
+  $('bdDate').value = today;
+  $('bdDate').onchange = $('bdClass').onchange = () => loadBoard();
+  async function loadBoard(){
+    const date = $('bdDate').value || today;
+    $('board').innerHTML = '<div class="muted">불러오는 중…</div>';
+    try {
+      const by = await plannersBetween(date, date);
+      bdRows = inClass($('bdClass').value).map(s => ({ s, p: (by[s.code] || {})[date] || null }))
+        .sort((a, b) => (b.p ? 1 : 0) - (a.p ? 1 : 0) || a.s.name.localeCompare(b.s.name, 'ko'));
+      $('board').innerHTML = bdRows.map((r, i) => card(r, i)).join('') || '<div class="muted">학생이 없습니다.</div>';
+      bindBoard();
+      if (focusCode){ const el = $('board').querySelector(`[data-code="${focusCode}"]`); if (el){ el.scrollIntoView({ behavior:'smooth', block:'center' }); el.classList.add('sel'); } focusCode = null; }
+    } catch(e){ $('board').innerHTML = '<div class="muted">불러오지 못했습니다.</div>'; handleErr(e); }
+  }
+  function card(r, i){
+    const p = r.p, sm = OMR.plannerTodos(p);
+    const pc = sm.total ? sm.done / sm.total : 0;
+    return `<div class="pc" data-i="${i}" data-code="${esc(r.s.code)}">
+      <div class="h"><input type="checkbox" class="pick-one" aria-label="${esc(r.s.name)} 선택"><b>${esc(r.s.name)}</b><span class="muted" style="font-size:12px;">${esc(r.s.className)}</span>
+        <span class="m">${p ? `${sm.done}/${sm.total} · ${hm(p.studyMin || 0)}` : '미작성'}</span></div>
+      ${p && p.sticker ? `<span class="stk">${p.sticker}</span>` : ''}
+      ${p ? `${p.pledge ? `<div class="pl">“${esc(p.pledge)}”</div>` : ''}
+        <div class="pg"><i style="width:${pc * 100}%"></i></div>
+        <ul>${sm.all.length ? sm.all.map(t => `<li class="${t.done ? 'dn' : ''}"><i style="background:${(SUBJ[t.subj] || SUBJ['5'])[1]}"></i>${esc(t.text)}${t.amount ? ` <span class="muted">${esc(t.amount)}</span>` : ''}${t.teacher ? ' <span class="t">선생님</span>' : ''}</li>`).join('') : '<li class="muted">할 일 없음</li>'}</ul>
+        ${p.feedback ? `<div class="fb">회고: ${esc(p.feedback)}</div>` : ''}`
+        : '<div class="none">아직 플래너를 쓰지 않았어요</div>'}
+      <div class="stamps">${Object.entries(STAMP).map(([k, v]) => `<button data-s="${k}" class="${p && p.tstamp === k ? 'on' : ''}">${v[0]} ${v[1]}</button>`).join('')}</div>
+      <div class="cm"><input class="input" placeholder="코멘트 (학생 플래너에 보여요)" maxlength="80" value="${p && p.tcomment ? esc(p.tcomment) : ''}"><button class="btn sm primary">저장</button></div>
+      ${p && p.tby ? `<div class="tdone">✓ ${esc(p.tby)} 확인</div>` : ''}
+    </div>`;
+  }
+  async function writeNote(r, fields){
+    const date = $('bdDate').value || today;
+    await db.collection('planners').doc(`${r.s.code}_${date}`).set({
+      code: r.s.code, name: r.s.name, className: r.s.className, date,
+      ...fields, tby: me.name, tat: FV.serverTimestamp() }, { merge: true });
+  }
+  function bindBoard(){
+    $('board').querySelectorAll('.pc').forEach(el => {
+      const r = bdRows[+el.dataset.i];
+      el.querySelector('.pick-one').onchange = e => el.classList.toggle('sel', e.target.checked);
+      el.querySelectorAll('.stamps button').forEach(b => b.onclick = async () => {
+        const v = b.classList.contains('on') ? '' : b.dataset.s;
+        try { await writeNote(r, { tstamp: v }); el.querySelectorAll('.stamps button').forEach(x => x.classList.toggle('on', x === b && !!v)); toast(v ? `${r.s.name}: ${STAMP[v][0]} 도장` : '도장을 뗐어요'); }
+        catch(e){ handleErr(e); }
+      });
+      const inp = el.querySelector('.cm input');
+      const saveCm = async () => { try { await writeNote(r, { tcomment: inp.value.trim() }); toast('코멘트를 남겼어요'); } catch(e){ handleErr(e); } };
+      el.querySelector('.cm .btn').onclick = saveCm;
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) saveCm(); });
+    });
+  }
+  $('bdAll').onchange = e => $('board').querySelectorAll('.pc').forEach(el => { el.querySelector('.pick-one').checked = e.target.checked; el.classList.toggle('sel', e.target.checked); });
+  $('bdBulk').onclick = async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const sel = [...$('board').querySelectorAll('.pc')].filter(el => el.querySelector('.pick-one').checked).map(el => bdRows[+el.dataset.i]);
+    if (!sel.length) return toast('먼저 학생을 선택하세요');
+    const date = $('bdDate').value || today;
+    try {
+      await OMR.commitOps(sel.map(r => ['set', db.collection('planners').doc(`${r.s.code}_${date}`),
+        { code: r.s.code, name: r.s.name, className: r.s.className, date, tstamp: b.dataset.s, tby: me.name, tat: FV.serverTimestamp() }, { merge: true }]));
+      toast(`${sel.length}명에게 ${STAMP[b.dataset.s][0]} 도장을 찍었어요`); loadBoard();
+    } catch(e){ handleErr(e); }
+  };
+
+  // ═════════ 할 일 일괄 배포 ═════════
+  let asSubj = '1';
+  function initAssign(){
+    $('asClasses').innerHTML = classes.map(c => `<label><input type="checkbox" value="${esc(c)}">${esc(c)}</label>`).join('') || '<span class="muted">등록된 반이 없습니다.</span>';
+    $('asClasses').onchange = renderAsStudents;
+    $('asDow').innerHTML = DOWK.split('').map((d, i) => `<label><input type="checkbox" value="${i}" checked>${d}</label>`).join('');
+    $('asSubj').innerHTML = Object.entries(SUBJ).map(([k, v]) => `<button data-k="${k}" class="${k === asSubj ? 'on' : ''}" style="color:${v[1]}">${v[0]}</button>`).join('');
+    $('asSubj').onclick = e => { const b = e.target.closest('button'); if (!b) return; asSubj = b.dataset.k; $('asSubj').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
+    $('asFrom').value = today; $('asTo').value = today;
+  }
+  function renderAsStudents(){
+    const cs = [...$('asClasses').querySelectorAll('input:checked')].map(i => i.value);
+    const list = roster.filter(s => cs.includes(s.className));
+    $('asStudents').innerHTML = list.length ? list.map(s => `<label><input type="checkbox" value="${esc(s.code)}" checked>${esc(s.name)}</label>`).join('') : '<span class="muted">반을 고르세요.</span>';
+    $('asStudents').onchange = countAs; countAs();
+  }
+  function asDays(){
+    const from = $('asFrom').value, to = $('asTo').value || from;
+    if (!from || to < from) return [];
+    const dows = new Set([...$('asDow').querySelectorAll('input:checked')].map(i => +i.value));
+    const out = []; for (let d = from; d <= to && out.length < 62; d = addDays(d, 1)){ if (dows.has((parse(d).getDay() + 6) % 7)) out.push(d); }
+    return out;
+  }
+  function countAs(){
+    const n = $('asStudents').querySelectorAll('input:checked').length, m = asDays().length;
+    $('asCnt').textContent = n ? `${n}명` : '';
+    $('asMsg').textContent = n && m ? `${n}명 × ${m}일 = ${n * m}건` : '';
+  }
+  ['asFrom','asTo'].forEach(id => $(id).onchange = countAs); $('asDow').onchange = countAs;
+  $('asGo').onclick = async () => {
+    const text = $('asText').value.trim(), amount = $('asAmt').value.trim();
+    const codes = [...$('asStudents').querySelectorAll('input:checked')].map(i => i.value);
+    const days = asDays();
+    if (!text) return toast('할 일을 입력하세요');
+    if (!codes.length) return toast('학생을 고르세요');
+    if (!days.length) return toast('날짜·요일을 확인하세요');
+    if (!confirm(`${codes.length}명의 플래너 ${days.length}일치에 ‘${text}’를 보낼까요?`)) return;
+    const item = { id: 't' + uid(), text, subj: asSubj, amount, batch: uid(), by: me.name };
+    $('asGo').disabled = true;
+    try {
+      const ops = [];
+      codes.forEach(code => { const s = roster.find(x => x.code === code);
+        days.forEach(d => ops.push(['set', db.collection('planners').doc(`${code}_${d}`),
+          { code, name: s.name, className: s.className, date: d, ttodos: firebase.firestore.FieldValue.arrayUnion(item) }, { merge: true }])); });
+      await OMR.commitOps(ops);
+      toast(`${ops.length}건 보냈어요`); $('asText').value = ''; $('asAmt').value = '';
+      loadAssigned();
+    } catch(e){ handleErr(e); }
+    $('asGo').disabled = false;
+  };
+  async function loadAssigned(){
+    const box = $('asList');
+    box.innerHTML = '<div class="muted">불러오는 중…</div>';
+    try {
+      const by = await plannersBetween(addDays(today, -14), addDays(today, 30));
+      const groups = {};
+      Object.values(by).forEach(dd => Object.values(dd).forEach(p => (p.ttodos || []).forEach(t => {
+        const g = groups[t.id] = groups[t.id] || { item: t, docs: [], done: 0, dates: new Set(), names: new Set() };
+        g.docs.push(p); g.dates.add(p.date); g.names.add(p.name); if ((p.tdone || []).includes(t.id)) g.done++; })));
+      const list = Object.values(groups).sort((a, b) => [...b.dates].sort().pop().localeCompare([...a.dates].sort().pop()));
+      box.innerHTML = list.length ? list.map((g, i) => { const dates = [...g.dates].sort();
+        return `<div class="dist"><div><b>${esc(g.item.text)}</b>${g.item.amount ? ` <span class="muted">${esc(g.item.amount)}</span>` : ''}
+          <div class="p">${(SUBJ[g.item.subj] || SUBJ['5'])[0]} · ${dates[0].slice(5).replace('-', '/')}${dates.length > 1 ? ' ~ ' + dates[dates.length - 1].slice(5).replace('-', '/') : ''} · ${g.names.size}명 · ${esc(g.item.by || '')}</div></div>
+          <b>${Math.round(g.done / g.docs.length * 100)}% <span class="muted" style="font-weight:600;font-size:12px;">${g.done}/${g.docs.length}</span></b>
+          <button class="btn sm ghost" data-i="${i}" style="color:var(--red);">회수</button></div>`; }).join('') : '<div class="muted">아직 보낸 할 일이 없어요.</div>';
+      box.querySelectorAll('[data-i]').forEach(b => b.onclick = async () => {
+        const g = list[+b.dataset.i];
+        if (!confirm(`‘${g.item.text}’를 ${g.docs.length}개 플래너에서 지울까요?`)) return;
+        try {
+          await OMR.commitOps(g.docs.map(p => ['set', db.collection('planners').doc(`${p.code}_${p.date}`),
+            { ttodos: firebase.firestore.FieldValue.arrayRemove(g.item) }, { merge: true }]));
+          toast('회수했어요'); loadAssigned();
+        } catch(e){ handleErr(e); }
+      });
+    } catch(e){ box.innerHTML = '<div class="muted">불러오지 못했습니다.</div>'; handleErr(e); }
+  }
+
+  // ═════════ 순공 랭킹 ═════════
+  let rkRows = [], rkLabel = '';
+  $('rkPeriod').onchange = () => { $('rkCustom').classList.toggle('hidden', $('rkPeriod').value !== 'c'); loadRank(); };
+  $('rkFrom').value = addDays(today, -6); $('rkTo').value = today;
+  $('rkFrom').onchange = $('rkTo').onchange = $('rkClass').onchange = () => loadRank();
+  function rkRange(){
+    const v = $('rkPeriod').value;
+    if (v === 'd') return [today, today, '오늘'];
+    if (v === 'w') { const m = monday(today); return [m, addDays(m, 6), '이번 주']; }
+    if (v === 'm') { const a = today.slice(0, 8) + '01'; const d = parse(a); d.setMonth(d.getMonth() + 1); d.setDate(0); return [a, ds(d), '이번 달']; }
+    return [$('rkFrom').value, $('rkTo').value, `${$('rkFrom').value.slice(5)}~${$('rkTo').value.slice(5)}`];
+  }
+  async function loadRank(){
+    const [a, b, label] = rkRange(); rkLabel = label;
+    $('rkList').innerHTML = '<div class="muted">불러오는 중…</div>';
+    try {
+      const ss = await sessionsBetween(a, b);
+      const cf = $('rkClass').value;
+      const agg = {};
+      inClass(cf).forEach(s => { agg[s.code] = { s, focus: 0, planned: 0, elapsed: 0, n: 0, away: 0, done: 0 }; });
+      ss.forEach(x => { const g = agg[x.code]; if (!g) return;
+        g.focus += x.focusSec || 0; g.planned += x.plannedSec || 0; g.elapsed += x.elapsedSec || 0; g.n++; g.away += x.awayCount || 0; if (x.completed) g.done++; });
+      rkRows = Object.values(agg).sort((p, q) => q.focus - p.focus);
+      const active = rkRows.filter(r => r.n);
+      const top = active[0] ? active[0].focus : 1;
+      const totF = active.reduce((s, r) => s + r.focus, 0);
+      $('rkKpis').innerHTML = `
+        <div class="stat"><div class="k">${esc(label)} 전체 순공</div><div class="v" style="font-size:18px;">${hmK(totF)}</div></div>
+        <div class="stat"><div class="k">참여 학생</div><div class="v">${active.length}<small>/${rkRows.length}명</small></div></div>
+        <div class="stat"><div class="k">1인 평균</div><div class="v" style="font-size:18px;">${hmK(active.length ? totF / active.length : 0)}</div></div>
+        <div class="stat"><div class="k">평균 집중률</div><div class="v">${active.length ? Math.round(active.reduce((s, r) => s + (r.planned ? r.focus / r.planned : 0), 0) / active.length * 100) : 0}<small>%</small></div></div>`;
+      $('rkList').innerHTML = `<div class="rk h"><span class="no">순위</span><span>이름</span><span class="bh">순공 시간</span><span class="n">순공</span><span class="n c4">세션</span><span class="n c5">집중률</span></div>`
+        + rkRows.map((r, i) => { const rank = r.n ? active.indexOf(r) + 1 : null;
+          return `<div class="rk ${rank && rank <= 3 ? 'top' : ''}"><span class="no">${rank ? (['🥇','🥈','🥉'][rank - 1] || rank) : '–'}</span>
+            <span class="nm"><b>${esc(r.s.name)}</b><small>${esc(r.s.className)}</small></span>
+            <span class="bar"><i style="width:${r.n ? Math.max(2, r.focus / top * 100) : 0}%"></i></span>
+            <span class="n">${r.n ? hmK(r.focus) : '<span class="muted">기록 없음</span>'}</span>
+            <span class="n c4">${r.n}<small>완주 ${r.done}</small></span>
+            <span class="n c5">${r.planned ? Math.round(r.focus / r.planned * 100) + '%' : '–'}<small>이탈 ${r.away}회</small></span></div>`; }).join('');
+    } catch(e){ $('rkList').innerHTML = '<div class="muted">불러오지 못했습니다.</div>'; handleErr(e); }
+  }
+  $('rkCopy').onclick = () => {
+    const act = rkRows.filter(r => r.n).slice(0, 5);
+    if (!act.length) return toast('아직 기록이 없어요');
+    copyText(`[엄형국 수학] ${rkLabel} 순공 랭킹 TOP ${act.length} 🏆\n` + act.map((r, i) => `${['🥇','🥈','🥉'][i] || (i + 1) + '위'} ${r.s.name} — ${hmK(r.focus)}`).join('\n') + `\n모두 수고했어요! 타이머로 순공 시간을 쌓아 보세요 ⏱️`);
+  };
+  $('rkCsv').onclick = () => OMR.downloadCsv(`순공랭킹_${rkLabel}.csv`, [['순위','이름','반','순공(분)','세션','완주','집중률','이탈 횟수'],
+    ...rkRows.map(r => [r.n ? rkRows.filter(x => x.n).indexOf(r) + 1 : '', r.s.name, r.s.className, Math.round(r.focus / 60), r.n, r.done, r.planned ? Math.round(r.focus / r.planned * 100) + '%' : '', r.away])]);
+})();
+</script>
+</body>
+</html>

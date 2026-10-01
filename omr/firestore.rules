@@ -314,7 +314,9 @@
         let d = request.resource.data;
         return stuOk(d) && pid == d.code + '_' + d.date
           && d.keys().hasOnly(['code', 'name', 'className', 'date', 'pledge', 'todos', 'grid', 'feedback', 'sticker',
-                               'studyMin', 'done', 'total', 'updatedAt'])
+                               'studyMin', 'done', 'total', 'updatedAt', 'tdone',
+                               'ttodos', 'tcomment', 'tstamp', 'tby', 'tat'])
+          && (!('tdone' in d) || (d.tdone is list && d.tdone.size() <= 40))
           && d.date is string && d.date.size() == 10
           && d.pledge is string && d.pledge.size() <= 60
           && d.todos is list && d.todos.size() <= 40
@@ -324,9 +326,13 @@
           && d.studyMin is int && d.studyMin >= 0 && d.studyMin <= 1440
           && d.updatedAt == request.time;
       }
+      // 선생님 칸(ttodos·코멘트·도장)은 학생이 만들거나 바꿀 수 없음
       allow get: if true;
       allow list, delete: if omrStaffOrAdmin();
-      allow create, update: if planOk();
+      allow create: if omrStaffOrAdmin() ||
+        (planOk() && !request.resource.data.keys().hasAny(['ttodos', 'tcomment', 'tstamp', 'tby', 'tat']));
+      allow update: if omrStaffOrAdmin() ||
+        (planOk() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['ttodos', 'tcomment', 'tstamp', 'tby', 'tat']));
     }
     // 플래너 설정(D-day). 문서 ID = 학생코드
     match /plannerMeta/{code} {
@@ -335,6 +341,30 @@
       allow write: if exists(/databases/$(database)/documents/omrCodes/$(code))
         && request.resource.data.code == code
         && request.resource.data.keys().hasOnly(['code', 'dday', 'updatedAt']);
+    }
+
+    // ───────── 순공 랭킹판 ─────────
+    // 타이머 세션이 저장될 때 같은 묶음(batch)으로만 더해짐. 학생 코드 대신 studentId·가린 이름만 공개
+    // 문서 ID = {기간키}_{studentId}, 기간키 = d2026-10-01(하루) · w2026-09-28(주, 월요일) · m2026-10(달)
+    match /studyBoard/{bid} {
+      function boardOk() {
+        let d = request.resource.data;
+        let sp = /databases/$(database)/documents/studySessions/$(d.lastSid);
+        let s = getAfter(sp).data;
+        let c = get(/databases/$(database)/documents/omrCodes/$(s.code)).data;
+        return !exists(sp) && existsAfter(sp)
+          && c.studentId == d.sid && c.className == d.className
+          && bid == d.key + '_' + d.sid
+          && (d.key == 'd' + s.date || d.key == 'm' + s.date[0:7] || d.key.matches('w[0-9]{4}-[0-9]{2}-[0-9]{2}'))
+          && d.keys().hasOnly(['key', 'sid', 'nick', 'className', 'focusSec', 'sessions', 'lastSid', 'updatedAt'])
+          && d.nick is string && d.nick.size() <= 12
+          && d.focusSec == (resource == null ? 0 : resource.data.focusSec) + s.focusSec
+          && d.sessions == (resource == null ? 0 : resource.data.sessions) + 1
+          && d.updatedAt == request.time;
+      }
+      allow read: if true;
+      allow create, update: if boardOk();
+      allow delete: if omrStaffOrAdmin();
     }
 
     // ───────── 학생 기록 (상담·특이사항) — 선생님·조교만 ─────────

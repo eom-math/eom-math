@@ -177,6 +177,7 @@
       <div class="row" style="margin-bottom:10px;">
         <select class="input" id="planClass" style="width:auto;min-width:130px;"></select>
         <span class="muted" id="planRange"></span>
+        <a class="btn primary" href="study.html#week" style="margin-left:auto;">플래너·순공 관리 열기 →</a>
       </div>
       <p class="muted" style="margin-bottom:8px;">학생이 직접 쓰는 플래너예요. 이번 주(월~일) 할 일 달성률과 10분 타임테이블 공부 시간을 보여줘요. 이름을 누르면 날짜별 내용이 펼쳐져요.</p>
       <div class="card" id="planList"><div class="muted">반을 고르세요.</div></div>
@@ -190,6 +191,7 @@
         <select class="input" id="studyClass" style="width:auto;min-width:130px;"></select>
         <a class="btn" href="timer.html" target="_blank" rel="noopener">학생 타이머 화면 ↗</a>
         <button class="btn" id="studyCsv">CSV</button>
+        <a class="btn primary" href="study.html#rank">순공 랭킹 →</a>
       </div>
       <p class="muted">학생은 포털 → <b>타이머</b>에서 공부합니다. 1분 이상 한 세션만 기록되고, 집중률 = 순수 집중 ÷ 계획 시간입니다.</p>
       <div class="kpis" id="studyKpis"></div>
@@ -256,7 +258,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=8"></script>
+<script src="common.js?v=9"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, round } = OMR;

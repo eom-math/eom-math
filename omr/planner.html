@@ -159,6 +159,12 @@
   .wbars span{font-size:10.5px;color:var(--dim);font-weight:800;}
   .wbars em{font-style:normal;font-size:10px;color:var(--faint);font-weight:700;font-variant-numeric:tabular-nums;height:12px;}
 
+  .tnote{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1.5px solid #FFD2C6;border-radius:20px;padding:14px 16px;margin-bottom:12px;position:relative;}
+  .tnote[hidden]{display:none;}
+  .tnote .st{flex:0 0 auto;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:26px;background:#FFF1EC;}
+  .tnote .k{font-size:11px;font-weight:800;color:var(--red);letter-spacing:.04em;}
+  .tnote .x{font-family:var(--hand);font-size:20px;font-weight:700;line-height:1.35;word-break:keep-all;}
+  .tnote .by{font-size:11.5px;color:var(--dim);margin-top:2px;}
   .notice{background:var(--warn-soft);color:#7A4E0E;border-radius:14px;padding:10px 12px;font-size:12.5px;margin-bottom:12px;line-height:1.5;}
   .notice[hidden]{display:none;}
 
@@ -188,6 +194,7 @@
     <div class="pledge"><label for="pledge">✏️ 오늘의 다짐</label><input id="pledge" maxlength="60" placeholder="오늘은 명제 끝내기!" autocomplete="off"></div>
   </div>
 
+  <div class="tnote" id="tnote" hidden></div>
   <div class="card2" id="todoCard">
     <div class="ctitle"><span class="em">📒</span>오늘 할 일<span class="r" id="todoCnt"></span></div>
     <div class="prog"><div class="bar"><i id="progBar" style="width:0"></i></div><b id="progTxt">0%</b></div>
@@ -244,7 +251,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=8"></script>
+<script src="common.js?v=9"></script>
 <script>
 (async function(){
   const { db, FV, esc, toast } = OMR;
@@ -274,7 +281,7 @@
   const LKEY = d => `planner_${me.code}_${d}`;
   const local = { get(d){ try { return JSON.parse(localStorage.getItem(LKEY(d))); } catch(e){ return null; } },
                   set(d, v){ try { localStorage.setItem(LKEY(d), JSON.stringify(v)); } catch(e){} } };
-  const blank = d => ({ code: me.code, name: me.name, className: me.className, date: d, pledge:'', todos:[], grid:'0'.repeat(CELLS), feedback:'', sticker:'', studyMin:0, done:0, total:0 });
+  const blank = d => ({ code: me.code, name: me.name, className: me.className, date: d, pledge:'', todos:[], tdone:[], ttodos:[], grid:'0'.repeat(CELLS), feedback:'', sticker:'', studyMin:0, done:0, total:0 });
 
   async function load(d){
     if (docs[d]) return docs[d];
@@ -285,6 +292,7 @@
     if (!v && l) v = l;
     docs[d] = { ...blank(d), ...(v || {}) };
     if ((docs[d].grid || '').length !== CELLS) docs[d].grid = (docs[d].grid || '').padEnd(CELLS, '0').slice(0, CELLS);
+    const sm = OMR.plannerTodos(docs[d]); docs[d].done = sm.done; docs[d].total = sm.total;
     return docs[d];
   }
 
@@ -292,7 +300,8 @@
   const timers = {};
   function save(d){
     const doc = docs[d];
-    doc.done = doc.todos.filter(t => t.done).length; doc.total = doc.todos.length;
+    const sm = OMR.plannerTodos(doc); doc.done = sm.done; doc.total = sm.total;
+    doc.tdone = (doc.tdone || []).filter(id => (doc.ttodos || []).some(t => t.id === id));
     doc.studyMin = [...doc.grid].filter(c => c !== '0').length * 10;
     local.set(d, doc);
     $('saveState').textContent = '저장 중…'; $('saveState').className = 'save';
@@ -303,7 +312,7 @@
           code: me.code, name: me.name, className: me.className, date: d,
           pledge: doc.pledge.slice(0, 60), todos: doc.todos.slice(0, 40).map(t => ({ id: t.id, text: String(t.text).slice(0, 80), subj: t.subj, amount: (t.amount || '').slice(0, 20), done: !!t.done, star: !!t.star, from: t.from || '' })),
           grid: doc.grid, feedback: doc.feedback.slice(0, 300), sticker: doc.sticker || '',
-          studyMin: doc.studyMin, done: doc.done, total: doc.total, updatedAt: FV.serverTimestamp() });
+          studyMin: doc.studyMin, done: doc.done, total: doc.total, tdone: doc.tdone.slice(0, 40), updatedAt: FV.serverTimestamp() }, { merge: true });
         $('saveState').textContent = '저장됨 ✓';
         $('notice').hidden = true;
       } catch(e){
@@ -377,6 +386,17 @@
   $('stks').onclick = e => { const b = e.target.closest('button'); if (!b) return;
     docs[cur].sticker = docs[cur].sticker === b.dataset.s ? '' : b.dataset.s; save(cur); renderDay(); renderWeek(); };
 
+  // ───── 선생님 도장·코멘트 ─────
+  const STAMP = { good:['👍','확인했어요'], best:['💯','최고예요'], fire:['🔥','조금 더 힘내요'], heart:['💖','응원해요'] };
+  function renderTeacherNote(x){
+    const box = $('tnote');
+    if (!x.tstamp && !x.tcomment){ box.hidden = true; return; }
+    const st = STAMP[x.tstamp];
+    box.hidden = false;
+    box.innerHTML = `<div class="st">${st ? st[0] : '✏️'}</div><div><div class="k">선생님 코멘트</div>
+      <div class="x">${x.tcomment ? esc(x.tcomment) : (st ? st[1] : '')}</div><div class="by">${esc(x.tby || '선생님')}</div></div>`;
+  }
+
   // ───── 할 일 ─────
   $('subs').innerHTML = SUBJ.map(s => `<button class="sub ${s.k === curSubj ? 'on' : ''}" data-k="${s.k}" style="--sc:${s.c};--ss:${s.s};">${s.name}</button>`).join('');
   $('subs').onclick = e => { const b = e.target.closest('.sub'); if (!b) return; curSubj = b.dataset.k;
@@ -393,7 +413,8 @@
 
   let lastAllDone = false;
   function renderTodos(popId){
-    const x = docs[cur], list = x.todos;
+    const x = docs[cur], list = OMR.plannerTodos(x).all;
+    renderTeacherNote(x);
     const dn = list.filter(t => t.done).length, p = list.length ? dn / list.length : 0;
     $('todoCnt').textContent = list.length ? `${dn} / ${list.length}` : '';
     $('progBar').style.width = (p * 100) + '%'; $('progTxt').textContent = Math.round(p * 100) + '%';
@@ -410,11 +431,18 @@
         ${items.map(t => `<div class="todo ${t.done ? 'done' : ''} ${t.id === popId ? 'pop' : ''}" data-id="${t.id}" style="--sc:${s.c}">
           <button class="chk" aria-label="${t.done ? '완료 취소' : '완료'}"></button>
           <div class="tx">${esc(t.text)}${t.amount ? `<span class="am">${esc(t.amount)}</span>` : ''}${t.from === 'teacher' ? '<span class="tg">선생님</span>' : ''}</div>
-          <button class="star ${t.star ? 'on' : ''}" aria-label="중요">⭐</button>
-          <button class="more" aria-label="더보기">⋯</button></div>`).join('')}</div>`; }).join('');
+          ${t.teacher ? '' : `<button class="star ${t.star ? 'on' : ''}" aria-label="중요">⭐</button>
+          <button class="more" aria-label="더보기">⋯</button>`}</div>`).join('')}</div>`; }).join('');
   }
   $('todos').addEventListener('click', e => {
     const row = e.target.closest('.todo'); if (!row) return;
+    const tt = (docs[cur].ttodos || []).find(x => x.id === row.dataset.id);
+    if (tt){   // 선생님 할 일: 완료 표시만 학생이 바꿈
+      if (!e.target.closest('.chk')) return;
+      const set = new Set(docs[cur].tdone || []);
+      const now = !set.has(tt.id); now ? set.add(tt.id) : set.delete(tt.id);
+      docs[cur].tdone = [...set]; save(cur); renderTodos(now ? tt.id : null); renderWeek(); return;
+    }
     const t = docs[cur].todos.find(x => x.id === row.dataset.id); if (!t) return;
     if (e.target.closest('.chk')){ t.done = !t.done; save(cur); renderTodos(t.done ? t.id : null); renderWeek(); return; }
     if (e.target.closest('.star')){ t.star = !t.star; save(cur); renderTodos(); return; }
@@ -464,7 +492,7 @@
   function renderSuggest(){
     if (!teacherRows.length){ $('tsgCard').hidden = true; return; }
     $('tsgCard').hidden = false;
-    const have = new Set(docs[cur].todos.map(t => t.text));
+    const have = new Set(OMR.plannerTodos(docs[cur]).all.map(t => t.text));
     $('tsg').innerHTML = teacherRows.map((r, i) => `<div class="it ${have.has(r.t) ? 'added' : ''}"><span class="d">${esc(r.d)}</span><span class="t">${esc(r.t)}</span>
       <button data-i="${i}" aria-label="추가">${have.has(r.t) ? '✓' : '+'}</button></div>`).join('');
     $('tsg').querySelectorAll('button').forEach(b => b.onclick = () => { const r = teacherRows[+b.dataset.i];
