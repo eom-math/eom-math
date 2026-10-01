@@ -61,7 +61,9 @@
   .seg button{border:0;background:#fff;padding:6px 11px;font-size:12.5px;font-weight:700;color:var(--dim);}
   .seg button+button{border-left:1px solid var(--line);}
   .seg button.on{background:var(--ink);color:#fff;}
-  .seg button.on.late{background:var(--warn);} .seg button.on.absent{background:var(--red);}
+  .seg button.on.late{background:var(--warn);} .seg button.on.absent{background:var(--red);} .seg button.on.makeup{background:#3b6fe0;}
+  .pub-note{background:#eef3fd;border:1px solid #c9d8f6;border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.55;margin-bottom:12px;}
+  .res-row .unpub{color:var(--red);}
   .fl{font-size:12px;font-weight:800;color:var(--dim);margin-bottom:5px;display:flex;justify-content:space-between;gap:8px;}
   .score-in{display:flex;align-items:center;gap:6px;}
   .score-in .input{width:90px;font-size:18px;font-weight:800;text-align:center;padding:8px;}
@@ -160,8 +162,12 @@
       <div class="row" style="gap:6px;">
         <span class="pill" id="lessonStatus"></span>
         <button class="btn sm" id="previewBtn">리포트 미리보기</button>
+        <button class="btn sm ghost" id="delLessonBtn" style="color:var(--red);">수업 삭제</button>
       </div>
     </div>
+
+    <div class="pub-note hidden" id="pubNote">📝 <b>이미 발행된 리포트예요.</b> 아래 내용을 고친 뒤 맨 아래 <b>「수정 내용 다시 발행」</b>을 누르면 학생·학부모가 받은 <b>같은 링크</b>에 바로 반영돼요.
+      한 학생만 빼려면 아래 <b>발송용 링크</b>에서 「발행 취소」, 수업 전체를 지우려면 위의 「수업 삭제」를 누르세요.</div>
 
     <div class="card">
       <div class="kicker" id="lessonKicker">수업 정보</div>
@@ -239,7 +245,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=14"></script>
+<script src="common.js?v=15"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, genToken, round } = OMR;
@@ -250,7 +256,7 @@
   const openModal = id => $(id).classList.remove('hidden');
   const closeModal = id => $(id).classList.add('hidden');
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeModal(b.dataset.close));
-  const ATT = { present:'출석', late:'지각', absent:'결석' };
+  const ATT = { present:'출석', late:'지각', absent:'결석', makeup:'보강' };
 
   let me = null;          // {uid, name, role:'admin'|'ta'}
   let roster = [];        // [{code, name, className}]
@@ -432,6 +438,7 @@
     $('lessonStatus').textContent = pub ? '발행됨' : '작성 중';
     $('lessonStatus').className = 'pill ' + (pub ? 'published' : 'draft');
     $('publishBtn').textContent = pub ? '수정 내용 다시 발행' : '리포트 발행';
+    $('pubNote').classList.toggle('hidden', !pub);
     renderTypeChips(); renderFiles($('lessonFiles'), lesson.files || [], 'lesson');
   }
 
@@ -732,10 +739,56 @@
       <div class="res-row"><span class="nm">${esc(r.s.name)}</span>
         <a class="btn sm" href="${esc(r.url)}" target="_blank" rel="noopener">열기</a>
         <button class="btn sm" data-copy="${i}">링크 복사</button>
-        <button class="btn sm" data-msg="${i}">메시지 복사</button></div>`).join('');
+        <button class="btn sm" data-msg="${i}">메시지 복사</button>
+        <button class="btn sm ghost unpub" data-unpub="${i}">발행 취소</button></div>`).join('');
     $('pubList').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copyText(rows[+b.dataset.copy].url));
     $('pubList').querySelectorAll('[data-msg]').forEach(b => b.onclick = () => copyText(rows[+b.dataset.msg].msg));
+    $('pubList').querySelectorAll('[data-unpub]').forEach(b => b.onclick = async () => {
+      const { s } = rows[+b.dataset.unpub];
+      if (!confirm(`${s.name} 학생의 리포트 발행을 취소할까요?\n보낸 링크는 더 이상 열리지 않고, 학생 포털의 리포트 목록에서도 빠집니다.\n(입력한 점수·코멘트는 남아 있어서 다시 발행할 수 있어요)`)) return;
+      try { await unpublish([s.code]); toast(`${s.name} 리포트 발행을 취소했습니다`); renderPublished(); }
+      catch(e){ handleErr(e); }
+    });
   }
+
+  // ───────── 발행 취소 · 수업 삭제 ─────────
+  // 학생들의 발행된 리포트(토큰 문서)와 포털 목록 항목을 지움
+  async function unpublish(codes, alsoDeleteEntries){
+    const ops = [];
+    const links = await Promise.all(codes.map(c => db.collection('dailyReportLinks').doc(c).get().then(d => d.exists ? d.data() : null).catch(() => null)));
+    codes.forEach((code, i) => {
+      const en = entries[code];
+      if (en && en.token) ops.push(['delete', db.collection('dailyReports').doc(en.token)]);
+      const L = links[i];
+      if (L && (L.items || []).some(x => x.lessonId === lesson.id))
+        ops.push(['set', db.collection('dailyReportLinks').doc(code), { ...L, items: (L.items || []).filter(x => x.lessonId !== lesson.id), updatedAt: FV.serverTimestamp() }]);
+      if (alsoDeleteEntries) ops.push(['delete', db.collection('dailyEntries').doc(`${lesson.id}_${code}`)]);
+      else if (en && en.token) ops.push(['set', db.collection('dailyEntries').doc(`${lesson.id}_${code}`), { token: null }, { merge:true }]);
+      if (en && !alsoDeleteEntries) en.token = null;
+    });
+    if (ops.length) await OMR.commitOps(ops);
+    if (!alsoDeleteEntries && !Object.values(entries).some(en => en && en.token) && lesson.status === 'published'){
+      await db.collection('dailyLessons').doc(lesson.id).update({ status:'draft' });
+      lesson.status = 'draft'; renderLessonForm();
+    }
+  }
+  $('delLessonBtn').onclick = async () => {
+    const pubN = Object.values(entries).filter(en => en && en.token).length;
+    if (!confirm(`${lesson.className} · ${OMR.fmtKDate(lesson.date)} ${lesson.title || ''} 수업 기록을 삭제할까요?\n\n입력한 점수·코멘트${pubN ? `와 발행된 리포트 ${pubN}개(보낸 링크 포함)` : ''}가 모두 지워지고 되돌릴 수 없습니다.`)) return;
+    const btn = $('delLessonBtn'); btn.disabled = true; btn.textContent = '삭제 중…';
+    try {
+      clearTimeout(lessonTimer); Object.values(entryTimers).forEach(clearTimeout);
+      await unpublish(Object.keys(entries), true);
+      await db.collection('dailyLessons').doc(lesson.id).delete();
+      // 첨부 파일도 정리 (실패해도 무시)
+      const files = [...(lesson.files || []), ...Object.values(entries).flatMap(en => (en && en.files) || [])];
+      files.forEach(f => { if (f.path) firebase.storage().ref(f.path).delete().catch(() => {}); });
+      toast('수업 기록을 삭제했습니다');
+      lesson = null; entries = {};
+      history.replaceState(null, '', 'daily.html'); show('vMain'); loadLessons();
+    } catch(e){ handleErr(e); }
+    btn.disabled = false; btn.textContent = '수업 삭제';
+  };
   $('printAllBtn').onclick = () => window.open('daily-report.html?batch=' + encodeURIComponent(lesson.id), '_blank');
   $('copyAllBtn').onclick = () => copyText(publishedRows().map(r => r.msg).join('\n\n────────\n\n'));
   $('csvBtn').onclick = async () => {

@@ -26,7 +26,7 @@
   .rh h1 small{font-size:16px;font-weight:700;opacity:.7;margin-left:4px;}
   .rh .meta{font-size:13.5px;opacity:.72;position:relative;z-index:1;}
   .att{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.14);opacity:1;}
-  .att.late{background:#B7791F;} .att.absent{background:var(--red);}
+  .att.late{background:#B7791F;} .att.absent{background:var(--red);} .att.makeup{background:#3b6fe0;}
 
   .body{padding:18px 18px 8px;}
   .sec{background:#fff;border:1px solid var(--line2);border-radius:14px;padding:16px;margin-bottom:12px;}
@@ -107,7 +107,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="common.js?v=14"></script>
+<script src="common.js?v=15"></script>
 <script>
 (async function(){
   const { db, esc } = OMR;
@@ -118,7 +118,7 @@
   const absent = r.attendance === 'absent';
   const max = r.maxScore || 100;
   const pct = x => Math.max(0, Math.min(100, x / max * 100));
-  const ATT = { present:'출석', late:'지각', absent:'결석' };
+  const ATT = { present:'출석', late:'지각', absent:'결석', makeup:'보강' };
   const trend = (r.trend || []).filter(t => t.score != null);
   const prev = trend.length >= 2 ? trend[trend.length - 2] : null;
   const diff = (prev && r.score != null) ? Math.round((r.score / max - prev.score / (prev.max || max)) * 1000) / 10 : null;

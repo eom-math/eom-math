@@ -45,7 +45,18 @@
   .thumbs img{width:92px;height:92px;object-fit:cover;border-radius:8px;border:1px solid var(--line);}
   .ans{background:var(--bg2);border-radius:8px;padding:10px 12px;margin-top:10px;}
   .ans .by{font-size:12px;color:var(--dim);margin-bottom:4px;font-weight:700;}
-  .att{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line2);font-size:14px;}
+  .att{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line2);font-size:14px;}
+  @media (max-width:640px){ .att{grid-template-columns:1fr auto;} .att .ks{grid-column:1/-1;} }
+  .ks{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .ks button{border:0;background:#fff;padding:7px 11px;font-size:13px;font-weight:800;color:var(--dim);cursor:pointer;}
+  .ks button+button{border-left:1px solid var(--line);}
+  .ks button:hover{color:var(--ink);}
+  .ks button.on.in{background:var(--ok);color:#fff;} .ks button.on.late{background:var(--warn);color:#fff;}
+  .ks button.on.absent{background:var(--red);color:#fff;} .ks button.on.makeup{background:#3b6fe0;color:#fff;}
+  .att .clr{border:0;background:none;color:var(--faint);font-size:16px;cursor:pointer;padding:0 4px;}
+  .att .clr:hover{color:var(--red);}
+  .att .kb{display:inline-block;font-size:11px;font-weight:800;padding:2px 7px;border-radius:99px;margin-right:4px;color:#fff;}
+  .att .kb.in{background:var(--ok);} .att .kb.late{background:var(--warn);} .att .kb.absent{background:var(--red);} .att .kb.makeup{background:#3b6fe0;}
   .att:last-child{border-bottom:0;}
   .att .t{font-variant-numeric:tabular-nums;font-size:13px;color:var(--dim);}
   .tl{position:relative;padding-left:18px;}
@@ -258,7 +269,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=14"></script>
+<script src="common.js?v=15"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, round } = OMR;
@@ -647,7 +658,9 @@
     return el;
   }
 
-  // ═════════ 등원 ═════════
+  // ═════════ 등원 (등원 · 지각 · 결석 · 보강) ═════════
+  const KIND = { in:'등원', late:'지각', absent:'결석', makeup:'보강' };
+  const kindOf = r => r ? (r.kind || (r.status === 'absent' ? 'absent' : 'in')) : null;
   $('attDate').value = OMR.todayStr();
   $('attDate').onchange = $('attClass').onchange = () => loadAtt();
   let attRows = [];
@@ -658,34 +671,64 @@
     try {
       const recs = {}; (await db.collection('attendance').where('date','==',date).get()).docs.forEach(d => { recs[d.data().code] = { id:d.id, ...d.data() }; });
       const list = roster.filter(s => cf === '*' || s.className === cf);
-      attRows = list.map(s => ({ s, r: recs[s.code] })).sort((a,b) => (a.r ? 0 : 1) - (b.r ? 0 : 1) || (toDate(a.r && a.r.inAt)||0) - (toDate(b.r && b.r.inAt)||0));
-      const inN = attRows.filter(x => x.r).length, outN = attRows.filter(x => x.r && x.r.status === 'out').length;
-      $('attKpis').innerHTML = `<div class="stat"><div class="k">등원</div><div class="v">${inN}<small>/${list.length}</small></div></div>
-        <div class="stat"><div class="k">하원</div><div class="v">${outN}<small>명</small></div></div>
-        <div class="stat"><div class="k">미등원</div><div class="v" style="color:var(--red);">${list.length - inN}<small>명</small></div></div>
-        <div class="stat"><div class="k">날짜</div><div class="v" style="font-size:16px;">${esc(kDate(date))}</div></div>`;
-      box.innerHTML = attRows.length ? attRows.map(({s, r}, i) => `
-        <div class="att"><div><b>${esc(s.name)}</b> <span class="muted">${esc(s.className)}</span></div>
-          <span class="t">${r ? `등원 ${OMR.hhmm(r.inAt)}${r.outAt ? ` · 하원 ${OMR.hhmm(r.outAt)}` : ''}` : '<span style="color:var(--red);font-weight:700;">미등원</span>'}</span>
-          ${r ? `<button class="btn sm" data-msg="${i}">알림 문구</button>` : `<button class="btn sm" data-in="${i}">등원 처리</button>`}</div>`).join('')
-        : '<div class="muted">학생이 없습니다.</div>';
+      const ord = { in:0, late:1, makeup:2, absent:3 };
+      attRows = list.map(s => ({ s, r: recs[s.code] })).sort((a,b) => (a.r ? ord[kindOf(a.r)] : 4) - (b.r ? ord[kindOf(b.r)] : 4) || (toDate(a.r && a.r.inAt)||0) - (toDate(b.r && b.r.inAt)||0) || a.s.name.localeCompare(b.s.name, 'ko'));
+      const n = k => attRows.filter(x => kindOf(x.r) === k).length, none = attRows.filter(x => !x.r).length;
+      const outN = attRows.filter(x => x.r && x.r.status === 'out').length;
+      $('attKpis').innerHTML = [['등원', n('in'), 'var(--ok)'], ['지각', n('late'), 'var(--warn)'], ['결석', n('absent'), 'var(--red)'], ['보강', n('makeup'), '#3b6fe0'], ['미처리', none, 'var(--dim)']]
+        .map(([k, v, c]) => `<div class="stat"><div class="k">${k}</div><div class="v" style="color:${c};">${v}<small>명</small></div></div>`).join('') +
+        `<div class="stat"><div class="k">하원 · ${esc(kDate(date))}</div><div class="v">${outN}<small>명</small></div></div>`;
+      box.innerHTML = attRows.length ? attRows.map(({s, r}, i) => {
+        const k = kindOf(r);
+        const time = !r ? '<span style="color:var(--dim);">미처리</span>'
+          : k === 'absent' ? `<span class="kb absent">결석</span>${r.memo ? esc(r.memo) : ''}`
+          : `<span class="kb ${k}">${KIND[k]}</span>${r.inAt ? OMR.hhmm(r.inAt) : ''}${r.outAt ? ` · 하원 ${OMR.hhmm(r.outAt)}` : ''}`;
+        return `<div class="att"><div><b>${esc(s.name)}</b> <span class="muted">${esc(s.className)}</span></div>
+          <span class="t">${time}</span>
+          <div class="ks" data-i="${i}">${Object.entries(KIND).map(([kk, v]) => `<button class="${kk}${k === kk ? ' on' : ''}" data-k="${kk}">${v}</button>`).join('')}</div>
+          <span>${r ? `<button class="btn sm" data-msg="${i}">알림 문구</button><button class="clr" data-clr="${i}" title="기록 지우기">×</button>` : ''}</span></div>`;
+      }).join('') : '<div class="muted">학생이 없습니다.</div>';
       box.querySelectorAll('[data-msg]').forEach(b => b.onclick = () => copyText(attMsg(attRows[+b.dataset.msg])));
-      box.querySelectorAll('[data-in]').forEach(b => b.onclick = async () => {
-        const { s } = attRows[+b.dataset.in];
-        try { await db.collection('attendance').doc(`${date}_${s.code}`).set({ date, code:s.code, name:s.name, className:s.className, inAt: FV.serverTimestamp(), status:'in', manualBy: me.name });
-          loadAtt(); } catch(e){ handleErr(e); }
+      box.querySelectorAll('.ks').forEach(g => g.onclick = async e => {
+        const b = e.target.closest('button[data-k]'); if (!b) return;
+        const { s, r } = attRows[+g.dataset.i], k = b.dataset.k;
+        if (r && kindOf(r) === k) return;
+        const ref = db.collection('attendance').doc(`${date}_${s.code}`);
+        try {
+          if (k === 'absent'){
+            await ref.set({ date, code:s.code, name:s.name, className:s.className, kind:'absent', status:'absent', inAt:null, outAt:null,
+              manualBy: me.name, updatedAt: FV.serverTimestamp() });
+          } else if (!r || kindOf(r) === 'absent'){
+            await ref.set({ date, code:s.code, name:s.name, className:s.className, kind:k, status:'in', inAt: FV.serverTimestamp(),
+              manualBy: me.name, updatedAt: FV.serverTimestamp() });
+          } else {
+            await ref.update({ kind:k, manualBy: me.name, updatedAt: FV.serverTimestamp() });   // 등원 시각은 그대로
+          }
+          toast(`${s.name} · ${KIND[k]}`);
+          loadAtt();
+        } catch(err){ handleErr(err); }
+      });
+      box.querySelectorAll('[data-clr]').forEach(b => b.onclick = async () => {
+        const { s } = attRows[+b.dataset.clr];
+        if (!confirm(`${s.name} 학생의 ${kDate(date)} 등원 기록을 지울까요?`)) return;
+        try { await db.collection('attendance').doc(`${date}_${s.code}`).delete(); loadAtt(); } catch(err){ handleErr(err); }
       });
     } catch(e){ box.innerHTML = '<div class="muted">불러오지 못했습니다.</div>'; handleErr(e); }
   }
-  const attMsg = ({ s, r }) => r.status === 'out'
-    ? `[엄형국 수학] ${s.name} 학생이 ${OMR.hhmm(r.outAt)}에 하원했습니다. (등원 ${OMR.hhmm(r.inAt)})`
-    : `[엄형국 수학] ${s.name} 학생이 ${OMR.hhmm(r.inAt)}에 등원했습니다.`;
-  $('attCopy').onclick = () => { const rows = attRows.filter(x => x.r); if (!rows.length) return toast('등원한 학생이 없습니다'); copyText(rows.map(attMsg).join('\n')); };
+  const attMsg = ({ s, r }) => {
+    const k = kindOf(r);
+    if (k === 'absent') return `[엄형국 수학] ${s.name} 학생이 오늘(${kDate(r.date)}) 수업에 결석했습니다.`;
+    const tag = k === 'late' ? ' (지각)' : k === 'makeup' ? ' 보강 수업에' : '';
+    if (r.status === 'out') return `[엄형국 수학] ${s.name} 학생이 ${OMR.hhmm(r.outAt)}에 하원했습니다. (${k === 'makeup' ? '보강 ' : ''}등원 ${OMR.hhmm(r.inAt)}${k === 'late' ? ', 지각' : ''})`;
+    return k === 'makeup' ? `[엄형국 수학] ${s.name} 학생이 ${OMR.hhmm(r.inAt)}에 보강 수업에 등원했습니다.`
+      : `[엄형국 수학] ${s.name} 학생이 ${OMR.hhmm(r.inAt)}에 등원했습니다.${tag}`;
+  };
+  $('attCopy').onclick = () => { const rows = attRows.filter(x => x.r); if (!rows.length) return toast('처리된 학생이 없습니다'); copyText(rows.map(attMsg).join('\n')); };
   $('attCsv').onclick = async () => {
     let phones = {};
     if (me.role === 'admin'){ try { (await db.collection('omrStudents').get()).docs.forEach(d => { phones[d.data().code] = d.data(); }); } catch(e){} }
-    OMR.downloadCsv(`등원_${$('attDate').value}.csv`, [['이름','반','등원','하원','학부모 연락처','메시지'],
-      ...attRows.map(x => [x.s.name, x.s.className, x.r ? OMR.hhmm(x.r.inAt) : '미등원', x.r && x.r.outAt ? OMR.hhmm(x.r.outAt) : '',
+    OMR.downloadCsv(`등원_${$('attDate').value}.csv`, [['이름','반','상태','등원','하원','학부모 연락처','메시지'],
+      ...attRows.map(x => [x.s.name, x.s.className, x.r ? KIND[kindOf(x.r)] : '미처리', x.r && x.r.inAt ? OMR.hhmm(x.r.inAt) : '', x.r && x.r.outAt ? OMR.hhmm(x.r.outAt) : '',
         OMR.fmtPhone((phones[x.s.code] || {}).parentPhone), x.r ? attMsg(x) : ''])]);
   };
 
@@ -755,7 +798,8 @@
     const scored = reports.filter(r => r.score != null && !r.absent);
     const avgPct = scored.length ? Math.round(scored.reduce((a, r) => a + r.score / (r.max || 100) * 100, 0) / scored.length) : null;
     const since30 = OMR.todayStr(new Date(Date.now() - 30 * 864e5));
-    const att30 = att.filter(a => a.date >= since30).length;
+    const att30 = att.filter(a => a.date >= since30 && kindOf(a) !== 'absent').length;
+    const abs30 = att.filter(a => a.date >= since30 && kindOf(a) === 'absent').length, late30 = att.filter(a => a.date >= since30 && kindOf(a) === 'late').length;
     const events = [
       ...notes.map(n => ({ t: toDate(n.at), cls:'note', h:`${n.tag || '기록'} · ${n.by || ''}`, x: n.text, id:n.id })),
       ...reports.map(r => ({ t: new Date(r.date + 'T12:00:00'), h:'데일리 리포트' + (r.title ? ' · ' + r.title : ''), x: r.absent ? '결석' : r.score != null ? `복습 테스트 ${r.score}/${r.max}점 (반 평균 ${r.avg ?? '–'})` : '리포트 발행', link: r.token ? 'daily-report.html?t=' + r.token : null })),
@@ -767,7 +811,7 @@
         <div class="row between"><div><h2 style="margin:0;">${esc(s.name)}</h2><p class="muted">${esc(s.className)}</p></div></div>
         <div class="kpis">
           <div class="stat"><div class="k">복습 테스트 평균</div><div class="v">${avgPct != null ? avgPct + '<small>%</small>' : '–'}</div></div>
-          <div class="stat"><div class="k">최근 30일 등원</div><div class="v">${att30}<small>회</small></div></div>
+          <div class="stat"><div class="k">최근 30일 등원</div><div class="v">${att30}<small>회</small></div>${late30 || abs30 ? `<div class="muted" style="font-size:11.5px;">지각 ${late30} · 결석 ${abs30}</div>` : ''}</div>
           <div class="stat"><div class="k">클리닉</div><div class="v">${bks.length}<small>회</small></div></div>
           <div class="stat"><div class="k">질문</div><div class="v">${qs.length}<small>개</small></div></div>
         </div>
