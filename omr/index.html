@@ -180,7 +180,7 @@
   let saveTimer = null;
 
   // ───────── 로그인 ─────────
-  async function login(code){
+  async function login(code, manual){
     code = (code || '').trim().toUpperCase();
     if (code.length !== 6){ $('loginMsg').textContent = '코드 6자리를 입력하세요.'; return false; }
     $('loginMsg').textContent = '확인 중…';
@@ -191,6 +191,8 @@
       ls.set(LS_KEY, code); ls.set('omrStudentName', me.name || '');
       const next = new URLSearchParams(location.search).get('next');
       if (next && /^[a-z-]+\.html(\?[\w=&%-]*)?$/.test(next)){ location.href = next; return true; }
+      // 코드를 직접 입력해 입장하면 메인 화면(내 학습)으로 이동
+      if (manual){ try { sessionStorage.setItem('gateChoice', 'student'); } catch(e){} location.href = '../#quick'; return true; }
       $('whoami').textContent = me.name;
       $('loginMsg').textContent = '';
       await loadList();
@@ -201,8 +203,8 @@
       return false;
     }
   }
-  $('loginBtn').onclick = () => login($('codeInput').value);
-  $('codeInput').addEventListener('keydown', e => { if (e.key === 'Enter') login(e.target.value); });
+  $('loginBtn').onclick = () => login($('codeInput').value, true);
+  $('codeInput').addEventListener('keydown', e => { if (e.key === 'Enter') login(e.target.value, true); });
   $('codeInput').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''); });
   $('logoutBtn').onclick = () => { ls.del(LS_KEY); ls.del('omrStudentName'); me = null; $('whoami').textContent=''; $('codeInput').value=''; show('vLogin'); };
 
