@@ -66,6 +66,20 @@
   .study .ss{grid-column:1/-1;font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums;line-height:1.7;}
   .rate{font-weight:800;font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:99px;font-size:12.5px;}
   .rate.ok{background:var(--ok-soft);color:var(--ok);} .rate.mid{background:var(--warn-soft);color:var(--warn);} .rate.low{background:var(--red-soft);color:var(--red);}
+  .pl-row{border-bottom:1px solid var(--line2);}
+  .pl-row:last-child{border-bottom:0;}
+  .pl-h{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;text-align:left;padding:10px 0;flex-wrap:wrap;}
+  .pl-days{display:flex;gap:3px;margin-left:auto;}
+  .pl-days i{font-style:normal;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:10.5px;font-weight:800;color:var(--ink);}
+  .pl-k{min-width:62px;text-align:right;font-weight:900;font-size:14px;font-variant-numeric:tabular-nums;}
+  .pl-k small{display:block;font-size:10.5px;color:var(--dim);font-weight:700;}
+  .pl-b{padding:0 0 12px;}
+  .pl-day{background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:13.5px;}
+  .pl-dh{margin-bottom:4px;}
+  .pl-t{display:inline-block;margin:2px 10px 2px 0;}
+  .pl-t.dn{color:var(--dim);text-decoration:line-through;}
+  .pl-t small{color:var(--dim);font-weight:700;}
+  .pl-fb{margin-top:4px;color:var(--dim);font-style:italic;}
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0;}
   @media (max-width:560px){ .kpis{grid-template-columns:repeat(2,1fr);} }
 </style>
@@ -106,6 +120,7 @@
       <button data-tab="qna">질문 답변 <span class="pill red hidden" id="qnaBadge"></span></button>
       <button data-tab="att">등원</button>
       <button data-tab="study">공부 타이머</button>
+      <button data-tab="plan">스터디 플래너</button>
       <button data-tab="notes">학생 기록</button>
     </div>
 
@@ -158,6 +173,15 @@
     </div>
 
     <!-- 공부 타이머 -->
+    <div data-pane="plan" class="hidden">
+      <div class="row" style="margin-bottom:10px;">
+        <select class="input" id="planClass" style="width:auto;min-width:130px;"></select>
+        <span class="muted" id="planRange"></span>
+      </div>
+      <p class="muted" style="margin-bottom:8px;">학생이 직접 쓰는 플래너예요. 이번 주(월~일) 할 일 달성률과 10분 타임테이블 공부 시간을 보여줘요. 이름을 누르면 날짜별 내용이 펼쳐져요.</p>
+      <div class="card" id="planList"><div class="muted">반을 고르세요.</div></div>
+    </div>
+
     <div data-pane="study" class="hidden">
       <div class="row" style="margin-bottom:10px;">
         <select class="input" id="studyRange" style="width:auto;">
@@ -278,6 +302,7 @@
     $('attClass').innerHTML = classOpts('*', '전체 반');
     $('studyClass').innerHTML = classOpts('*', '전체 반');
     $('noteClass').innerHTML = classOpts('', '반 선택');
+    $('planClass').innerHTML = classOpts('*', '전체 반');
   }
 
   // ───────── 탭 ─────────
@@ -286,9 +311,50 @@
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === t));
     document.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('hidden', p.dataset.pane !== t));
     history.replaceState(null, '', '#' + t);
-    ({ clinic: loadClinic, lecture: loadLectures, qna: loadQna, att: loadAtt, study: loadStudy, notes: () => {} })[t]();
+    ({ clinic: loadClinic, lecture: loadLectures, qna: loadQna, att: loadAtt, study: loadStudy, plan: loadPlan, notes: () => {} })[t]();
   }
   $('tabs').onclick = e => { const b = e.target.closest('button'); if (b) selectTab(b.dataset.tab); };
+
+  // ═════════ 스터디 플래너 ═════════
+  $('planClass').onchange = () => loadPlan();
+  async function loadPlan(){
+    const box = $('planList');
+    const t = new Date(); const w = (t.getDay() + 6) % 7; const mon = new Date(t.getFullYear(), t.getMonth(), t.getDate() - w);
+    const days = [...Array(7)].map((_, i) => { const d = new Date(mon); d.setDate(d.getDate() + i); return OMR.todayStr(d); });
+    $('planRange').textContent = `${days[0].slice(5).replace('-', '/')} ~ ${days[6].slice(5).replace('-', '/')}`;
+    box.innerHTML = '<div class="muted">불러오는 중…</div>';
+    try {
+      const cf = $('planClass').value;
+      let q = db.collection('planners').where('date', '>=', days[0]).where('date', '<=', days[6]);
+      const all = (await q.get()).docs.map(d => d.data());
+      const list = roster.filter(s => cf === '*' || s.className === cf);
+      const by = {}; all.forEach(p => { (by[p.code] = by[p.code] || {})[p.date] = p; });
+      const rows = list.map(s => { const ps = Object.values(by[s.code] || {});
+        const tot = ps.reduce((a, p) => a + (p.total || 0), 0), dn = ps.reduce((a, p) => a + (p.done || 0), 0), mins = ps.reduce((a, p) => a + (p.studyMin || 0), 0);
+        return { s, ps: by[s.code] || {}, tot, dn, mins, days: ps.filter(p => (p.total || p.studyMin)).length }; })
+        .sort((a, b) => b.mins - a.mins || b.dn - a.dn);
+      const DOWK = '월화수목금토일';
+      box.innerHTML = rows.length ? rows.map((r, i) => `
+        <div class="pl-row">
+          <button class="pl-h" data-i="${i}"><b>${esc(r.s.name)}</b><span class="muted">${esc(r.s.className)}</span>
+            <span class="pl-days">${days.map((d, k) => { const p = r.ps[d]; const pc = p && p.total ? p.done / p.total : 0;
+              return `<i title="${DOWK[k]} ${p ? `${p.done || 0}/${p.total || 0} · ${p.studyMin || 0}분` : '기록 없음'}" style="background:${!p ? 'var(--bg2)' : pc >= 1 ? 'var(--red)' : pc > 0 ? 'rgba(214,48,31,.4)' : p.studyMin ? 'rgba(214,48,31,.18)' : 'var(--bg2)'}">${DOWK[k]}</i>`; }).join('')}</span>
+            <span class="pl-k">${r.tot ? Math.round(r.dn / r.tot * 100) + '%' : '–'}<small>달성</small></span>
+            <span class="pl-k">${Math.floor(r.mins / 60)}h ${r.mins % 60}m<small>공부</small></span></button>
+          <div class="pl-b hidden"></div></div>`).join('') : '<div class="muted">학생이 없습니다.</div>';
+      box.querySelectorAll('.pl-h').forEach(b => b.onclick = () => {
+        const r = rows[+b.dataset.i], body = b.nextElementSibling;
+        body.classList.toggle('hidden'); if (body.classList.contains('hidden')) return;
+        const SN = { '1':'수학','2':'국어','3':'영어','4':'탐구','5':'기타' };
+        const ds = days.filter(d => r.ps[d]);
+        body.innerHTML = ds.length ? ds.map(d => { const p = r.ps[d];
+          return `<div class="pl-day"><div class="pl-dh"><b>${OMR.fmtKDate(d)}</b> ${p.sticker || ''} <span class="muted">${p.done || 0}/${p.total || 0} 완료 · ${p.studyMin || 0}분</span></div>
+            ${p.pledge ? `<div class="muted">다짐: ${esc(p.pledge)}</div>` : ''}
+            <div>${(p.todos || []).map(t => `<span class="pl-t ${t.done ? 'dn' : ''}">${t.done ? '✓' : '○'} <small>${SN[t.subj] || ''}</small> ${esc(t.text)}${t.amount ? ` <small>${esc(t.amount)}</small>` : ''}</span>`).join('') || '<span class="muted">할 일 없음</span>'}</div>
+            ${p.feedback ? `<div class="pl-fb">“${esc(p.feedback)}”</div>` : ''}</div>`; }).join('') : '<div class="muted">이번 주 기록이 없어요.</div>';
+      });
+    } catch(e){ box.innerHTML = '<div class="muted">불러오지 못했습니다.</div>'; handleErr(e); }
+  }
 
   // ═════════ 클리닉 ═════════
   async function loadClinic(){

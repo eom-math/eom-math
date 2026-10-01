@@ -307,6 +307,36 @@
       allow read, update, delete: if omrStaffOrAdmin();
     }
 
+    // ───────── 스터디 플래너 ─────────
+    // 하루 한 장. 문서 ID = {학생코드}_{YYYY-MM-DD}. 학생이 코드로 작성, 선생님·조교는 목록 조회
+    match /planners/{pid} {
+      function planOk() {
+        let d = request.resource.data;
+        return stuOk(d) && pid == d.code + '_' + d.date
+          && d.keys().hasOnly(['code', 'name', 'className', 'date', 'pledge', 'todos', 'grid', 'feedback', 'sticker',
+                               'studyMin', 'done', 'total', 'updatedAt'])
+          && d.date is string && d.date.size() == 10
+          && d.pledge is string && d.pledge.size() <= 60
+          && d.todos is list && d.todos.size() <= 40
+          && d.grid is string && d.grid.size() <= 200
+          && d.feedback is string && d.feedback.size() <= 300
+          && d.sticker is string && d.sticker.size() <= 16
+          && d.studyMin is int && d.studyMin >= 0 && d.studyMin <= 1440
+          && d.updatedAt == request.time;
+      }
+      allow get: if true;
+      allow list, delete: if omrStaffOrAdmin();
+      allow create, update: if planOk();
+    }
+    // 플래너 설정(D-day). 문서 ID = 학생코드
+    match /plannerMeta/{code} {
+      allow get: if true;
+      allow list: if omrStaffOrAdmin();
+      allow write: if exists(/databases/$(database)/documents/omrCodes/$(code))
+        && request.resource.data.code == code
+        && request.resource.data.keys().hasOnly(['code', 'dday', 'updatedAt']);
+    }
+
     // ───────── 학생 기록 (상담·특이사항) — 선생님·조교만 ─────────
     match /studentNotes/{id} {
       allow read, write: if omrStaffOrAdmin();

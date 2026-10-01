@@ -437,7 +437,7 @@
   // ───────── 학생 대시보드 데이터 (메인 화면 배너용) ─────────
   // base: 학생 페이지까지의 경로 접두사 (메인에서는 'omr/')
   // 반환: { week:[{d,cls,t,m,href}], latest:{token,...report}|null, trend:[{date,score,max,avg,token}] }
-  async function studentDashboard(me, base = '') {
+  async function studentDashboard(me, base = '', opts = {}) {
     const now = new Date(), in7 = new Date(now.getTime() + 7 * 864e5), today = todayStr();
     const safe = p => p.catch(e => { console.warn(e); return null; });
     const dLabel = d => { const days = Math.ceil((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
@@ -495,7 +495,24 @@
     }
     rows.sort((a, b) => a.sort - b.sort);
     const trend = items.filter(x => x.score != null && !x.absent).slice(0, 5).reverse();
-    return { week: rows, latest, trend };
+    // 스터디 플래너: 오늘부터 이번 주 일요일까지 학생이 직접 적은 할 일
+    let plan = null;
+    if (opts.withPlanner) {
+      const DOW = '일월화수목금토';
+      const days = []; const d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const left = (7 - d0.getDay()) % 7;                       // 일요일까지 남은 날
+      for (let i = 0; i <= left; i++) { const d = new Date(d0); d.setDate(d.getDate() + i); days.push(todayStr(d)); }
+      const docs = await Promise.all(days.map(d => db.collection('planners').doc(`${me.code}_${d}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
+      const todayDoc = docs[0] || null;
+      plan = { today: todayDoc ? { done: todayDoc.done || 0, total: todayDoc.total || 0, studyMin: todayDoc.studyMin || 0 } : { done: 0, total: 0, studyMin: 0 }, rows: [] };
+      docs.forEach((doc, i) => {
+        if (!doc) return;
+        const dd = new Date(days[i] + 'T00:00:00');
+        (doc.todos || []).filter(t => !t.done && t.from !== 'teacher').forEach(t => plan.rows.push({
+          sort: dd.getTime() + (t.star ? 0 : 1), d: i === 0 ? '오늘' : DOW[dd.getDay()], cls: 'plan', subj: t.subj, t: t.text, m: t.amount || '', href: base + 'planner.html' }));
+      });
+    }
+    return { week: rows, latest, trend, plan };
   }
 
   // 여러 문서 쓰기를 400개씩 나눠 커밋
