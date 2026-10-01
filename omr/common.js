@@ -176,7 +176,7 @@
       questions.push({ n, type, answers: type === 'short' ? raw.map(String) : type === 'essay' ? [] : raw.map(Number),
                        points: Number(key.points[n]) || 0, allCorrect, tag: meta.tag || null, level: meta.level || null, note: meta.note || null });
     }
-    const maxScore = questions.reduce((s, q) => s + q.points, 0);
+    const maxScore = round(questions.reduce((s, q) => s + q.points, 0), 2);   // 0.1+0.2 같은 소수 오차 제거
 
     const results = subs.map(sub => {
       const marks = normalizeAnswers(sub.answers, qn, exam.choiceCount, types);

@@ -2,7 +2,7 @@
 // 원칙: 항상 최신 사이트를 먼저 받고(network-first), 인터넷이 끊겼을 때만 저장해 둔 화면을 보여줌.
 // Firebase·외부 요청은 건드리지 않음 (실시간 데이터는 언제나 서버에서).
 const VERSION = 'eom-v2';
-const CORE = ['./', 'index.html', 'offline.html', 'omr/', 'omr/index.html', 'omr/omr.css?v=5',
+const CORE = ['./', 'index.html', 'offline.html', 'omr/', 'omr/index.html', 'omr/omr.css?v=6',
   'icons/icon-192.png', 'icons/icon-512.png', 'manifest.webmanifest'];
 
 self.addEventListener('install', e => {

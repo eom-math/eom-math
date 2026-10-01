@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="omr.css?v=5">
+<link rel="stylesheet" href="omr.css?v=6">
 <style>
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
@@ -441,7 +441,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=16"></script>
+<script src="common.js?v=17"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast, copyText, fmtPhone, normalizePhone } = OMR;
@@ -1584,6 +1584,7 @@
   }
   function renderResult(){
     const st = ex.stats, list = gradedSubs();
+    if (st && st.maxScore != null) st.maxScore = OMR.round(st.maxScore, 2);   // 예전 채점분의 99.9999… 표시 보정
     const has = !!(ex.gradedAt && st && st.n);
     $('resultEmpty').classList.toggle('hidden', has);
     $('resultBody').classList.toggle('hidden', !has);
@@ -1595,7 +1596,7 @@
     $('rankTbl').innerHTML = `<tr><th class="num">석차</th><th>이름</th><th class="num">점수</th><th class="num">맞은 수</th><th class="num">백분위</th><th>틀린 문항</th><th></th></tr>` +
       list.map(s => `<tr><td class="num"><b>${s.rank}</b></td><td><b>${esc(s.name)}</b></td>
         <td class="num"><b>${s.score}</b></td><td class="num">${s.correctCount}/${ex.questionCount}</td>
-        <td class="num">${s.percentile}</td><td class="muted">${(s.wrong || []).join(', ') || '없음'}</td>
+        <td class="num">${s.percentile}</td><td class="muted wrong">${(s.wrong || []).join(', ') || '없음'}</td>
         <td style="white-space:nowrap;text-align:right;">
           <a class="btn sm" href="report.html?t=${encodeURIComponent(s.reportToken)}" target="_blank">성적표</a>
           <button class="btn sm" data-link="${esc(s.reportToken)}">링크 복사</button></td></tr>`).join('');
