@@ -3,6 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FAFAF8">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="엄형국 수학">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script src="pwa.js" defer></script>
 <title>엄형국 수학 — 내신성공의 방정식</title>
 <meta name="description" content="엄형국 수학. 내신성공의 방정식.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -601,7 +610,7 @@
   body.toc-lock{ overflow:hidden; }
 </style>
 </head>
-<body>
+<body data-pwa-prompt>
 
 <div class="wrap">
 
@@ -1363,6 +1372,9 @@
   var qs = new URLSearchParams(location.search);
   // 이번 방문에서 이미 골랐거나, 링크로 특정 위치(#…)를 열었거나, ?visit 로 들어오면 건너뜀
   var skip = !!(store.get('sessionStorage', 'gateChoice') || qs.has('visit') || (location.hash && location.hash.length > 1));
+  // 홈 화면 앱으로 열었고 이 기기에 학생 코드가 저장돼 있으면 입장 화면 없이 바로 메인으로
+  var isApp = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  if (!skip && isApp && store.get('localStorage', 'omrStudentCode')){ skip = true; store.set('sessionStorage', 'gateChoice', 'student'); }
   if (!skip){ gate.hidden = false; document.body.classList.add('gate-open'); }
   var codeIn = document.getElementById('gateCode'), go = document.getElementById('gateGo'), msg = document.getElementById('gateMsg');
   var preCode = (qs.get('code') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
