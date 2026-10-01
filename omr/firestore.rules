@@ -314,7 +314,7 @@
         let d = request.resource.data;
         return stuOk(d) && pid == d.code + '_' + d.date
           && d.keys().hasOnly(['code', 'name', 'className', 'date', 'pledge', 'todos', 'grid', 'feedback', 'sticker',
-                               'studyMin', 'done', 'total', 'updatedAt', 'tdone',
+                               'studyMin', 'done', 'total', 'updatedAt', 'tdone', 'closed', 'closedAuto',
                                'ttodos', 'tcomment', 'tstamp', 'tby', 'tat'])
           && (!('tdone' in d) || (d.tdone is list && d.tdone.size() <= 40))
           && d.date is string && d.date.size() == 10

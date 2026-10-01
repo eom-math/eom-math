@@ -276,7 +276,7 @@
         + wkRows.sort((a, b) => b.min - a.min || b.dn - a.dn).map(r => `<tr><td><b>${esc(r.s.name)}</b><br><span class="muted" style="font-size:11.5px;">${esc(r.s.className)}</span></td>
           ${r.cells.map((c, i) => { const pc = c && c.total ? c.done / c.total : 0;
             const cls = !c || (!c.total && !c.min) ? 'c0' : pc >= 1 ? 'c3' : pc >= .5 ? 'c2' : 'c1';
-            return `<td class="day"><button class="cell ${cls} ${days[i] === today ? 'today' : ''}" data-code="${esc(r.s.code)}" data-d="${days[i]}" title="${c ? `${c.done}/${c.total} 완료 · ${c.min}분` : '기록 없음'}">${c && c.total ? `${c.done}/${c.total}` : '–'}<small>${c && c.min ? hm(c.min) : ''}</small></button></td>`; }).join('')}
+            return `<td class="day"><button class="cell ${cls} ${days[i] === today ? 'today' : ''}" data-code="${esc(r.s.code)}" data-d="${days[i]}" title="${c ? `${c.done}/${c.total} 완료 · ${c.min}분${c.p.closed ? ' · 하루 완료' : ''}` : '기록 없음'}">${c && c.total ? `${c.p.closed && !c.p.closedAuto ? '✓' : ''}${c.done}/${c.total}` : '–'}<small>${c && c.min ? hm(c.min) : ''}</small></button></td>`; }).join('')}
           <td class="num"><b>${r.tot ? Math.round(r.dn / r.tot * 100) + '%' : '–'}</b></td><td class="num">${hm(r.min)}</td><td class="num">${hmK(r.focus)}</td></tr>`).join('');
       $('wkTbl').querySelectorAll('.cell').forEach(b => b.onclick = () => { $('bdDate').value = b.dataset.d; $('bdClass').value = '*'; focusCode = b.dataset.code; selectTab('board'); });
     } catch(e){ $('wkTbl').innerHTML = '<tr><td class="muted">불러오지 못했습니다.</td></tr>'; handleErr(e); }
@@ -315,7 +315,7 @@
     const pc = sm.total ? sm.done / sm.total : 0;
     return `<div class="pc" data-i="${i}" data-code="${esc(r.s.code)}">
       <div class="h"><input type="checkbox" class="pick-one" aria-label="${esc(r.s.name)} 선택"><b>${esc(r.s.name)}</b><span class="muted" style="font-size:12px;">${esc(r.s.className)}</span>
-        <span class="m">${p ? `${sm.done}/${sm.total} · ${hm(p.studyMin || 0)}` : '미작성'}</span></div>
+        <span class="m">${p ? `${p.closed ? (p.closedAuto ? '🌙 ' : '✅ ') : ''}${sm.done}/${sm.total} · ${hm(p.studyMin || 0)}` : '미작성'}</span></div>
       ${p && p.sticker ? `<span class="stk">${p.sticker}</span>` : ''}
       ${p ? `${p.pledge ? `<div class="pl">“${esc(p.pledge)}”</div>` : ''}
         <div class="pg"><i style="width:${pc * 100}%"></i></div>
