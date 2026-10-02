@@ -55,6 +55,11 @@
   .cls-chips{display:flex;flex-wrap:wrap;gap:6px;}
   .cls-chips button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer;}
   .cls-chips button.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .lk-tabs{display:flex;gap:4px;background:var(--bg2);padding:4px;border-radius:10px;}
+  .lk-tabs button{flex:1;border:0;background:transparent;padding:9px;border-radius:8px;font:inherit;font-size:13.5px;font-weight:800;color:var(--dim);cursor:pointer;}
+  .lk-tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .lec .ext{width:120px;height:68px;border-radius:8px;background:#111114;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:800;gap:2px;flex:0 0 auto;}
+  .lec .ext b{font-size:20px;color:#ff7a6c;}
   .ans{background:var(--bg2);border-radius:8px;padding:10px 12px;margin-top:10px;}
   .ans .by{font-size:12px;color:var(--dim);margin-bottom:4px;font-weight:700;}
   .att{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line2);font-size:14px;}
@@ -263,12 +268,19 @@
   <div class="modal">
     <h2 id="lecModalTitle">영상 강의 등록</h2>
     <div class="stack">
-      <div><label class="f">유튜브 링크 (일부 공개로 올린 영상 권장)</label><input class="input" id="lUrl" placeholder="https://youtu.be/…"></div>
+      <div class="lk-tabs" id="lKind"><button type="button" class="on" data-k="youtube">▶ 유튜브 영상</button><button type="button" data-k="link">↗ 외부 강의실 링크</button></div>
+      <div id="lYtWrap"><label class="f">유튜브 링크 (일부 공개로 올린 영상 권장)</label><input class="input" id="lUrl" placeholder="https://youtu.be/…"></div>
+      <div id="lLinkWrap" class="hidden">
+        <label class="f">외부 강의실 주소</label><input class="input" id="lExt" placeholder="https://…">
+        <div class="row" style="gap:6px;margin-top:6px;"><span class="muted" style="font-size:12px;">빠른 입력</span><button type="button" class="btn sm" id="lPresetSS">대치 상상학원 온라인강의실</button></div>
+        <p class="muted" style="font-size:12.5px;margin-top:6px;">학생이 누르면 그 사이트가 새 창으로 열리고, 거기서 로그인해서 봐요. (시청 기록은 남지 않아요)</p>
+      </div>
       <div><label class="f">제목</label><input class="input" id="lTitle" placeholder="예: 명제 3강 — 대우를 이용한 증명"></div>
       <div class="grid2">
         <div><label class="f">반</label><select class="input" id="lClass2"></select></div>
         <div><label class="f">단원</label><input class="input" id="lUnit" placeholder="예: 공통수학2 · 명제"></div>
       </div>
+      <div><label class="f">학원 <span class="muted" style="font-weight:600;">— 고르면 그 학원 학생에게만 보여요</span></label><select class="input" id="lAcad"></select></div>
       <div><label class="f">설명</label><textarea class="input" id="lNote" style="min-height:70px;" placeholder="시청 전 준비물, 풀어볼 문제 등"></textarea></div>
       <label class="toggle" style="display:flex;gap:8px;align-items:center;font-weight:700;font-size:14px;"><input type="checkbox" id="lOpen" checked style="width:18px;height:18px;"> 학생에게 공개</label>
     </div>
@@ -281,7 +293,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=19"></script>
+<script src="common.js?v=20"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, round } = OMR;
@@ -596,12 +608,14 @@
     const cf = $('lecClass').value, box = $('lecList');
     const list = lectures.filter(l => cf === '*' || l.className === cf || l.className === '전체');
     if (!list.length){ box.innerHTML = '<div class="empty">등록된 영상 강의가 없습니다.<br>유튜브에 ‘일부 공개’로 올린 뒤 링크를 등록하세요.</div>'; return; }
+    const ACADN = Object.fromEntries(OMR.ACADEMIES);
     box.innerHTML = list.map(l => `
       <div class="lec">
-        <img src="https://i.ytimg.com/vi/${esc(l.videoId)}/mqdefault.jpg" alt="" loading="lazy">
+        ${l.kind === 'link' ? '<div class="ext"><b>↗</b>외부 강의실</div>' : `<img src="https://i.ytimg.com/vi/${esc(l.videoId)}/mqdefault.jpg" alt="" loading="lazy">`}
         <div style="min-width:0;"><div class="t">${esc(l.title)}</div>
-          <div class="m">${esc(l.className === '전체' ? '전체 반' : l.className)}${l.unit ? ' · ' + esc(l.unit) : ''} ${l.status === 'open' ? '' : '<span class="pill draft">비공개</span>'}</div></div>
-        <div class="r"><button class="btn sm primary" data-views="${esc(l.id)}">시청 현황</button>
+          <div class="m">${esc(l.className === '전체' ? '전체 반' : l.className)}${l.academy ? ' · ' + esc(ACADN[l.academy] || l.academy) + ' 학생만' : ''}${l.unit ? ' · ' + esc(l.unit) : ''} ${l.status === 'open' ? '' : '<span class="pill draft">비공개</span>'}</div>
+          ${l.kind === 'link' ? `<div class="m"><a href="${esc(l.url)}" target="_blank" rel="noopener" style="text-decoration:underline;">${esc(l.url)}</a></div>` : ''}</div>
+        <div class="r">${l.kind === 'link' ? '' : `<button class="btn sm primary" data-views="${esc(l.id)}">시청 현황</button>`}
           <span class="row" style="gap:4px;"><button class="btn sm" data-edit="${esc(l.id)}">수정</button><button class="btn sm ghost" data-del="${esc(l.id)}">삭제</button></span></div>
       </div>`).join('');
     box.querySelectorAll('[data-views]').forEach(b => b.onclick = () => showViews(lectures.find(l => l.id === b.dataset.views)));
@@ -618,7 +632,11 @@
   function editLecture(l){
     editingLec = l || null;
     $('lecModalTitle').textContent = l ? '영상 강의 수정' : '영상 강의 등록';
-    $('lUrl').value = l ? 'https://youtu.be/' + l.videoId : '';
+    lecKind = l && l.kind === 'link' ? 'link' : 'youtube'; kindUI();
+    $('lUrl').value = l && l.videoId ? 'https://youtu.be/' + l.videoId : '';
+    $('lExt').value = l && l.url ? l.url : '';
+    $('lAcad').innerHTML = '<option value="">모든 학원</option>' + OMR.ACADEMIES.map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join('');
+    $('lAcad').value = l && l.academy ? l.academy : '';
     $('lTitle').value = l ? l.title : '';
     $('lClass2').value = l ? l.className : ($('lecClass').value !== '*' ? $('lecClass').value : '전체');
     $('lUnit').value = l ? (l.unit || '') : '';
@@ -628,11 +646,25 @@
     openModal('lecModal');
   }
   $('newLecBtn').onclick = () => editLecture(null);
+  let lecKind = 'youtube';
+  function kindUI(){
+    $('lKind').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === lecKind));
+    $('lYtWrap').classList.toggle('hidden', lecKind !== 'youtube'); $('lLinkWrap').classList.toggle('hidden', lecKind !== 'link');
+  }
+  $('lKind').onclick = e => { const b = e.target.closest('button[data-k]'); if (!b) return; lecKind = b.dataset.k; kindUI(); };
+  $('lPresetSS').onclick = () => {
+    const p = OMR.EXT_LINKS[0];
+    $('lExt').value = p.url; $('lAcad').value = p.key; $('lClass2').value = '전체';
+    if (!$('lTitle').value.trim()) $('lTitle').value = '대치상상 보강영상 (온라인강의실)';
+    if (!$('lNote').value.trim()) $('lNote').value = '대치상상학원 아이디로 로그인한 뒤 「온라인강의실」에서 보강영상을 보세요.';
+  };
   $('lecSave').onclick = async () => {
-    const videoId = ytId($('lUrl').value), title = $('lTitle').value.trim();
-    if (!videoId){ $('lecMsg').textContent = '유튜브 링크를 확인하세요.'; return; }
+    const title = $('lTitle').value.trim();
+    let videoId = null, url = null;
+    if (lecKind === 'youtube'){ videoId = ytId($('lUrl').value); if (!videoId){ $('lecMsg').textContent = '유튜브 링크를 확인하세요.'; return; } }
+    else { url = $('lExt').value.trim(); if (!/^https?:\/\/\S+\.\S+/.test(url)){ $('lecMsg').textContent = '외부 강의실 주소(https://…)를 확인하세요.'; return; } }
     if (!title){ $('lecMsg').textContent = '제목을 입력하세요.'; return; }
-    const data = { videoId, title, className: $('lClass2').value, unit: $('lUnit').value.trim(), note: $('lNote').value.trim(),
+    const data = { kind: lecKind, videoId, url, academy: $('lAcad').value || null, title, className: $('lClass2').value, unit: $('lUnit').value.trim(), note: $('lNote').value.trim(),
       status: $('lOpen').checked ? 'open' : 'hidden', updatedAt: FV.serverTimestamp() };
     try {
       if (editingLec) await db.collection('lectures').doc(editingLec.id).update(data);

@@ -592,6 +592,14 @@
     return Array.isArray(s.classNames) && s.classNames.length > 1 ? s.classNames.join(' · ') : s.className;
   }
 
+  // 영상 강의가 이 학생에게 보이는지 (반 '전체' 또는 같은 반 + 학원 지정 시 같은 학원)
+  function lectureForStudent(l, me) {
+    if (l.status !== 'open') return false;
+    if (!(l.className === '전체' || l.className === me.className)) return false;
+    return !l.academy || l.academy === me.academy;
+  }
+  const EXT_LINKS = [{ key: 'daechi-sangsang', label: '대치 상상학원 온라인강의실', url: 'https://dss3388.atedu.co.kr/user/main' }];
+
   async function studentDashboard(me, base = '', opts = {}) {
     const now = new Date(), in7 = new Date(now.getTime() + 7 * 864e5), today = todayStr();
     const safe = p => p.catch(e => { console.warn(e); return null; });
@@ -643,7 +651,7 @@
         rows.push({ sort: due ? due.getTime() : now.getTime(), d: due ? dLabel(due) : 'OMR', cls: 'red', t: e.title, m: '시험 OMR', href: base + 'index.html?exam=' + encodeURIComponent(e.id) }); });
     }
     if (lecs) {
-      const mine = lecs.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => l.status === 'open' && (l.className === '전체' || l.className === me.className))
+      const mine = lecs.docs.map(d => ({ id: d.id, ...d.data() })).filter(l => l.kind !== 'link' && lectureForStudent(l, me))
         .sort((a, b) => (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0)).slice(0, 6);
       const vs = await Promise.all(mine.map(l => db.collection('lectureViews').doc(`${l.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
       mine.forEach((l, i) => { if (vs[i] && vs[i].completed) return;
@@ -737,7 +745,7 @@
     QTYPES, examTypes, examSegments, layoutText, shortEq,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
-    ACADEMIES, slotForClass, slotClassLabel, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
+    ACADEMIES, lectureForStudent, EXT_LINKS, slotForClass, slotClassLabel, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

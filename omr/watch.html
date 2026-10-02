@@ -43,7 +43,7 @@
 </div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=19"></script>
+<script src="common.js?v=20"></script>
 <script>
 (async function(){
   const { db, FV, esc } = OMR;
@@ -58,6 +58,8 @@
     if (!s.exists || s.data().status !== 'open') return fail('볼 수 없는 강의입니다.');
     lec = s.data();
     if (lec.className !== '전체' && lec.className !== me.className) return fail('우리 반 강의가 아니에요.');
+    if (lec.academy && lec.academy !== me.academy) return fail('우리 학원 강의가 아니에요.');
+    if (lec.kind === 'link' && lec.url){ location.replace(lec.url); return; }
     const v = await db.collection('lectureViews').doc(`${id}_${me.code}`).get();
     view = v.exists ? v.data() : null;
   } catch(e){ console.error(e); return fail('불러오지 못했습니다.'); }

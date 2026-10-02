@@ -19,8 +19,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="omr.css?v=6">
 <style>
+  .ext-card{display:grid;grid-template-columns:46px 1fr auto;gap:12px;align-items:center;padding:14px;margin-bottom:12px;border:1.5px solid var(--ink);border-radius:14px;background:#fff;color:var(--ink);text-decoration:none;}
+  .ext-card .ei{width:46px;height:46px;border-radius:12px;background:var(--ink);color:#ff7a6c;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;}
+  .ext-card .ek{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--red);}
+  .ext-card b{display:block;font-size:16px;font-weight:900;margin:2px 0;}
+  .ext-card .en{display:block;font-size:12.5px;color:var(--dim);line-height:1.45;}
+  .ext-card .eg{background:var(--red);color:#fff;font-weight:900;font-size:13.5px;padding:9px 13px;border-radius:9px;}
   .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
-  .summary div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;}
+  .summary > div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;}
   .summary .k{font-size:11.5px;color:var(--dim);font-weight:800;} .summary .v{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;}
   .filter{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;scrollbar-width:none;}
   .filter button{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--dim);}
@@ -46,13 +52,14 @@
   <div class="kicker">LECTURES</div>
   <h1>영상 강의</h1>
   <p class="lead">끝까지 시청하면 ‘완강’으로 기록돼요. 건너뛴 구간은 시청 시간에 들어가지 않아요.</p>
+  <div id="extBox"></div>
   <div class="summary" id="summary"></div>
   <div class="filter" id="filter"></div>
   <div id="list"><div class="empty">불러오는 중…</div></div>
 </div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=19"></script>
+<script src="common.js?v=20"></script>
 <script>
 (async function(){
   const { db, esc, toDate } = OMR;
@@ -62,17 +69,20 @@
   let lecs = [], views = {}, unit = '전체';
   try {
     lecs = (await db.collection('lectures').get()).docs.map(d => ({ id:d.id, ...d.data() }))
-      .filter(l => l.status === 'open' && (l.className === '전체' || l.className === me.className))
+      .filter(l => OMR.lectureForStudent(l, me))
       .sort((a,b) => (toDate(b.createdAt)||0) - (toDate(a.createdAt)||0));
-    const vs = await Promise.all(lecs.map(l => db.collection('lectureViews').doc(`${l.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
+    const vs = await Promise.all(lecs.map(l => l.kind === 'link' ? null : db.collection('lectureViews').doc(`${l.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
     lecs.forEach((l, i) => { views[l.id] = vs[i]; });
   } catch(e){ console.error(e); $('list').innerHTML = '<div class="empty">불러오지 못했습니다.</div>'; return; }
+  const ext = lecs.filter(l => l.kind === 'link'); lecs = lecs.filter(l => l.kind !== 'link');
   const done = lecs.filter(l => views[l.id] && views[l.id].completed).length;
   const mins = Math.round(lecs.reduce((a, l) => a + ((views[l.id] && views[l.id].watchedSec) || 0), 0) / 60);
   $('summary').innerHTML = `<div><div class="k">전체 강의</div><div class="v">${lecs.length}</div></div>
     <div><div class="k">완강</div><div class="v" style="color:var(--ok);">${done}</div></div>
     <div><div class="k">시청 시간</div><div class="v">${mins}<small style="font-size:12px;color:var(--dim);">분</small></div></div>`;
   const units = ['전체', '안 본 강의', ...new Set(lecs.map(l => l.unit).filter(Boolean))];
+  $('extBox').innerHTML = ext.map(l => `<a class="ext-card" href="${esc(l.url)}" target="_blank" rel="noopener">
+      <span class="ei">↗</span><span style="min-width:0;"><span class="ek">외부 강의실 · 새 창으로 열려요</span><b>${esc(l.title)}</b>${l.note ? `<span class="en">${esc(l.note)}</span>` : ''}</span><span class="eg">열기</span></a>`).join('');
   function render(){
     $('filter').innerHTML = units.map(u => `<button class="${u === unit ? 'on' : ''}">${esc(u)}</button>`).join('');
     $('filter').querySelectorAll('button').forEach((b, i) => b.onclick = () => { unit = units[i]; render(); });
