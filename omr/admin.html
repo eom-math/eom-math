@@ -98,6 +98,10 @@
   .dl-row{display:grid;grid-template-columns:110px 44px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line2);}
   .dl-row .input{padding:7px 8px;font-size:13.5px;}
   @media (max-width:600px){ .dl-row{grid-template-columns:1fr auto;} .dl-row select{grid-column:1/-1;} }
+  .cls-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .cls-chips button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+  .cls-chips button.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .cls-chips button small{font-weight:600;opacity:.65;margin-left:3px;}
   .tpl-box{background:var(--bg2);border-radius:10px;padding:12px;}
   .seg{display:grid;grid-template-columns:44px 14px 72px 22px 1fr 34px;align-items:center;gap:6px;margin-bottom:6px;}
   .seg .from{font-weight:800;text-align:right;font-variant-numeric:tabular-nums;}
@@ -355,8 +359,9 @@
     <div class="grid2">
       <div><label class="f">과목</label><input class="input" id="fSubject" list="subjectList" placeholder="미적분">
         <datalist id="subjectList"><option>공통수학1</option><option>공통수학2</option><option>대수</option><option>미적분I</option><option>미적분II</option><option>확률과 통계</option><option>기하</option></datalist></div>
-      <div><label class="f">반</label><input class="input" id="fClass" list="classList" placeholder="고2 미적분 A반"><datalist id="classList"></datalist></div>
+      <div><label class="f">새 반 이름 추가 <span class="muted" style="font-weight:600;">(선택)</span></label><div class="row" style="flex-wrap:nowrap;gap:6px;"><input class="input" id="fClassNew" list="classList" placeholder="목록에 없는 반 이름"><button type="button" class="btn sm" id="fClassAdd">추가</button></div><datalist id="classList"></datalist></div>
     </div>
+    <div><label class="f">응시 반 <span class="muted" style="font-weight:600;">— 여러 반을 고를 수 있어요 (학생 개별 선택은 「응시 대상」에서)</span></label><div class="cls-chips" id="fClassChips"></div></div>
     <div id="fLayoutWrap">
       <label class="f">문항 구성 <span class="muted" style="font-weight:600;">— 몇 번까지 어떤 유형인지 정하세요</span></label>
       <div class="seg-bar" id="segBar"></div>
@@ -763,6 +768,21 @@
     return { gradeMode: 'score', gradeCuts: cuts };
   }
 
+  // ───────── 응시 반 (여러 반) ─────────
+  let fCls = new Set();
+  function renderClassChips(){
+    const cnt = {}; students.forEach(s => { cnt[s.className] = (cnt[s.className] || 0) + 1; });
+    const all = [...new Set([...Object.keys(cnt).sort((a, b) => a.localeCompare(b, 'ko')), ...fCls])];
+    $('fClassChips').innerHTML = all.length ? all.map(c => `<button type="button" class="${fCls.has(c) ? 'on' : ''}" data-c="${esc(c)}">${esc(c)}${cnt[c] ? `<small>${cnt[c]}명</small>` : ''}</button>`).join('')
+      : '<span class="muted">등록된 반이 없어요. 오른쪽 위에 반 이름을 입력해 추가하세요.</span>';
+  }
+  $('fClassChips').addEventListener('click', e => {
+    const b = e.target.closest('button[data-c]'); if (!b) return;
+    const c = b.dataset.c; fCls.has(c) ? fCls.delete(c) : fCls.add(c); renderClassChips();
+  });
+  $('fClassAdd').onclick = () => { const v = $('fClassNew').value.trim(); if (!v) return; fCls.add(v); $('fClassNew').value = ''; renderClassChips(); };
+  $('fClassNew').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('fClassAdd').click(); } });
+
   // 새 시험 / 시험 설정 수정
   let editingExam = null, tplSrc = null;
   $('fFrom').onchange = () => {
@@ -770,7 +790,7 @@
     $('tplOpts').classList.toggle('hidden', !tplSrc);
     if (!tplSrc){ segs = segsFromExam(null); renderSegs(false); return; }
     $('fSubject').value = tplSrc.subject || '';
-    $('fClass').value = tplSrc.className || '';
+    fCls = new Set(Array.isArray(tplSrc.classNames) && tplSrc.classNames.length ? tplSrc.classNames : [tplSrc.className].filter(Boolean)); renderClassChips();
     $('fPass').value = tplSrc.passScore != null ? tplSrc.passScore : '';
     $('fGrade').value = tplSrc.gradeSystem !== undefined ? (tplSrc.gradeSystem || '') : '5';
     setGradeUI($('fGrade').value, tplSrc.gradeMode, tplSrc.gradeCuts || []);
@@ -784,7 +804,7 @@
     $('examModalTitle').textContent = e ? '시험 설정' : '새 시험';
     $('fTitle').value = e ? e.title : '';
     $('fSubject').value = e ? e.subject : '';
-    $('fClass').value = e ? e.className : '';
+    fCls = new Set(e ? (Array.isArray(e.classNames) && e.classNames.length ? e.classNames : [e.className].filter(Boolean)) : []); renderClassChips();
     // 이전 시험 양식 (새 시험일 때만)
     tplSrc = null;
     $('tplBox').classList.toggle('hidden', !!e);
@@ -805,15 +825,15 @@
   }
   $('newExamBtn').onclick = () => examModal(null);
   $('examSaveBtn').onclick = async () => {
-    const title = $('fTitle').value.trim(), subject = $('fSubject').value.trim(), className = $('fClass').value.trim();
-    if (!title || !subject || !className){ $('examModalMsg').textContent = '제목·과목·반을 입력하세요.'; return; }
+    const title = $('fTitle').value.trim(), subject = $('fSubject').value.trim(), classNames = [...fCls], className = classNames[0] || '';
+    if (!title || !subject || !className){ $('examModalMsg').textContent = '제목·과목을 입력하고 응시 반을 하나 이상 고르세요.'; return; }
     let layout, questionCount; const choiceCount = 5;
     if (!editingExam || editingExam.status === 'draft'){
       try { ({ layout, total: questionCount } = segsToLayout()); } catch(err){ $('examModalMsg').textContent = err.message; return; }
     }
     const due = $('fDue').value ? firebase.firestore.Timestamp.fromDate(new Date($('fDue').value)) : null;
     const passRaw = $('fPass').value.trim();
-    const data = { title, subject, className, examDate: $('fDate').value || null, dueAt: due,
+    const data = { title, subject, className, classNames, targetCodes: (editingExam && editingExam.targetCodes) || [], examDate: $('fDate').value || null, dueAt: due,
                    passScore: passRaw === '' ? null : parseFloat(passRaw), gradeSystem: $('fGrade').value };
     try { Object.assign(data, readCuts()); } catch(err){ $('examModalMsg').textContent = err.message; return; }
     if (editingExam && ex && ex.gradedAt && (data.gradeMode !== (editingExam.gradeMode || 'rank') || JSON.stringify(data.gradeCuts || null) !== JSON.stringify(editingExam.gradeCuts || null)))
