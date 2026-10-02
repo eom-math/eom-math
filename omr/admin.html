@@ -50,7 +50,7 @@
   .key-row label.ac{font-size:12px;color:var(--dim);display:flex;gap:4px;align-items:center;}
   .key-row input.note{flex:1 1 100%;padding:6px 8px;font-size:13px;margin-left:40px;}
   .key-row[class*=rl-] .no{border-left:3px solid #c9c9cf;padding-left:5px;}
-  .key-row.rl-하 .no{border-color:#7fb8a4;} .key-row.rl-중 .no{border-color:#3b6fe0;} .key-row.rl-상 .no{border-color:#e08a2e;} .key-row.rl-최상 .no{border-color:#d6301f;color:var(--red);}
+  .key-row.rl-하 .no{border-color:#7fb8a4;} .key-row.rl-중하 .no{border-color:#4a9bb8;} .key-row.rl-중 .no{border-color:#3b6fe0;} .key-row.rl-중상 .no{border-color:#8a52c9;} .key-row.rl-상 .no{border-color:#e08a2e;} .key-row.rl-최상 .no{border-color:#d6301f;color:var(--red);}
   .an-wrap{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;}
   @media (max-width:760px){ .an-wrap{grid-template-columns:1fr;} }
   .an-h{font-size:12px;font-weight:800;color:var(--dim);margin-bottom:8px;}
@@ -61,7 +61,7 @@
   .an-bar{height:8px;background:var(--bg2);border-radius:99px;overflow:hidden;} .an-bar i{display:block;height:100%;background:var(--ink);border-radius:99px;}
   .lv-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;font-size:11.5px;font-weight:800;color:#fff;}
   .lv-bar span{display:flex;align-items:center;justify-content:center;min-width:0;white-space:nowrap;overflow:hidden;}
-  .lv-하{background:#7fb8a4;} .lv-중{background:#3b6fe0;} .lv-상{background:#e08a2e;} .lv-최상{background:#d6301f;} .lv-none{background:#c9c9cf;}
+  .lv-하{background:#7fb8a4;} .lv-중하{background:#4a9bb8;} .lv-중{background:#3b6fe0;} .lv-중상{background:#8a52c9;} .lv-상{background:#e08a2e;} .lv-최상{background:#d6301f;} .lv-none{background:#c9c9cf;}
   .lv-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:12px;color:var(--dim);}
   .lv-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px;}
   #anPaste{min-height:120px;font-size:13px;font-family:inherit;}
@@ -241,7 +241,7 @@
       <div class="card">
         <details id="anPasteBox">
           <summary style="cursor:pointer;font-weight:800;">📋 문항 분석표 붙여넣기 <span class="muted" style="font-weight:600;">— 번호 · 단원 · 난이도 · 출제 포인트를 한 번에 채웁니다</span></summary>
-          <p class="muted" style="margin:10px 0 8px;">엑셀·한글 표에서 복사해 그대로 붙여넣으세요. 한 줄에 한 문항: <b>번호, 단원, 난이도(하·중·상·최상), 출제 포인트</b><br>
+          <p class="muted" style="margin:10px 0 8px;">엑셀·한글 표에서 복사해 그대로 붙여넣으세요. 한 줄에 한 문항: <b>번호, 단원, 난이도(하·중하·중·중상·상·최상), 출제 포인트</b><br>
             번호 옆에 <b>(논술)·(서술)·(단답)</b>을 적으면 그 문항 유형도 맞춰집니다. 단원 앞의 「1.」 같은 번호는 빼고 저장해요. <b>「3점」 같은 배점 칸</b>이 있으면 배점도 함께 채워요.</p>
           <textarea class="input" id="anPaste" placeholder="1	3. 미분계수와 도함수	하	곱의 미분법, 미분계수 = 접선의 기울기&#10;2	1. 함수의 극한	하	∞−∞ 꼴, 분자 유리화&#10;21 (논술)	3. 미분계수와 도함수	상	극한 존재 조건(좌극한=우극한)"></textarea>
           <div class="row" style="margin-top:8px;"><button class="btn primary" id="anApplyBtn">분석표 적용</button><span class="muted" id="anMsg"></span></div>
@@ -1077,7 +1077,7 @@
         html += `<input class="input pts" type="number" step="0.5" min="0.5" value="${exKey.points[n] ?? 3}" aria-label="${n}번 배점">
           <label class="ac"><input type="checkbox" ${ac ? 'checked' : ''}> 전원정답</label>
           <input class="input tag" list="tagList" placeholder="단원 태그" value="${esc(meta.tag || '')}" aria-label="${n}번 단원">
-          <select class="input lv" aria-label="${n}번 난이도">${['', '하', '중', '상', '최상'].map(l =>
+          <select class="input lv" aria-label="${n}번 난이도">${['', '하', '중하', '중', '중상', '상', '최상'].map(l =>
             `<option value="${l}" ${meta.level === l ? 'selected' : ''}>${l || '난이도'}</option>`).join('')}</select>
           <input class="input note" placeholder="출제 포인트 (예: 분자 유리화)" value="${esc(meta.note || '')}" aria-label="${n}번 출제 포인트"></div>`;
       }
@@ -1211,7 +1211,7 @@
   });
 
   // ───────── 시험지 분석 (단원·난이도·유형) ─────────
-  const LEVELS = ['하', '중', '상', '최상'];
+  const LEVELS = ['하', '중하', '중', '중상', '상', '최상'];
   const rangeText = ns => {   // [1,2,3,5,7,8] → 1~3, 5, 7~8
     const out = []; let a = null, b = null;
     ns.forEach(n => { if (a == null){ a = b = n; } else if (n === b + 1) b = n; else { out.push(a === b ? a : a + '~' + b); a = b = n; } });
@@ -1254,7 +1254,7 @@
       else if (/객관|선택|5지/.test(mark)) type = 'mc';
       const rest = cols.slice(1).filter(c => c !== '');
       // 난이도 칸 찾기 (보통 2번째지만 순서가 달라도 인식)
-      const li = rest.findIndex(c => /^(최상|상|중|하|최하)$/.test(c));
+      const li = rest.findIndex(c => /^(최상|중상|중하|상|중|하|최하)$/.test(c));
       const level = li >= 0 ? (rest[li] === '최하' ? '하' : rest[li]) : null;
       const pi = rest.findIndex((c, i) => i !== li && /^\d+(\.\d+)?\s*점$/.test(c));   // 「3점」처럼 쓴 칸 = 배점
       const points = pi >= 0 ? parseFloat(rest[pi]) : null;
