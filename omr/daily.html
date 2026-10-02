@@ -66,6 +66,7 @@
   .stu.filled .stu-h .done{background:var(--ok);}
   .stu-b{padding:12px 14px 14px;display:grid;gap:12px;}
   .stu.absent .stu-b .hide-absent{opacity:.35;pointer-events:none;}
+  .omr-tag{margin-left:auto;font-size:11.5px;font-weight:800;color:#fff;background:var(--red);padding:2px 8px;border-radius:99px;text-decoration:none;}
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
   .seg button{border:0;background:#fff;padding:6px 11px;font-size:12.5px;font-weight:700;color:var(--dim);}
   .seg button+button{border-left:1px solid var(--line);}
@@ -254,7 +255,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=18"></script>
+<script src="common.js?v=19"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, genToken, round } = OMR;
@@ -442,7 +443,7 @@
     $('lUnit').value = lesson.unit || '';
     fillUnitList();
     $('lMax').value = lesson.maxScore || '';
-    $('lessonKicker').textContent = `${lesson.className} · ${OMR.fmtKDate(lesson.date)}`;
+    $('lessonKicker').textContent = `${lesson.className} · ${OMR.fmtKDate(lesson.date)}${lesson.examId ? ' · OMR 시험 「' + (lesson.examTitle || lesson.testName || '') + '」 점수 연동됨' : ''}`;
     const pub = lesson.status === 'published';
     $('lessonStatus').textContent = pub ? '발행됨' : '작성 중';
     $('lessonStatus').className = 'pill ' + (pub ? 'published' : 'draft');
@@ -549,7 +550,7 @@
         <span class="st" data-st>${en.updatedBy ? esc(en.updatedBy.name) : ''}</span></div>
       <div class="stu-b">
         <div class="grid2 hide-absent">
-          <div><div class="fl"><span>복습 테스트 점수</span></div>
+          <div><div class="fl"><span>복습 테스트 점수</span>${en.examToken ? `<a class="omr-tag" href="report.html?t=${encodeURIComponent(en.examToken)}" target="_blank" rel="noopener">OMR 자동 입력 · 성적표 ↗</a>` : ''}</div>
             <div class="score-in"><input class="input" type="number" inputmode="decimal" data-k="score" min="0" max="${max}" value="${en.score ?? ''}"><span class="muted">/ ${max}점</span></div></div>
           <div><div class="fl"><span>과제 이행률</span><span data-hwv>${en.homework != null ? en.homework + '%' : ''}</span></div>
             <div class="hw-quick">${[100,90,80,70,50,30,0].map(v => `<button data-hw="${v}" class="${en.homework === v ? 'on' : ''}">${v}</button>`).join('')}
@@ -693,6 +694,7 @@
       avg: st.avg, high: st.high, n: st.n, hwAvg: st.hwAvg,
       files: [...(lesson.files || []), ...(en.files || [])],
       trend, author: (en.updatedBy && en.updatedBy.name) || me.name,
+      exam: en.examToken ? { title: en.examTitle || lesson.testName || '시험', token: en.examToken, rank: en.examRank || null, n: en.examN || null, grade: en.examGrade || null } : null,
       publishedAt: FV.serverTimestamp(),
     };
   }

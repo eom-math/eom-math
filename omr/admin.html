@@ -94,6 +94,10 @@
   .cut-grid input{width:56px;border:0;font:inherit;font-size:15px;text-align:right;padding:2px;background:transparent;}
   .cut-grid input:focus{outline:none;}
   .cut-grid .last{color:var(--dim);font-weight:600;}
+  .dl-card{border:1.5px solid var(--ink);}
+  .dl-row{display:grid;grid-template-columns:110px 44px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line2);}
+  .dl-row .input{padding:7px 8px;font-size:13.5px;}
+  @media (max-width:600px){ .dl-row{grid-template-columns:1fr auto;} .dl-row select{grid-column:1/-1;} }
   .tpl-box{background:var(--bg2);border-radius:10px;padding:12px;}
   .seg{display:grid;grid-template-columns:44px 14px 72px 22px 1fr 34px;align-items:center;gap:6px;margin-bottom:6px;}
   .seg .from{font-weight:800;text-align:right;font-variant-numeric:tabular-nums;}
@@ -275,6 +279,20 @@
       <div id="resultEmpty" class="empty">아직 채점하지 않았습니다. 응시를 마감한 뒤 위의 <b>채점하기</b>를 누르세요.</div>
       <div id="resultBody" class="hidden">
         <div class="stat-grid" id="resStats"></div>
+        <div class="card dl-card" id="dlCard">
+          <div class="row between" style="align-items:flex-start;">
+            <div><h3 style="margin:0;">📒 데일리 리포트에 점수 보내기</h3>
+              <p class="muted" style="margin-top:4px;">이 시험 점수·석차·틀린 유형이 반별 수업 기록(데일리 리포트)에 자동으로 입력돼요. 리포트에는 「시험 성적표 자세히 보기」 버튼도 붙어요.</p></div>
+            <span class="pill" id="dlState"></span>
+          </div>
+          <div id="dlRows" style="margin-top:10px;"></div>
+          <div class="row" style="margin-top:10px;gap:12px;">
+            <label class="row" style="gap:6px;font-size:13px;font-weight:700;"><input type="checkbox" id="dlAuto" checked> 다시 채점하면 데일리 리포트도 자동으로 갱신</label>
+            <span class="grow"></span>
+            <button class="btn primary" id="dlSend">데일리 리포트에 입력</button>
+          </div>
+          <p class="muted" id="dlMsg" style="margin-top:8px;"></p>
+        </div>
         <h3>석차</h3>
         <div class="tbl-wrap" style="margin-bottom:18px;"><table class="tbl" id="rankTbl"></table></div>
         <div id="tagStatWrap" class="hidden"><h3>단원별 정답률</h3><div class="card" id="tagStats"></div></div>
@@ -441,7 +459,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=18"></script>
+<script src="common.js?v=19"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast, copyText, fmtPhone, normalizePhone } = OMR;
@@ -1450,9 +1468,11 @@
     const ops = [];
     // 누적 성적표: 학생별 시험 목록(같은 반)을 불러와 이번 시험을 넣고 갱신
     const linkDocs = await Promise.all(results.map(r => db.collection('omrReportLinks').doc(r.code).get().then(d => d.exists ? (d.data().items || []) : []).catch(() => [])));
+    const tokenOf = {};
     results.forEach((r, ri) => {
       const sub = subs.find(s => s.code === r.code);
       const token = sub.reportToken || OMR.genToken();
+      tokenOf[r.code] = token;
       const wrong = r.questions.filter(q => !q.ok).map(q => q.n);
       ops.push(['set', db.collection('omrReports').doc(token), {
         examId: ex.id, examTitle: ex.title, subject: ex.subject, className: sub.className || ex.className, examDate: ex.examDate || null,
@@ -1475,7 +1495,7 @@
       const wrongDetail = r.questions.filter(q => !q.ok).map(q => ({ n: q.n, tag: q.tag, level: q.level, note: q.note || null, marked: q.marked, correct: q.correct }));
       ops.push(['update', db.collection('omrSubmissions').doc(sub.id), {
         score: r.score, correctCount: r.correctCount, rank: r.rank, percentile: r.percentile,
-        wrong, wrongDetail, reportToken: token, gradedAt: now,
+        wrong, wrongDetail, reportToken: token, gradedAt: now, grade: an.byCode[r.code].grade || null,
       }]);
       // 재시험 대상 자동 등록 (기존 재시험 기록은 유지)
       const rid = `${ex.id}_${r.code}`;
@@ -1496,9 +1516,96 @@
     const es = await db.collection('omrExams').doc(ex.id).get();
     ex = { id: ex.id, ...es.data() };
     renderHeader(); renderResult();
+    // 데일리 리포트 자동 갱신
+    if (ex.dailyAuto && ex.dailyLessons && Object.keys(ex.dailyLessons).length){
+      const rows = results.map(r => { const sub = subs.find(s => s.code === r.code);
+        return { code: r.code, name: r.name, className: sub.className || ex.className, score: r.score, rank: r.rank, grade: an.byCode[r.code].grade || null,
+          token: tokenOf[r.code],
+          wrongDetail: r.questions.filter(q => !q.ok).map(q => ({ n: q.n, tag: q.tag, note: q.note || null })) }; });
+      try { const n = await pushToDaily(ex.dailyLessons, rows, stats); toast(`데일리 리포트 ${n}명 점수도 갱신했어요`, 2600); } catch(e){ handleErr(e); }
+    }
     const nRe = ex.passScore != null ? results.filter(r => r.score < ex.passScore).length : 0;
     toast(`${results.length}명 채점 완료${nRe ? ` · 재시험 대상 ${nRe}명` : ''}${ex.status === 'published' ? '' : ' · 확인 후 결과 공개를 누르세요'}`, 3600);
   }
+
+  // ───────── 데일리 리포트 연동 ─────────
+  // 반마다 수업 기록(dailyLessons) 하나에 점수·석차·보완 유형·성적표 링크를 넣음
+  let dlLessons = {};   // 반 → [수업]
+  let dlRenderedFor = null;
+  async function renderDailyLink(){
+    const graded = gradedSubs(); if (!graded.length) return;
+    const classes = [...new Set(graded.map(s => s.className || ex.className))].sort((a,b) => a.localeCompare(b,'ko'));
+    try {
+      const got = await Promise.all(classes.map(c => db.collection('dailyLessons').where('className','==',c).get().then(q => q.docs.map(d => ({ id:d.id, ...d.data() }))).catch(() => [])));
+      classes.forEach((c, i) => { dlLessons[c] = got[i].sort((a,b) => (b.date || '').localeCompare(a.date || '')).slice(0, 12); });
+    } catch(e){ console.warn(e); }
+    const linked = ex.dailyLessons || {};
+    $('dlState').textContent = Object.keys(linked).length ? '연동됨' : '아직 안 보냄';
+    $('dlState').className = 'pill ' + (Object.keys(linked).length ? 'open' : 'draft');
+    $('dlAuto').checked = ex.dailyAuto !== false;
+    const ed = ex.examDate || OMR.todayStr();
+    $('dlRows').innerHTML = classes.map(c => {
+      const list = dlLessons[c] || [], n = graded.filter(s => (s.className || ex.className) === c).length;
+      const pre = linked[c] || (list.find(l => l.date === ed) || {}).id || '';
+      return `<div class="dl-row"><b>${esc(c)}</b><span class="muted">${n}명</span>
+        <select class="input" data-cls="${esc(c)}">
+          <option value="">＋ 새 수업 기록 만들기 (${esc(OMR.fmtKDate(ed))} · ${esc(ex.title)})</option>
+          ${list.map(l => `<option value="${esc(l.id)}" ${l.id === pre ? 'selected' : ''}>${esc(OMR.fmtKDate(l.date))} · ${esc(l.title || '수업')}${l.status === 'published' ? ' (발행됨)' : ''}${l.examId === ex.id ? ' ✓' : ''}</option>`).join('')}
+        </select>
+        ${linked[c] ? `<a class="btn sm" href="daily.html?lesson=${encodeURIComponent(linked[c])}" target="_blank">수업 기록 열기 ↗</a>` : ''}</div>`;
+    }).join('');
+  }
+  const weakOf = wd => [...new Set((wd || []).map(w => w.note || w.tag).filter(Boolean))];
+  async function pushToDaily(map, rows, stats){
+    let n = 0;
+    const tagCount = {}; rows.forEach(r => (r.wrongDetail || []).forEach(w => { if (w.tag) tagCount[w.tag] = (tagCount[w.tag] || 0) + 1; }));
+    const topTag = Object.entries(tagCount).sort((a,b) => b[1] - a[1])[0];
+    for (const [cls, lessonId] of Object.entries(map)){
+      const mine = rows.filter(r => (r.className || ex.className) === cls); if (!mine.length) continue;
+      const ls = await db.collection('dailyLessons').doc(lessonId).get(); const L = ls.exists ? ls.data() : {};
+      const ens = {}; (await db.collection('dailyEntries').where('lessonId','==',lessonId).get()).docs.forEach(d => { ens[d.data().code] = d.data(); });
+      const ops = [['update', db.collection('dailyLessons').doc(lessonId), {
+        testName: L.testName && L.examId !== ex.id ? L.testName : ex.title, maxScore: stats.maxScore, examId: ex.id, examTitle: ex.title,
+        unit: L.unit || (topTag ? topTag[0] : ''), filledCount: Math.max(L.filledCount || 0, mine.length) }]];
+      mine.forEach(r => {
+        const prev = ens[r.code] || {};
+        const weak = [...new Set([...(prev.weak || []), ...weakOf(r.wrongDetail)])].slice(0, 6);
+        ops.push(['set', db.collection('dailyEntries').doc(`${lessonId}_${r.code}`), {
+          lessonId, code: r.code, name: r.name, score: r.score, weak,
+          examId: ex.id, examTitle: ex.title, examToken: r.token || null, examRank: r.rank || null, examN: stats.n, examGrade: r.grade || null,
+          updatedAt: FV.serverTimestamp() }, { merge: true }]);
+        n++;
+      });
+      await OMR.commitOps(ops);
+    }
+    return n;
+  }
+  $('dlSend').onclick = async () => {
+    const graded = gradedSubs(); if (!graded.length) return toast('채점된 답안이 없어요');
+    const btn = $('dlSend'); btn.disabled = true; $('dlMsg').textContent = '입력 중…';
+    try {
+      const map = {};
+      for (const sel of $('dlRows').querySelectorAll('select[data-cls]')){
+        const cls = sel.dataset.cls; let id = sel.value;
+        if (!id){
+          const ref = await db.collection('dailyLessons').add({ className: cls, date: ex.examDate || OMR.todayStr(), title: ex.title,
+            testName: ex.title, maxScore: ex.stats.maxScore, unit: '', status: 'draft', types: [], files: [], filledCount: 0,
+            examId: ex.id, examTitle: ex.title, createdAt: FV.serverTimestamp(), createdBy: { uid: auth.currentUser.uid, name: '엄형국 선생님' } });
+          id = ref.id;
+        }
+        map[cls] = id;
+      }
+      const rows = graded.map(s => ({ code: s.code, name: s.name, className: s.className || ex.className, score: s.score, rank: s.rank,
+        grade: s.grade || null, token: s.reportToken, wrongDetail: s.wrongDetail || [] }));
+      const n = await pushToDaily(map, rows, ex.stats);
+      await db.collection('omrExams').doc(ex.id).update({ dailyLessons: map, dailyAuto: $('dlAuto').checked });
+      ex.dailyLessons = map; ex.dailyAuto = $('dlAuto').checked;
+      $('dlMsg').innerHTML = `<b>${n}명</b>의 점수를 데일리 리포트에 입력했어요. 「수업 기록 열기」에서 코멘트·과제 이행률을 채운 뒤 <b>리포트 발행</b>을 누르세요.`;
+      toast('데일리 리포트에 입력했어요'); renderDailyLink();
+    } catch(e){ handleErr(e); $('dlMsg').textContent = '입력하지 못했어요.'; }
+    btn.disabled = false;
+  };
+  $('dlAuto').onchange = () => { if (ex.dailyLessons) db.collection('omrExams').doc(ex.id).update({ dailyAuto: $('dlAuto').checked }).catch(handleErr); };
 
   // ───────── 서답형 채점: 단답형 답 모아보기 · 서논술형 점수 ─────────
   function renderWritten(){
@@ -1589,6 +1696,7 @@
     $('resultEmpty').classList.toggle('hidden', has);
     $('resultBody').classList.toggle('hidden', !has);
     if (!has) return;
+    if (dlRenderedFor !== ex.id + ':' + st.n){ dlRenderedFor = ex.id + ':' + st.n; renderDailyLink(); }
     $('resStats').innerHTML = [
       ['응시', `${st.n}<small>명</small>`], ['평균', `${st.avg}<small>/ ${st.maxScore}</small>`],
       ['최고', st.high], ['최저', st.low], ['표준편차', st.std],

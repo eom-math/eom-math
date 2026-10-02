@@ -47,7 +47,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=18"></script>
+<script src="common.js?v=19"></script>
+<script src="demo.js?v=1"></script>
 <script>
 (async function(){
   const { db, FV, esc, fmtDateTime, toDate, toast } = OMR;
@@ -55,13 +56,16 @@
   const root = $('root');
   const fail = m => { root.innerHTML = `<div class="empty">${m}</div>`; };
   const id = new URLSearchParams(location.search).get('id');
+  const demo = window.DEMO && DEMO.isDemo();
   let code = null; try { code = localStorage.getItem('omrStudentCode'); } catch(e){}
-  if (!id) return fail('잘못된 링크입니다.');
-  if (!code) return fail('먼저 학생 코드로 입장하세요.<br><a href="index.html" style="text-decoration:underline;">입장하기</a>');
+  if (!id && !demo) return fail('잘못된 링크입니다.');
+  if (!code && !demo) return fail('먼저 학생 코드로 입장하세요.<br><a href="index.html" style="text-decoration:underline;">입장하기</a>');
 
   const MAX_FILES = 20, MAX_MB = 10;
   let a, me, sub;
-  const subRef = db.collection('omrAssignSubs').doc(`${id}_${code}`);
+  const subRef = demo ? null : db.collection('omrAssignSubs').doc(`${id}_${code}`);
+  if (demo){ ({ a, me, sub } = DEMO.homework()); }
+  else {
   try {
     const [as, cs, ss] = await Promise.all([db.collection('omrAssignments').doc(id).get(),
       db.collection('omrCodes').doc(code).get(), subRef.get()]);
@@ -71,6 +75,7 @@
   } catch(e){ console.error(e); return fail('불러오지 못했습니다. 잠시 후 다시 시도하세요.'); }
   if (a.className !== me.className) return fail('우리 반 과제가 아닙니다.');
   if (a.kind === 'omr' && a.examId){ location.replace('index.html?exam=' + encodeURIComponent(a.examId)); return; }
+  }
   $('who').textContent = me.name;
 
   let files = sub ? (sub.files || []).slice() : [];
@@ -81,7 +86,7 @@
   const overdue = due && due < new Date();
 
   function render(){
-    root.innerHTML = `
+    root.innerHTML = (demo ? DEMO.banner('과제 제출') : '') + `
       <a class="btn sm ghost" href="index.html" style="padding-left:0;margin-bottom:6px;">← 목록</a>
       <h1>${esc(a.title)}</h1>
       <p class="muted" style="margin-bottom:14px;">${due ? `제출 기한 ${fmtDateTime(due)}${overdue ? ' · <b style="color:var(--red);">기한이 지났습니다</b>' : ''}` : '제출 기한 없음'}</p>

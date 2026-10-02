@@ -604,6 +604,9 @@
       safe(db.collection('dailyReportLinks').doc(me.code).get()),
       safe(examsForStudent(me)),
     ]);
+    // 최근 시험 OMR 성적표 (결과 공개된 것)
+    const rl = await db.collection('omrReportLinks').doc(me.code).get().then(x => x.exists ? (x.data().items || []) : []).catch(() => []);
+    const lastExam = rl.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0] || null;
     const rows = [];
     // 과제: 진행 중인 것 + 최근 끝낸 것 (나의 학습 「과제」 배너용), 이번 주 할 일에는 7일 안 기한의 미완료만
     const hw = (hwAll || []).filter(x => x.a.status === 'open' || x.status === 'revise' || (!x.done && toDate(x.a.dueAt) && toDate(x.a.dueAt) > new Date(now.getTime() - 14 * 864e5))).slice(0, 12);
@@ -667,7 +670,7 @@
           sort: dd.getTime() + (t.star ? 0 : 1), d: i === 0 ? '오늘' : DOW[dd.getDay()], cls: 'plan', subj: t.subj, t: t.text, m: t.amount || '', href: base + 'planner.html' }));
       });
     }
-    return { week: rows, latest, trend, plan, hw };
+    return { week: rows, latest, trend, plan, hw, exam: lastExam };
   }
 
   // 여러 문서 쓰기를 400개씩 나눠 커밋

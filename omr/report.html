@@ -95,17 +95,20 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=18"></script>
+<script src="common.js?v=19"></script>
+<script src="demo.js?v=1"></script>
 <script>
 (async function(){
   const { db, esc } = OMR;
   const root = document.getElementById('root');
   const token = new URLSearchParams(location.search).get('t');
   const fail = msg => { root.innerHTML = `<div class="empty">${msg}</div>`; };
-  if (!token) return fail('잘못된 링크입니다.');
+  const demo = window.DEMO && DEMO.isDemo();
+  if (!token && !demo) return fail('잘못된 링크입니다.');
 
   let r;
-  try {
+  if (demo) r = DEMO.examReport();
+  else try {
     const snap = await db.collection('omrReports').doc(token).get();
     if (!snap.exists) return fail('성적표를 찾을 수 없습니다. 링크를 다시 확인해 주세요.');
     r = snap.data();
@@ -226,7 +229,7 @@
         <span style="text-align:right;"><b>${a.score}점</b> <span class="pill ${a.score >= rt.passScore ? 'open' : 'red'}">${a.score >= rt.passScore ? '통과' : '미통과'}</span></span></div>`).join('')}</div>`;
   }
 
-  root.innerHTML = `
+  root.innerHTML = (demo ? DEMO.banner('시험 OMR 성적표') : '') + `
     <div class="hero">
       <div class="who">${esc(r.name)} · ${esc(r.className)}${r.examDate ? ' · ' + esc(r.examDate) : ''}</div>
       <div class="title">${esc(r.examTitle)} <span style="opacity:.6;font-weight:700;font-size:14px;">${esc(r.subject)}</span></div>

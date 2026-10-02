@@ -106,6 +106,12 @@
     .sec,.kpi,.extra,.two{break-inside:avoid;}
     .foot{padding:6px 0 0;}
   }
+  .exam-link{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;margin:0 0 12px;padding:13px 16px;border:1.5px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink);text-decoration:none;}
+  .exam-link .ek{grid-column:1;font-size:11px;font-weight:800;letter-spacing:.12em;color:var(--red);}
+  .exam-link b{grid-column:1;font-size:16px;font-weight:900;}
+  .exam-link .ec{grid-column:1;font-size:12.5px;color:var(--dim);}
+  .exam-link .eg{grid-column:2;grid-row:1/4;font-weight:900;color:#fff;background:var(--red);padding:9px 12px;border-radius:9px;font-size:13.5px;}
+  @media print{.exam-link .eg{display:none}}
 </style>
 </head>
 <body>
@@ -116,7 +122,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="common.js?v=18"></script>
+<script src="common.js?v=19"></script>
+<script src="demo.js?v=1"></script>
 <script>
 (async function(){
   const { db, esc } = OMR;
@@ -202,6 +209,10 @@
           </div>
         </div>
 
+        ${r.exam ? `<a class="exam-link" href="${esc(r.exam.href || 'report.html?t=' + encodeURIComponent(r.exam.token))}">
+          <span class="ek">시험 OMR 연동</span><b>${esc(r.exam.title || '시험')} 성적표</b>
+          <span class="ec">${r.exam.rank ? `석차 ${r.exam.rank}/${r.exam.n}` : ''}${r.exam.grade ? ` · ${r.exam.grade}등급` : ''} · 문항별 정오답 · 유형 분석</span><span class="eg">자세히 →</span></a>` : ''}
+
         <div class="sec"><div class="sec-t">보완할 유형</div>
           ${r.weak && r.weak.length ? `<div class="hl">${r.weak.map(t => `<span>${esc(t)}</span>`).join('')}</div>
             <p class="muted" style="margin-top:10px;font-size:12.5px;">점수와 관계없이 부분 실점한 유형입니다. 다음 수업 전까지 다시 풀어 보세요.</p>`
@@ -247,7 +258,8 @@
   }
 
   let r, preview = false;
-  if (qs.get('preview')){
+  if (window.DEMO && DEMO.isDemo()){ r = DEMO.dailyReport(); }
+  else if (qs.get('preview')){
     try { r = JSON.parse(sessionStorage.getItem('dailyPreview')); preview = true; } catch(e){}
     if (!r) return fail('미리볼 내용이 없습니다.');
   } else {
@@ -260,7 +272,7 @@
     } catch(e){ console.error(e); return fail('불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); }
   }
   document.title = `${r.name} · ${OMR.fmtKDate(r.date)} 데일리 리포트`;
-  root.innerHTML = `<div class="page">${build(r, preview)}</div>` + printBar(1);
+  root.innerHTML = (r.demo ? DEMO.banner('데일리 리포트') : '') + `<div class="page">${build(r, preview)}</div>` + printBar(1);
 })();
 </script>
 </body>

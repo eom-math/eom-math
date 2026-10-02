@@ -540,6 +540,9 @@
   .dr .hl{ display:flex; flex-wrap:wrap; gap:4px 10px; }
   .dr .hl span{ font-size:14.5px; font-weight:800; padding:0 2px; background:linear-gradient(transparent 52%, #FFE45C 52%); }
   /* 추이 */
+  .ex-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .ex-chips span{ font-size:12.5px; font-weight:800; padding:4px 9px; background:var(--bg2); }
+  .ex-chips span.g{ background:var(--ink); color:#fff; } .ex-chips span.g b{ color:#ff7a6c; }
   .tr{ display:flex; align-items:center; gap:18px; }
   .tr .now{ flex:0 0 auto; }
   .tr .now b{ display:block; font-size:30px; font-weight:900; letter-spacing:-.03em; line-height:1; font-variant-numeric:tabular-nums; }
@@ -971,6 +974,12 @@
       <a class="bn-go" href="omr/" aria-label="과제 전체 보기">→</a>
     </div>
 
+    <a class="bn" id="bnExam" href="omr/">
+      <div class="bn-l"><span class="bn-k">Exam report</span><b>시험 성적표</b><span class="bn-s" id="bnExamDate">시험 OMR</span></div>
+      <div class="bn-c" id="bnExamBody"><span class="bn-empty">불러오는 중…</span></div>
+      <span class="bn-go" aria-hidden="true">→</span>
+    </a>
+
     <a class="bn" id="bnDaily" href="omr/">
       <div class="bn-l"><span class="bn-k">Daily report</span><b>데일리 리포트</b><span class="bn-s" id="bnDailyDate">매 수업 발송</span></div>
       <div class="bn-c" id="bnDailyBody"><span class="bn-empty">불러오는 중…</span></div>
@@ -1265,7 +1274,7 @@
     acadState.admin = !!user; applyAcad();
   });
 </script>
-<script src="omr/common.js?v=18"></script>
+<script src="omr/common.js?v=19"></script>
 <script>
 (function(){
   var btn=document.getElementById('tocBtn'), toc=document.getElementById('toc'),
@@ -1500,8 +1509,21 @@
         + '<span class="t">' + (x.omr ? '<span class="om">OMR </span>' : '') + esc(x.a.title) + '</span><span class="st ' + cls + '">' + esc(lab) + '</span></a>';
     }).join('');
   }
+  function exHtml(x){
+    if (!x) return '<span class="bn-empty">결과가 공개된 시험이 아직 없어요.</span>';
+    return '<div class="dr"><div class="sc">' + x.score + '<small>/' + OMR.round(x.max || 100, 1) + '</small></div><div class="meta"><div class="m">' + esc(x.title || '시험') + '</div>'
+      + '<div class="ex-chips">' + (x.grade ? '<span class="g"><b>' + x.grade + '</b>등급</span>' : '') + (x.rank ? '<span>석차 ' + x.rank + '/' + x.n + '</span>' : '') + (x.avg != null ? '<span>반 평균 ' + x.avg + '</span>' : '') + '</div></div></div>';
+  }
   function fill(d, sample){
-    ['bnWeek','bnHw','bnDaily','bnTrend'].forEach(function(id){ $(id).classList.toggle('sample', !!sample); });
+    ['bnWeek','bnHw','bnExam','bnDaily','bnTrend'].forEach(function(id){ $(id).classList.toggle('sample', !!sample); });
+    $('bnExamBody').innerHTML = exHtml(d.exam);
+    $('bnExamDate').textContent = d.exam ? (d.exam.date ? OMR.fmtKDate(d.exam.date) : '최근 시험') : '시험 OMR';
+    if (d.exam && d.exam.token) $('bnExam').href = 'omr/report.html?t=' + encodeURIComponent(d.exam.token);
+    if (sample){
+      $('bnExam').href = 'omr/report.html?demo=1';
+      $('bnDaily').href = 'omr/daily-report.html?demo=1';
+      $('bnTrend').href = 'omr/review.html?demo=1';
+    }
     var hw = d.hw || [], left = hw.filter(function(x){ return !x.done; }).length;
     $('bnHwCnt').textContent = hw.length ? (left ? '남은 과제 ' + left + '개' : '모두 완료 👏') : '없음';
     $('bnHwBody').innerHTML = hwHtml(hw);
@@ -1522,23 +1544,22 @@
   }
   var SAMPLE = {
     week: [{ d:'오늘', cls:'plan', subj:'1', t:'명제 개념 복습' }, { d:'D-1', cls:'red', t:'쎈 B 212~240번 과제 제출' }, { d:'10/4', cls:'ink', t:'토 14:00 클리닉 예약' }, { d:'완강', cls:'ok', t:'명제 3강 — 대우를 이용한 증명' }],
-    hw: [{ a:{ title:'쎈 B 212~240번', dueAt: new Date(Date.now() + 864e5) }, status:'none', done:false, href:'omr/' },
-         { a:{ title:'10월 주간평가 OMR', dueAt: new Date(Date.now() + 2 * 864e5) }, status:'none', omr:true, done:false, href:'omr/' },
-         { a:{ title:'명제 워크북 p.32~40' }, status:'approved', done:true, href:'omr/' }],
-    latest: { date:'2026-09-30', title:'13회차', score:88, maxScore:100, avg:80, homework:100, weak:['대우 증명'], attendance:'present' },
-    trend: [{ score:72, max:100 }, { score:80, max:100 }, { score:76, max:100 }, { score:88, max:100 }, { score:94, max:100 }],
+    hw: [{ a:{ title:'쎈 B 212~240번', dueAt: new Date(Date.now() + 864e5) }, status:'none', done:false, href:'omr/hw.html?demo=1' },
+         { a:{ title:'10월 주간평가 OMR', dueAt: new Date(Date.now() + 2 * 864e5) }, status:'none', omr:true, done:false, href:'omr/report.html?demo=1' },
+         { a:{ title:'명제 워크북 p.32~40' }, status:'approved', done:true, href:'omr/hw.html?demo=1' }],
+    exam: { title:'10월 주간평가 · 미적분I', score:76.5, max:100, rank:3, n:24, grade:2, avg:62.69 },
+    latest: { date:'2026-10-01', title:'13회차', score:76.5, maxScore:100, avg:62.69, homework:90, weak:['함수의 극한의 대소 관계', '접선과 곡선의 교점, 수직 조건'], attendance:'present' },
+    trend: [{ score:72, max:100 }, { score:78, max:100 }, { score:76, max:100 }, { score:85, max:100 }, { score:76.5, max:100 }],
   };
   function showSample(){
     fill(SAMPLE, true);
     $('dashNote').hidden = false;
-    $('dashNote').innerHTML = '<span>재원생은 <b>학생 코드로 입장</b>하면 내 할 일·리포트·점수 추이가 여기에 나와요.</span><button type="button" id="dashLogin">학생 코드로 입장</button>';
+    $('dashNote').innerHTML = '<span><b>아래는 예시 화면이에요.</b> 과제 · 시험 성적표 · 데일리 리포트 · 복습 추이를 눌러 실제 화면처럼 둘러보세요. 재원생은 학생 코드로 입장하면 내 기록이 나와요.</span><button type="button" id="dashLogin">학생 코드로 입장</button>';
     $('dashLogin').onclick = function(e){ e.preventDefault(); if (window.openGate) window.openGate(); else location.href = 'omr/'; };
     $('dashWho').textContent = '';
   }
-  $('bnHw').addEventListener('click', function(e){
-    if ($('bnHw').classList.contains('sample') && window.openGate){ e.preventDefault(); window.openGate(); }
-  });
-  ['bnWeek','bnDaily','bnTrend'].forEach(function(id){
+  // 방문자 예시: 과제·성적표·데일리 리포트·복습 추이는 예시 화면으로, 플래너만 입장창
+  ['bnWeek'].forEach(function(id){
     $(id).addEventListener('click', function(e){
       if ($(id).classList.contains('sample') && window.openGate){ e.preventDefault(); window.openGate(id === 'bnTrend' ? 'omr/review.html' : id === 'bnWeek' ? 'omr/planner.html' : null); }
     });
