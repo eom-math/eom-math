@@ -429,7 +429,10 @@
   .gate.out{ animation:gateOut .35s ease forwards; }
   @keyframes gateOut{ to{ opacity:0; transform:scale(1.02); visibility:hidden; } }
   .gate-in{ width:100%; max-width:400px; }
-  .gate .brand{ font-size:16px; margin-bottom:34px; }
+  .gate .brand{ font-size:16px; }
+  .gate-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:34px; }
+  .gate-skip{ border:1.5px solid var(--ink); background:#fff; color:var(--ink); font:inherit; font-size:13px; font-weight:800; padding:8px 12px; border-radius:99px; cursor:pointer; white-space:nowrap; }
+  .gate-skip:hover{ background:var(--ink); color:#fff; }
   .gate h1{ font-weight:900; font-size:clamp(34px,9vw,46px); line-height:1.05; letter-spacing:-.03em; margin-bottom:16px; }
   .gate .gate-code::placeholder{ letter-spacing:.08em; font-size:18px; font-weight:700; color:var(--dim); opacity:.7; }
   .gate h1 .accent{ color:var(--red); }
@@ -450,10 +453,20 @@
   .gate-saved[hidden]{ display:none; }
   .gate-or{ display:flex; align-items:center; gap:12px; margin:18px 0; font-size:12px; color:var(--dim); font-weight:700; }
   .gate-or::before,.gate-or::after{ content:""; flex:1; height:1px; background:var(--line); }
-  .gate-visit{ width:100%; padding:15px; border:1.5px solid var(--line); background:transparent; color:var(--ink); font:inherit; font-size:15px; font-weight:800; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; gap:8px; }
-  .gate-visit:hover{ border-color:var(--ink); }
-  .gate-visit small{ font-weight:600; color:var(--dim); font-size:12.5px; }
+  .gate-visit{ position:relative; width:100%; display:grid; grid-template-columns:44px 1fr 40px; align-items:center; gap:14px; text-align:left;
+    padding:16px 16px 16px 14px; border:1.5px solid var(--ink); background:#fff; color:var(--ink); font:inherit; cursor:pointer;
+    box-shadow:0 8px 22px rgba(17,17,20,.08); transition:transform .2s, box-shadow .2s, border-color .2s; }
+  .gate-visit::before{ content:""; position:absolute; left:-1.5px; top:-1.5px; bottom:-1.5px; width:4px; background:var(--red); }
+  .gate-visit:hover{ transform:translateY(-2px); box-shadow:0 14px 30px rgba(17,17,20,.14); }
+  .gate-visit .gv-ic{ width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:var(--bg2); }
+  .gate-visit .gv-ic svg{ width:24px; height:24px; fill:none; stroke:var(--ink); stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+  .gate-visit .gv-k{ display:block; font-size:11px; font-weight:800; letter-spacing:.14em; color:var(--red); margin-bottom:3px; }
+  .gate-visit b{ display:block; font-size:17px; font-weight:900; letter-spacing:-.01em; }
+  .gate-visit .gv-s{ display:block; margin-top:3px; font-size:12.5px; font-weight:600; color:var(--dim); line-height:1.45; }
+  .gate-visit .gv-go{ width:40px; height:40px; border-radius:50%; background:var(--red); color:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900; transition:transform .2s; }
+  .gate-visit:hover .gv-go{ transform:translateX(3px); }
+  @keyframes gvPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(214,48,31,.35); } 50%{ box-shadow:0 0 0 7px rgba(214,48,31,0); } }
+  .gate-visit .gv-go{ animation:gvPulse 2.4s ease-in-out 1s 3; }
   .gate-foot{ margin-top:22px; font-size:12px; color:var(--dim); line-height:1.6; text-align:center; }
   body.gate-open{ overflow:hidden; }
 
@@ -983,7 +996,7 @@
 
 <div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle" hidden>
   <div class="gate-in">
-    <div class="brand">엄형국<span>수학</span></div>
+    <div class="gate-top"><div class="brand">엄형국<span>수학</span></div><button class="gate-skip" id="gateSkip" type="button">방문자 둘러보기 →</button></div>
     <h1 id="gateTitle">어떻게<br>입장할까요<span class="accent">?</span></h1>
     <p class="lead">재원생은 선생님께 받은 6자리 학생 코드로 입장하면 메인 화면에서 내 할 일·데일리 리포트·성적과 클리닉·영상·질문을 바로 이용할 수 있어요.</p>
     <div class="gate-card">
@@ -993,8 +1006,12 @@
       <button class="gate-go" id="gateGo" type="button">학생 코드로 입장</button>
       <div class="gate-msg" id="gateMsg" role="status"></div>
     </div>
-    <div class="gate-or">또는</div>
-    <button class="gate-visit" id="gateVisit" type="button">방문자로 둘러보기 <small>수업 소개 · 상담</small></button>
+    <div class="gate-or">재원생이 아니라면</div>
+    <button class="gate-visit" id="gateVisit" type="button">
+      <span class="gv-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg></span>
+      <span><span class="gv-k">처음 오셨나요?</span><b>방문자로 둘러보기</b><span class="gv-s">학생 코드 없이 수업 소개 · 커리큘럼 · 개념 퀴즈 게임 · 상담</span></span>
+      <span class="gv-go" aria-hidden="true">→</span>
+    </button>
     <p class="gate-foot">학생 코드를 모르면 선생님께 문의해 주세요.</p>
   </div>
 </div>
@@ -1403,6 +1420,7 @@
     setTimeout(function(){ gate.hidden = true; gate.classList.remove('out'); }, 360);
   }
   document.getElementById('gateVisit').onclick = close;
+  document.getElementById('gateSkip').onclick = close;
   codeIn.addEventListener('input', function(){ codeIn.value = codeIn.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); msg.textContent = ''; });
   codeIn.addEventListener('keydown', function(e){ if (e.key === 'Enter') go.click(); });
   go.onclick = async function(){
