@@ -147,7 +147,6 @@
       <button data-tab="lecture">영상 강의</button>
       <button data-tab="qna">질문 답변 <span class="pill red hidden" id="qnaBadge"></span></button>
       <button data-tab="att">등원</button>
-      <button data-tab="study">공부 타이머</button>
       <button data-tab="plan">스터디 플래너</button>
       <button data-tab="notes">학생 기록</button>
     </div>
@@ -205,7 +204,7 @@
       <div class="row" style="margin-bottom:10px;">
         <select class="input" id="planClass" style="width:auto;min-width:130px;"></select>
         <span class="muted" id="planRange"></span>
-        <a class="btn primary" href="study.html#week" style="margin-left:auto;">플래너·순공 관리 열기 →</a>
+        <a class="btn primary" href="study.html#week" style="margin-left:auto;">플래너 관리 열기 →</a>
       </div>
       <p class="muted" style="margin-bottom:8px;">학생이 직접 쓰는 플래너예요. 이번 주(월~일) 할 일 달성률과 10분 타임테이블 공부 시간을 보여줘요. 이름을 누르면 날짜별 내용이 펼쳐져요.</p>
       <div class="card" id="planList"><div class="muted">반을 고르세요.</div></div>
@@ -293,7 +292,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=30"></script>
+<script src="common.js?v=31"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, round } = OMR;
@@ -322,6 +321,7 @@
     $('rulesWarn').classList.toggle('hidden', !me.rulesMissing);
     show('vMain');
     await loadRoster();
+    if (location.hash === '#study') { location.replace('study.html#timer'); return; }   // 공부 타이머는 순공 메뉴로 옮겼어요
     const tab = (location.hash || '#clinic').slice(1);
     selectTab(['clinic','lecture','qna','att','study','plan','notes'].includes(tab) ? tab : 'clinic');
     // 위쪽 메뉴에서 같은 페이지의 다른 항목(#qna 등)을 누르면 그 탭으로

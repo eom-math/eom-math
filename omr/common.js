@@ -417,7 +417,7 @@
     ['학생', [['students.html', '학생 관리'], ['ops.html#att', '등원', 1], ['ops.html#notes', '학생 기록', 1]]],
     ['수업·시험', [['admin.html', '시험·OMR'], ['daily.html', '데일리 리포트', 1], ['assign.html', '과제'], ['clinic.html', '오답 클리닉'], ['classcal.html', '수업 달력']]],
     ['소통·예약', [['ops.html#qna', '질문 답변', 1, 'qna'], ['board.html', '게시판', 1, 'board'], ['notice.html', '칭찬 공지'], ['ops.html#clinic', '클리닉 예약', 1], ['ops.html#lecture', '영상 강의', 1]]],
-    ['공부 관리', [['study.html', '플래너·순공', 1], ['ops.html#study', '공부 타이머', 1]]],
+    ['공부 관리', [['study.html#week', '플래너', 1], ['study.html#rank', '순공·타이머', 1]]],
   ];
   const ADMIN_PAGES = NAV_GROUPS.flatMap(g => g[1]).map(x => [x[0], x[1]]);
   const STAFF_PAGES = NAV_GROUPS.flatMap(g => g[1]).filter(x => x[2]).map(x => [x[0], x[1]]);

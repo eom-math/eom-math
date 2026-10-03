@@ -96,6 +96,12 @@
   a.pv .go{font-size:11px;font-weight:800;color:var(--red);}
   .pv-btn{font-size:12px;font-weight:800;color:var(--red);text-decoration:none;white-space:nowrap;border:1px solid var(--red-soft);background:var(--red-soft);padding:3px 8px;border-radius:99px;}
   .pv-btn:hover{background:var(--red);color:#fff;}
+  .study{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line2);font-size:14px;cursor:pointer;}
+  .study .t{font-variant-numeric:tabular-nums;font-size:13px;color:var(--dim);}
+  .study .ss{grid-column:1/-1;font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums;line-height:1.7;display:none;}
+  .study.open .ss{display:block;}
+  .rate{font-weight:800;font-variant-numeric:tabular-nums;padding:2px 8px;border-radius:99px;font-size:12.5px;}
+  .rate.ok{background:var(--ok-soft);color:var(--ok);} .rate.mid{background:var(--warn-soft);color:var(--warn);} .rate.low{background:var(--red-soft);color:var(--red);}
 </style>
 </head>
 <body>
@@ -111,7 +117,7 @@
 
   <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
     <div class="kicker">PLANNER · FOCUS</div>
-    <h1>플래너·순공 관리</h1>
+    <h1>플래너 · 순공 관리</h1>
     <p class="lead">선생님 이메일 또는 조교 아이디로 로그인하세요.</p>
     <div class="card stack">
       <input class="input" id="loginEmail" placeholder="이메일 또는 조교 아이디" autocomplete="username" autocapitalize="none">
@@ -124,11 +130,13 @@
 
   <section id="vMain" class="hidden">
     <div class="row" id="nav" style="margin-bottom:12px;gap:4px;"></div>
+    <h1 id="modeTitle" style="margin:2px 0 12px;"></h1>
     <div class="tabs" id="tabs">
       <button class="on" data-tab="week">주간 현황</button>
       <button data-tab="board">플래너 확인·도장</button>
       <button data-tab="assign">할 일 일괄 배포</button>
       <button data-tab="rank">순공 랭킹</button>
+      <button data-tab="timer">타이머 기록</button>
     </div>
 
     <!-- 주간 현황 -->
@@ -199,7 +207,20 @@
       </div>
       <div class="kpis" id="rkKpis"></div>
       <div class="card" id="rkList"></div>
-      <p class="muted" style="font-size:12px;">순공 = 집중 타이머로 잰 시간에서 화면을 벗어난 시간을 뺀 순수 집중 시간이에요. 1분 미만 세션은 기록되지 않아요. 학생은 타이머 화면에서 가린 이름으로 랭킹을 봐요.</p>
+      <p class="muted" style="font-size:12px;">순공 = 공부 타이머로 잰 시간에서 화면을 벗어난 시간을 뺀 순수 집중 시간이에요. 1분 미만 세션은 기록되지 않아요. 학생은 타이머 화면에서 가린 이름으로 랭킹을 봐요.</p>
+    </div>
+
+    <!-- 타이머 기록 (예전 '공부 타이머') -->
+    <div data-pane="timer" class="hidden">
+      <div class="bar2">
+        <select class="input" id="studyRange"><option value="1">오늘</option><option value="7" selected>최근 7일</option><option value="30">최근 30일</option></select>
+        <select class="input" id="studyClass"></select>
+        <a class="btn sm" href="timer.html" target="_blank" rel="noopener">학생 타이머 화면 ↗</a>
+        <button class="btn sm" id="studyCsv">CSV</button>
+      </div>
+      <p class="muted" style="font-size:12.5px;margin-bottom:8px;">학생은 포털 → <b>타이머</b>에서 공부해요. 1분 이상 한 세션만 기록되고, 집중률 = 순수 집중 ÷ 계획 시간이에요. 이름을 누르면 세션별 기록이 펼쳐져요.</p>
+      <div class="kpis" id="studyKpis"></div>
+      <div class="card" id="studyList"></div>
     </div>
   </section>
 </div>
@@ -207,7 +228,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=30"></script>
+<script src="common.js?v=31"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText } = OMR;
@@ -237,24 +258,77 @@
     if (!me){ show('vDenied'); return; }
     $('whoBadge').textContent = me.role === 'admin' ? '선생님' : '조교 · ' + me.name;
     $('whoBadge').className = 'who-badge' + (me.role === 'admin' ? ' admin' : '');
-    $('nav').innerHTML = OMR.staffNav('study.html', me.role);
     show('vMain');
     try {
       roster = (await db.collection('omrCodes').get()).docs.map(d => ({ code: d.id, ...d.data() }))
         .filter(s => s.name && s.className).sort((a,b) => a.name.localeCompare(b.name, 'ko'));
     } catch(e){ roster = []; handleErr(e); }
     classes = [...new Set(roster.map(s => s.className))].sort((a,b) => a.localeCompare(b, 'ko'));
-    ['wkClass','bdClass','rkClass'].forEach(id => $(id).innerHTML = classOpts('*', '전체 반'));
+    ['wkClass','bdClass','rkClass','studyClass'].forEach(id => $(id).innerHTML = classOpts('*', '전체 반'));
     initAssign();
     const tab = (location.hash || '#week').slice(1);
-    selectTab(['week','board','assign','rank'].includes(tab) ? tab : 'week');
+    selectTab(TABS.includes(tab) ? tab : 'week');
   });
+  // 메뉴 두 개: 플래너(주간 현황·확인·도장·할 일 배포) / 순공(랭킹·타이머 기록)
+  const MODES = { planner: ['week', 'board', 'assign'], focus: ['rank', 'timer'] };
+  const TABS = [...MODES.planner, ...MODES.focus];
+  const modeOf = t => MODES.focus.includes(t) ? 'focus' : 'planner';
+  let curMode = null;
   function selectTab(t){
+    const mode = modeOf(t);
+    if (mode !== curMode) {
+      curMode = mode;
+      [...$('tabs').children].forEach(b => b.classList.toggle('hidden', modeOf(b.dataset.tab) !== mode));
+      $('modeTitle').textContent = mode === 'focus' ? '⏱ 순공 · 공부 타이머' : '📒 플래너';
+      $('nav').innerHTML = OMR.staffNav(mode === 'focus' ? 'study.html#rank' : 'study.html#week', me.role);
+      document.title = (mode === 'focus' ? '순공 관리' : '플래너 관리') + ' — 엄형국 수학';
+    }
     [...$('tabs').children].forEach(b => b.classList.toggle('on', b.dataset.tab === t));
     document.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('hidden', p.dataset.pane !== t));
     history.replaceState(null, '', '#' + t);
-    ({ week: loadWeek, board: loadBoard, assign: loadAssigned, rank: loadRank })[t]();
+    ({ week: loadWeek, board: loadBoard, assign: loadAssigned, rank: loadRank, timer: loadStudy })[t]();
   }
+  // 메뉴에서 플래너 ↔ 순공으로 옮길 때 (같은 페이지라 해시만 바뀜)
+  window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (me && TABS.includes(t) && !$('tabs').querySelector(`[data-tab="${t}"].on`)) selectTab(t); });
+
+  // ═════ 타이머 기록 (세션별) ═════
+  let studyRows = [];
+  const rateCls = r => r >= 85 ? 'ok' : r >= 65 ? 'mid' : 'low';
+  $('studyRange').onchange = $('studyClass').onchange = () => loadStudy();
+  async function loadStudy(){
+    const days = +$('studyRange').value, cf = $('studyClass').value, box = $('studyList');
+    const from = addDays(today, -(days - 1));
+    box.innerHTML = '<div class="muted">불러오는 중…</div>';
+    try {
+      const sess = (await db.collection('studySessions').where('date', '>=', from).get()).docs.map(d => d.data())
+        .filter(x => cf === '*' || x.className === cf);
+      const by = {};
+      sess.forEach(x => { (by[x.code] = by[x.code] || []).push(x); });
+      const list = inClass(cf);
+      studyRows = list.map(s => {
+        const l = (by[s.code] || []).sort((a, b) => (OMR.toDate(a.startedAt) || 0) - (OMR.toDate(b.startedAt) || 0));
+        const planned = l.reduce((a, x) => a + (x.plannedSec || 0), 0), focus = l.reduce((a, x) => a + (x.focusSec || 0), 0);
+        return { s, l, planned, focus, away: l.reduce((a, x) => a + (x.awayCount || 0), 0), rate: planned ? Math.round(100 * focus / planned) : null };
+      }).sort((a, b) => b.focus - a.focus || a.s.name.localeCompare(b.s.name, 'ko'));
+      const active = studyRows.filter(r => r.l.length), totFocus = active.reduce((a, r) => a + r.focus, 0), totPlan = active.reduce((a, r) => a + r.planned, 0);
+      $('studyKpis').innerHTML = `<div class="stat"><div class="k">사용 학생</div><div class="v">${active.length}<small>/${list.length}</small></div></div>
+        <div class="stat"><div class="k">총 순수 집중</div><div class="v" style="font-size:17px;">${hmK(totFocus)}</div></div>
+        <div class="stat"><div class="k">평균 집중률</div><div class="v">${totPlan ? Math.round(100 * totFocus / totPlan) : '–'}<small>${totPlan ? '%' : ''}</small></div></div>
+        <div class="stat"><div class="k">세션 수</div><div class="v">${sess.length}<small>회</small></div></div>`;
+      box.innerHTML = studyRows.length ? studyRows.map(r => `
+        <div class="study"><div><b>${esc(r.s.name)}</b> <span class="muted">${esc(r.s.className)}</span></div>
+          <span class="t">${r.l.length ? `${hmK(r.focus)} · 이탈 ${r.away}회 <span class="rate ${rateCls(r.rate)}">${r.rate}%</span>` : '<span style="color:var(--faint);">기록 없음</span>'}</span>
+          ${r.l.length ? `<div class="ss">${r.l.map(x => `${esc(OMR.fmtKDate(x.date))} ${OMR.hhmm(x.startedAt)} · ${hmK(x.plannedSec || 0)} 중 ${hmK(x.focusSec || 0)} 집중 · 이탈 ${x.awayCount || 0}회${x.completed ? '' : ' · 중간 종료'}`).join('<br>')}</div>` : ''}</div>`).join('')
+        : '<div class="muted">학생이 없어요.</div>';
+    } catch(e){ box.innerHTML = '<div class="muted">불러오지 못했어요. (보안 규칙에 studySessions가 게시됐는지 확인하세요)</div>'; handleErr(e); }
+  }
+  $('studyList').onclick = e => { const r = e.target.closest('.study'); if (r) r.classList.toggle('open'); };
+  $('studyCsv').onclick = () => {
+    if (!studyRows.length) return toast('불러온 기록이 없어요');
+    OMR.downloadCsv(`공부타이머_${today}.csv`, [['이름','반','날짜','시작','계획(분)','순수 집중(분)','이탈 횟수','이탈(분)','방식','완료'],
+      ...studyRows.flatMap(r => r.l.map(x => [r.s.name, r.s.className, x.date, OMR.hhmm(x.startedAt), Math.round((x.plannedSec || 0) / 60),
+        Math.round((x.focusSec || 0) / 60), x.awayCount || 0, Math.round((x.awaySec || 0) / 60), x.mode === 'pause' ? '일시정지' : '경고', x.completed ? 'O' : '중간 종료']))]);
+  };
   $('tabs').onclick = e => { const b = e.target.closest('button'); if (b) selectTab(b.dataset.tab); };
   const inClass = (cf) => roster.filter(s => cf === '*' || s.className === cf);
   async function plannersBetween(a, b){
