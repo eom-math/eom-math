@@ -535,6 +535,10 @@
   .wk-i .d{ flex:0 0 auto; font-size:11px; font-weight:900; padding:4px 7px; background:var(--bg2); color:var(--dim); font-variant-numeric:tabular-nums; }
   .wk-i .d.plan{ background:#FFE6DF; color:#E8432F; }
   .wk-i.mine{ background:#FFFDF8; }
+  .wk-i.note{ border-color:var(--red); background:#FFF5F1; }
+  .wk-i.note .d{ background:var(--red); color:#fff; }
+  .bn-alarm{ display:inline-block; font-size:11.5px; font-weight:900; color:#fff; background:var(--red); padding:3px 8px; border-radius:99px; animation:bnPulse 1.4s ease 3; }
+  @keyframes bnPulse{ 50%{ transform:scale(1.08); } }
   .wk-i.wk-add{ border-style:dashed; background:transparent; }
   .wk-i.wk-add .t{ color:var(--dim); }
   .wk-i .d.red{ background:rgba(214,48,31,.1); color:var(--red); } .wk-i .d.ink{ background:var(--ink); color:#fff; } .wk-i .d.ok{ background:rgba(31,122,77,.12); color:#1F7A4D; }
@@ -1332,7 +1336,7 @@
     acadState.admin = !!user; applyAcad();
   });
 </script>
-<script src="omr/common.js?v=21"></script>
+<script src="omr/common.js?v=22"></script>
 <script>
 (function(){
   var btn=document.getElementById('tocBtn'), toc=document.getElementById('toc'),
@@ -1631,7 +1635,14 @@
     if (!me){ showSample(); return; }
     $('dashTitle').textContent = me.name + ' 학생의 학습';
     $('dashWho').textContent = me.className;
-    return OMR.studentDashboard(me, 'omr/', { withPlanner: true }).then(function(d){ fill(d, false); });
+    return OMR.studentDashboard(me, 'omr/', { withPlanner: true }).then(function(d){ fill(d, false); return OMR.plannerNotes(me.code); }).then(function(ns){
+      // 선생님이 플래너에 남긴 새 코멘트·도장 알림
+      if (!ns || !ns.length) return;
+      var n0 = ns[0];
+      $('bnWeek').href = 'omr/planner.html?d=' + n0.date;
+      $('bnWeekCnt').innerHTML = '<span class="bn-alarm">🔔 새 코멘트 ' + ns.length + '</span>';
+      $('bnWeekBody').insertAdjacentHTML('afterbegin', '<span class="wk-i note"><span class="d">🔔</span><span class="t">' + OMR.esc(n0.icon + ' ' + n0.text) + '</span></span>');
+    });
   }).catch(function(e){ console.warn(e); showSample(); });
 })();
 </script>

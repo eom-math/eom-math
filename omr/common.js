@@ -525,6 +525,34 @@
     return n[0] + '*'.repeat(n.length - 2) + n[n.length - 1];
   }
   // 플래너 하루치에서 할 일 합치기 (학생 할 일 + 선생님 할 일)
+  // ───────── 플래너 선생님 코멘트·도장 알림 ─────────
+  // 학생이 그날 플래너를 열어 보면 '읽음' (기기별 localStorage). 코멘트·도장이 바뀌면 다시 새 알림
+  const PLAN_STAMP = { good: ['👍', '확인했어요'], best: ['💯', '최고예요'], fire: ['🔥', '조금 더 힘내요'], heart: ['💖', '응원해요'] };
+  const noteSig = p => (p && (p.tstamp || p.tcomment)) ? (p.tstamp || '') + '|' + (p.tcomment || '') : '';
+  function plannerSeen(code) { try { return JSON.parse(localStorage.getItem('plannerSeen_' + code)) || {}; } catch (e) { return {}; } }
+  function markPlannerSeen(code, p) {
+    const sig = noteSig(p); if (!sig || !p.date) return;
+    const m = plannerSeen(code); if (m[p.date] === sig) return;
+    m[p.date] = sig;
+    Object.keys(m).sort().slice(0, -60).forEach(k => delete m[k]);       // 오래된 기록 정리
+    try { localStorage.setItem('plannerSeen_' + code, JSON.stringify(m)); } catch (e) {}
+  }
+  // 안 읽은 코멘트·도장 목록 (docs: {date: plannerDoc} 를 주면 그걸로, 없으면 최근 days일을 불러옴)
+  async function plannerNotes(code, docs, days = 14) {
+    if (!docs) {
+      docs = {};
+      const t = new Date();
+      const ds = [...Array(days)].map((_, i) => { const d = new Date(t); d.setDate(d.getDate() - i); return todayStr(d); });
+      const got = await Promise.all(ds.map(d => db.collection('planners').doc(`${code}_${d}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
+      ds.forEach((d, i) => { if (got[i]) docs[d] = got[i]; });
+    }
+    const seen = plannerSeen(code);
+    return Object.entries(docs).filter(([d, p]) => noteSig(p) && seen[d] !== noteSig(p))
+      .map(([d, p]) => ({ date: d, tstamp: p.tstamp || '', tcomment: p.tcomment || '', tby: p.tby || '선생님', icon: (PLAN_STAMP[p.tstamp] || ['✏️'])[0],
+        text: p.tcomment || (PLAN_STAMP[p.tstamp] || ['', ''])[1] }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }
+
   function plannerTodos(p) {
     p = p || {};
     const tdone = new Set(p.tdone || []);
@@ -747,7 +775,7 @@
     QTYPES, examTypes, examSegments, layoutText, shortEq,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
-    ACADEMIES, lectureForStudent, EXT_LINKS, slotForClass, slotClassLabel, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
+    ACADEMIES, lectureForStudent, EXT_LINKS, slotForClass, slotClassLabel, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, plannerNotes, markPlannerSeen, plannerSeen, noteSig, PLAN_STAMP, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

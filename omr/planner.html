@@ -178,6 +178,19 @@
 
   .tnote{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1.5px solid #FFD2C6;border-radius:20px;padding:14px 16px;margin-bottom:12px;position:relative;}
   .tnote[hidden]{display:none;}
+  .na{background:#fff;border:1.5px solid #E8432F;border-radius:18px;padding:12px 14px;margin:0 0 12px;box-shadow:0 6px 18px rgba(232,67,47,.12);animation:naIn .4s ease;}
+  .na[hidden]{display:none;}
+  @keyframes naIn{from{transform:translateY(-6px);opacity:0;}to{transform:none;opacity:1;}}
+  .na-h{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .na-h .bell{font-size:18px;animation:ring 1.6s ease 2;transform-origin:50% 10%;display:inline-block;}
+  @keyframes ring{0%,100%{transform:rotate(0);}10%{transform:rotate(16deg);}20%{transform:rotate(-14deg);}30%{transform:rotate(10deg);}40%{transform:rotate(-6deg);}50%{transform:rotate(0);}}
+  .na-h b{font-size:14.5px;font-weight:900;}
+  .na-n{margin-left:auto;min-width:22px;height:22px;padding:0 7px;border-radius:99px;background:#E8432F;color:#fff;font-size:12px;font-weight:900;display:grid;place-items:center;}
+  .na-i{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:#FFF5F1;border-radius:12px;padding:9px 11px;margin-top:5px;}
+  .na-i .ic{font-size:17px;} .na-i .d{font-size:12px;font-weight:800;color:var(--dim);white-space:nowrap;}
+  .na-i .t{flex:1;min-width:0;font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .na-i .go{font-size:12px;font-weight:800;color:#E8432F;white-space:nowrap;}
+  .newb{display:inline-block;font-size:10px;font-weight:900;color:#fff;background:#E8432F;border-radius:6px;padding:1px 6px;margin-left:4px;vertical-align:1px;}
   .tnote .st{flex:0 0 auto;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:26px;background:#FFF1EC;}
   .tnote .k{font-size:11px;font-weight:800;color:var(--red);letter-spacing:.04em;}
   .tnote .x{font-family:var(--hand);font-size:20px;font-weight:700;line-height:1.35;word-break:keep-all;}
@@ -263,6 +276,7 @@
     <div class="t" id="hdTitle">스터디 플래너</div>
     <div class="navs"><button id="prevW" aria-label="지난주">‹</button><button class="today" id="goToday">오늘</button><button id="nextW" aria-label="다음 주">›</button></div>
   </div>
+  <div class="na" id="noteAlarm" hidden></div>
   <div class="week" id="week"></div>
   <p class="notice" id="notice" hidden></p>
 
@@ -346,7 +360,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=21"></script>
+<script src="common.js?v=22"></script>
 <script>
 (async function(){
   const { db, FV, esc, toast } = OMR;
@@ -458,6 +472,7 @@
     const active = d => docs[d] && (docs[d].studyMin > 0 || docs[d].done > 0);
     let i = active(today) ? 0 : 1, n = 0;
     while (i < past.length && active(past[i])){ n++; i++; }
+    refreshAlarm();
     $('streak').innerHTML = n ? `🔥 <b style="color:var(--red);">${n}일</b> 연속 기록 중이에요` : '오늘 기록하면 연속 기록이 시작돼요';
   }
 
@@ -507,8 +522,26 @@
     if (!x.tstamp && !x.tcomment){ box.hidden = true; return; }
     const st = STAMP[x.tstamp];
     box.hidden = false;
-    box.innerHTML = `<div class="st">${st ? st[0] : '✏️'}</div><div><div class="k">선생님 코멘트</div>
+    const fresh = !VIEW && OMR.plannerSeen(me.code)[cur] !== OMR.noteSig(x);
+    box.innerHTML = `<div class="st">${st ? st[0] : '✏️'}</div><div><div class="k">선생님 코멘트${fresh ? ' <span class="newb">NEW</span>' : ''}</div>
       <div class="x">${x.tcomment ? esc(x.tcomment) : (st ? st[1] : '')}</div><div class="by">${esc(x.tby || '선생님')}</div></div>`;
+    if (!VIEW){ OMR.markPlannerSeen(me.code, { ...x, date: cur }); if (fresh){ alarmList = alarmList.filter(n => n.date !== cur); renderAlarm(); } }
+  }
+  // ───── 새 코멘트 알림 (맨 위) ─────
+  let alarmList = [];
+  async function refreshAlarm(){
+    if (VIEW) return;
+    alarmList = await OMR.plannerNotes(me.code, Object.fromEntries(Object.entries(docs).filter(([d]) => d !== cur)));
+    renderAlarm();
+  }
+  function renderAlarm(){
+    const box = $('noteAlarm');
+    if (!alarmList.length){ box.hidden = true; return; }
+    box.hidden = false;
+    const fmt = d => { const t = parse(d); return `${t.getMonth() + 1}/${t.getDate()}(${DOW[t.getDay()]})`; };
+    box.innerHTML = `<div class="na-h"><span class="bell">🔔</span><b>선생님이 플래너에 코멘트를 남겼어요</b><span class="na-n">${alarmList.length}</span></div>`
+      + alarmList.slice(0, 4).map(n => `<button class="na-i" data-d="${n.date}"><span class="ic">${n.icon}</span><span class="d">${fmt(n.date)}</span><span class="t">${esc(n.text)}</span><span class="go">보기 ›</span></button>`).join('');
+    box.querySelectorAll('.na-i').forEach(b => b.onclick = () => { go(b.dataset.d); window.scrollTo({ top: 0, behavior: 'smooth' }); });
   }
 
   // ───── 할 일 ─────
@@ -809,7 +842,7 @@
   $('goToday').onclick = () => go(today);
 
   loadMeta();
-  await go(VIEW && /^\d{4}-\d{2}-\d{2}$/.test(QS.get('d') || '') ? QS.get('d') : today);
+  await go(/^\d{4}-\d{2}-\d{2}$/.test(QS.get('d') || '') && QS.get('d') <= today ? QS.get('d') : today);
   renderStats();
   renderStreak();
 })();
