@@ -508,7 +508,7 @@
   .bd-i:hover{ background:var(--bg2); }
   .bd-i.nt{ background:#FFF8F6; }
   .bd-i .tg, .bd-m-h .tg{ font-size:11px; font-weight:900; padding:3px 8px; background:var(--bg2); color:var(--dim); white-space:nowrap; }
-  .bd-i .tg.nt, .bd-m-h .tg.nt{ background:var(--red); color:#fff; } .bd-i .tg.pv, .bd-m-h .tg.pv{ background:var(--ink); color:#fff; }
+  .bd-i .tg.nt, .bd-m-h .tg.nt{ background:var(--red); color:#fff; } .bd-i .tg.pv, .bd-m-h .tg.pv{ background:var(--ink); color:#fff; } .bd-i .tg.an, .bd-m-h .tg.an{ background:#EEF1FF; color:#3B4CCA; }
   .bd-i .tt{ font-size:14.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .bd-i .rp{ font-style:normal; font-size:10.5px; font-weight:900; color:#1F7A4D; background:rgba(31,122,77,.12); padding:2px 6px; margin-left:4px; vertical-align:1px; }
   .bd-i .mt{ font-size:12px; color:var(--dim); white-space:nowrap; }
@@ -1118,7 +1118,7 @@
       <div><p class="hub-kicker">Board</p><h2 class="hub-title">게시판</h2></div>
       <button type="button" class="bd-write" id="bdWrite">✏️ 글쓰기</button>
     </div>
-    <p class="bd-sub">공지사항과 학생들의 이야기 · 🔒 비공개 글은 쓴 학생과 선생님만 볼 수 있어요</p>
+    <p class="bd-sub">공지사항과 학생들의 이야기 · 익명으로 쓰거나 🔒 선생님·조교 선생님께만 보낼 수도 있어요</p>
     <div class="bd-list" id="bdList"><div class="bd-none">불러오는 중…</div></div>
     <button type="button" class="bd-more" id="bdMore" hidden></button>
   </section>
@@ -1422,12 +1422,12 @@
     acadState.admin = !!user; applyAcad();
   });
 </script>
-<script src="omr/common.js?v=29"></script>
+<script src="omr/common.js?v=30"></script>
 <script src="notice.js?v=1"></script>
 <script src="omr/timerange.js?v=1"></script>
 <script src="omr/calendar.js?v=10"></script>
 <script src="omr/mycal.js?v=1"></script>
-<script src="board.js?v=2"></script>
+<script src="board.js?v=3"></script>
 <script>try { BOARD.mount(document.getElementById('board')); } catch(e){ console.warn(e); }</script>
 <script>
 // 메인 화면 맨 아래 달력: 학생은 내 반 수업 시간표·내 플래너, 방문자는 공휴일·전체 일정 + 플래너 예시

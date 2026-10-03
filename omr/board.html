@@ -32,6 +32,10 @@
   .rp span{display:block;font-size:11.5px;font-weight:900;color:var(--dim);margin-bottom:3px;}
   .ops{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px;}
   .rpf{margin-top:10px;display:grid;gap:6px;}
+  .who-badge{font-size:12px;font-weight:800;padding:4px 9px;border-radius:99px;background:var(--bg2);}
+  .who-badge.admin{background:var(--ink);color:#fff;}
+  .tg.an{background:#EEF1FF;color:#3B4CCA;} .tg.st{background:#E6F6F5;color:#0E7A7A;}
+  .who{font-size:12px;font-weight:800;color:#3B4CCA;background:#EEF1FF;border-radius:6px;padding:2px 7px;margin-left:4px;}
   .chk{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;}
   .chk input{width:17px;height:17px;}
 </style>
@@ -40,26 +44,27 @@
 <div class="wrap">
   <div class="topbar">
     <a class="brand" href="../index.html">엄형국 <span>수학</span> · 관리</a>
-    <div class="row"><span class="sub" id="adminEmail"></span><button class="btn sm hidden" id="logoutBtn">로그아웃</button></div>
+    <div class="row"><span class="who-badge hidden" id="whoBadge"></span><span class="sub" id="adminEmail"></span><button class="btn sm hidden" id="logoutBtn">로그아웃</button></div>
   </div>
   <nav class="row" id="adminNav" style="gap:4px;margin:-8px 0 16px;"></nav>
 
   <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
-    <h1>관리자 로그인</h1>
+    <h1>선생님 · 조교 로그인</h1>
     <div class="card stack">
-      <input class="input" type="email" id="loginEmail" placeholder="이메일" autocomplete="username">
+      <input class="input" id="loginEmail" placeholder="아이디 또는 이메일" autocomplete="username">
       <input class="input" type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
       <button class="btn primary block" id="loginBtn">로그인</button>
       <p class="muted" id="loginMsg"></p>
     </div>
   </section>
 
+  <section id="vDenied" class="hidden"><div class="empty">이 계정은 관리 권한이 없습니다.</div></section>
   <section id="vMain" class="hidden">
     <div class="kicker">BOARD</div>
     <h1>게시판</h1>
-    <p class="muted" style="margin-bottom:14px;">메인 화면 <b>수업 달력 위 게시판</b>이에요. 공지를 올리고, 학생 글(🔒 비공개 포함)을 모두 보고 답변할 수 있어요.</p>
+    <p class="muted" style="margin-bottom:14px;" id="intro">메인 화면 <b>수업 달력 위 게시판</b>이에요. 공지를 올리고, 학생 글(익명·선생님께·조교 선생님께 포함)을 모두 보고 답변할 수 있어요. 익명 글은 누가 썼는지 선생님만 볼 수 있어요.</p>
     <div id="permWarn" class="note hidden" style="margin-bottom:14px;border:1px solid var(--red);"><b>Firestore 권한 오류</b> — <code>boardPosts</code>·<code>boardLinks</code> 규칙을 게시했는지 확인하세요.</div>
-    <div class="card">
+    <div class="card" id="noticeCard">
       <h2 id="fHead">공지 쓰기</h2>
       <div class="stack">
         <input class="input" id="fTitle" maxlength="60" placeholder="제목 (예: 10월 시험기간 보강 안내)">
@@ -76,52 +81,74 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=29"></script>
+<script src="common.js?v=30"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, toDate } = OMR;
   const $ = id => document.getElementById(id);
   const pad = n => String(n).padStart(2, '0');
   const fmt = t => { const d = toDate(t); return d && !isNaN(d) ? `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${pad(d.getMinutes())}` : ''; };
-  const FL = [['all', '전체'], ['wait', '답변 대기'], ['notice', '공지'], ['public', '공개'], ['private', '🔒 비공개'], ['hidden', '숨김']];
-  let posts = [], flt = 'all', editId = null, replyId = null;
-  $('adminNav').innerHTML = OMR.adminNav('board.html');
-  OMR.mountAdminLogin(user => {
-    ['vLogin','vMain'].forEach(x => $(x).classList.toggle('hidden', x !== (user ? 'vMain' : 'vLogin')));
-    if (user) load();
+  const VL = { public: ['공개', ''], anon: ['익명', 'an'], teacher: ['🔒 선생님께', 'pv'], private: ['🔒 선생님께', 'pv'], staff: ['🔒 조교쌤께', 'st'] };
+  let posts = [], authors = {}, flt = 'all', editId = null, replyId = null, me = null;
+  const isAdmin = () => !!(me && me.role === 'admin');
+  const FL = () => [['all', '전체'], ['wait', '답변 대기'], ['notice', '공지'], ['public', '공개'], ['anon', '익명']]
+    .concat(isAdmin() ? [['teacher', '🔒 선생님께']] : []).concat([['staff', '🔒 조교쌤께']]).concat(isAdmin() ? [['hidden', '숨김']] : []);
+  const VIEWS = ['vLogin', 'vDenied', 'vMain'];
+  const show = v => VIEWS.forEach(x => $(x).classList.toggle('hidden', x !== v));
+  OMR.mountStaffLogin((m, user) => {
+    me = m; $('whoBadge').classList.add('hidden');
+    if (!user) return show('vLogin');
+    if (!me) return show('vDenied');
+    $('whoBadge').textContent = me.role === 'admin' ? '선생님' : '조교 · ' + me.name;
+    $('whoBadge').className = 'who-badge' + (me.role === 'admin' ? ' admin' : '');
+    $('adminNav').innerHTML = OMR.staffNav('board.html', me.role);
+    $('noticeCard').classList.toggle('hidden', !isAdmin());
+    if (!isAdmin()) $('intro').innerHTML = '메인 화면 게시판의 학생 글이에요. <b>🔒 조교 선생님께</b> 온 글과 공개·익명 글을 보고 답변할 수 있어요.';
+    show('vMain'); load();
   });
   function handleErr(e){ console.error(e); if (e && e.code === 'permission-denied') $('permWarn').classList.remove('hidden'); toast('오류: ' + (e.message || e), 3500); }
   const isWait = p => p.kind === 'post' && p.visibility !== 'hidden' && !(p.reply && p.reply.text);
+  const visOf = p => p.visibility === 'private' ? 'teacher' : p.visibility;
   const match = p => flt === 'all' ? true
     : flt === 'wait' ? isWait(p) : flt === 'notice' ? p.kind === 'notice'
-    : flt === 'hidden' ? p.visibility === 'hidden' : p.kind === 'post' && p.visibility === flt;
+    : flt === 'hidden' ? p.visibility === 'hidden' : p.kind === 'post' && visOf(p) === flt;
   async function load(){
     try {
-      posts = (await db.collection('boardPosts').get()).docs.map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0));
+      const map = q => q.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (isAdmin()) {
+        const [ps, as] = await Promise.all([db.collection('boardPosts').get(), db.collection('boardAuthors').get().catch(() => null)]);
+        posts = map(ps); authors = {}; if (as) as.docs.forEach(d => { authors[d.id] = d.data(); });
+      } else {
+        // 조교: 공개·익명·조교 선생님께 글만 (공지는 공개라 같이 보여요)
+        posts = (await Promise.all(['public', 'anon', 'staff'].map(v => db.collection('boardPosts').where('visibility', '==', v).get().then(map)))).flat();
+        authors = {};
+      }
+      posts.sort((a, b) => (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0));
       render();
     } catch(e){ handleErr(e); $('pList').innerHTML = '<div class="muted">불러오지 못했어요.</div>'; }
   }
   function render(){
     const cnt = k => posts.filter(p => { const o = flt; flt = k; const r = match(p); flt = o; return r; }).length;
-    $('flt').innerHTML = FL.map(([k, l]) => `<button type="button" data-f="${k}" class="${k === flt ? 'on' : ''}">${l}<small>${cnt(k)}</small></button>`).join('');
+    $('flt').innerHTML = FL().map(([k, l]) => `<button type="button" data-f="${k}" class="${k === flt ? 'on' : ''}">${l}<small>${cnt(k)}</small></button>`).join('');
     const list = posts.filter(match);
     $('pCount').textContent = `${posts.length}개 중 ${list.length}개`;
     $('pList').innerHTML = list.length ? list.map(p => {
-      const notice = p.kind === 'notice', hid = p.visibility === 'hidden';
-      const tag = notice ? `<span class="tg nt">${p.pinned ? '📌 공지' : '공지'}</span>` : hid ? '<span class="tg hd">숨김</span>' : p.visibility === 'private' ? '<span class="tg pv">🔒 비공개</span>' : '<span class="tg">공개</span>';
+      const notice = p.kind === 'notice', hid = p.visibility === 'hidden', base = hid ? (p.prevVis || 'public') : p.visibility, v = VL[base] || VL.public, au = authors[p.id];
+      const tag = notice ? `<span class="tg nt">${p.pinned ? '📌 공지' : '공지'}</span>` : (hid ? '<span class="tg hd">숨김</span>' : '') + `<span class="tg ${v[1]}">${v[0]}</span>`;
+      const who = notice ? '선생님' : base === 'anon' ? '익명' + (au ? `<span class="who">실제: ${esc(au.name)}${au.className ? ' · ' + esc(au.className) : ''}</span>` : '') : (au ? esc(au.name) : esc(p.nick || '')) + (p.className ? ' · ' + esc(p.className) : '');
+      const canReply = !notice && (isAdmin() || ['staff', 'public', 'anon'].includes(p.visibility));
       return `<div class="pi ${hid ? 'hid' : ''}" data-id="${esc(p.id)}">
         <div class="h">${tag}${isWait(p) ? '<span class="tg wt">답변 대기</span>' : ''}<span class="t">${esc(p.title)}</span>
-          <span class="m">${notice ? '선생님' : esc(p.nick || '') + (p.className ? ' · ' + esc(p.className) : '')} · ${fmt(p.createdAt)}</span></div>
+          <span class="m">${who} · ${fmt(p.createdAt)}</span></div>
         ${p.body ? `<div class="b">${esc(p.body)}</div>` : ''}
-        ${p.reply && p.reply.text ? `<div class="rp"><span>선생님 답변 · ${fmt(p.reply.at)}</span>${esc(p.reply.text)}</div>` : ''}
-        ${replyId === p.id ? `<div class="rpf"><textarea class="input" id="rpText" rows="3" maxlength="2000" placeholder="답변 (학생 화면에 '선생님 답변'으로 보여요)">${esc((p.reply && p.reply.text) || '')}</textarea>
+        ${p.reply && p.reply.text ? `<div class="rp"><span>${p.reply.by === 'ta' ? '조교 선생님' : '선생님'} 답변 · ${fmt(p.reply.at)}</span>${esc(p.reply.text)}</div>` : ''}
+        ${replyId === p.id ? `<div class="rpf"><textarea class="input" id="rpText" rows="3" maxlength="2000" placeholder="답변 (학생 화면에 보여요)">${esc((p.reply && p.reply.text) || '')}</textarea>
           <div class="row"><button class="btn primary sm" data-a="rpSave">답변 저장</button><button class="btn ghost sm" data-a="rpCancel">취소</button></div></div>` : ''}
         <div class="ops">
-          ${notice ? `<button class="btn sm" data-a="edit">수정</button><button class="btn sm" data-a="pin">${p.pinned ? '고정 해제' : '📌 고정'}</button>`
-            : `<button class="btn sm" data-a="reply">${p.reply && p.reply.text ? '답변 수정' : '답변하기'}</button>
-               <button class="btn sm" data-a="hide">${hid ? '다시 보이기' : '숨기기'}</button>`}
-          <button class="btn ghost sm" data-a="del">삭제</button>
+          ${notice ? (isAdmin() ? `<button class="btn sm" data-a="edit">수정</button><button class="btn sm" data-a="pin">${p.pinned ? '고정 해제' : '📌 고정'}</button>` : '')
+            : (canReply ? `<button class="btn sm" data-a="reply">${p.reply && p.reply.text ? '답변 수정' : '답변하기'}</button>` : '')
+              + (isAdmin() ? `<button class="btn sm" data-a="hide">${hid ? '다시 보이기' : '숨기기'}</button>` : '')}
+          ${isAdmin() ? '<button class="btn ghost sm" data-a="del">삭제</button>' : ''}
         </div></div>`;
     }).join('') : '<div class="muted">해당하는 글이 없어요.</div>';
     const ta = $('rpText'); if (ta) ta.focus();
@@ -135,7 +162,7 @@
       if (a === 'rpCancel') { replyId = null; render(); return; }
       if (a === 'rpSave') {
         const t = $('rpText').value.trim();
-        await ref.update({ reply: t ? { text: t, at: FV.serverTimestamp(), by: 'teacher' } : FV.delete() });
+        await ref.update({ reply: t ? { text: t, at: FV.serverTimestamp(), by: isAdmin() ? 'teacher' : 'ta' } : FV.delete() });
         replyId = null; toast(t ? '답변을 달았어요' : '답변을 지웠어요');
       } else if (a === 'hide') {
         // 숨긴 글은 원래 공개/비공개를 기억해 두었다가 되돌려요

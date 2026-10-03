@@ -57,23 +57,44 @@
         && request.resource.data.items is list && request.resource.data.items.size() <= 300);
     }
 
-    // 메인 게시판: 공지(관리자) + 학생 글(공개/비공개). 비공개 글은 목록 조회 불가, 글 id(추측 불가)로만 열림. 관리자는 전부 봄
+    // 메인 게시판: 공지(관리자) + 학생 글
+    //  public 공개(이름 가림) · anon 익명(학생 정보 없음) · teacher 선생님께(관리자만) · staff 조교 선생님께(조교+관리자)
+    //  선생님께·조교께 글은 목록 조회 불가, 글 id(추측 불가)로만 열림. 누가 썼는지는 boardAuthors(관리자만 읽음)
     match /boardPosts/{id} {
       function postOk() {
         let d = request.resource.data;
+        let au = /databases/$(database)/documents/boardAuthors/$(id);
         return d.kind == 'post'
           && d.keys().hasOnly(['kind','title','body','visibility','sid','nick','className','createdAt'])
-          && d.visibility in ['public','private']
+          && d.visibility in ['public','anon','teacher','staff']
           && d.title is string && d.title.size() >= 1 && d.title.size() <= 60
           && d.body is string && d.body.size() <= 3000
-          && d.nick is string && d.nick.size() <= 12
-          && d.className is string && d.className.size() <= 40
-          && d.sid is string && exists(/databases/$(database)/documents/omrStudents/$(d.sid))
-          && d.createdAt == request.time;
+          && d.createdAt == request.time
+          && existsAfter(au)
+          && (d.visibility == 'anon'
+              ? (!('sid' in d) && !('className' in d) && d.nick == '익명')
+              : (d.sid is string && getAfter(au).data.sid == d.sid
+                 && d.nick is string && d.nick.size() <= 12
+                 && d.className is string && d.className.size() <= 40));
       }
       allow get: if true;
-      allow list: if omrAdmin() || resource.data.visibility == 'public';
+      allow list: if omrAdmin() || resource.data.visibility in ['public','anon']
+        || (omrStaffOrAdmin() && resource.data.visibility == 'staff');
       allow create: if omrAdmin() || postOk();
+      allow update: if omrAdmin() || (omrStaffOrAdmin() && resource.data.visibility in ['public','anon','staff']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reply']));
+      allow delete: if omrAdmin();
+    }
+    // 글쓴이 (익명 글 포함) — 선생님만 읽음
+    match /boardAuthors/{id} {
+      allow read: if omrAdmin();
+      allow create: if omrAdmin() || (request.resource.data.keys().hasOnly(['sid','name','className','createdAt'])
+        && request.resource.data.sid is string
+        && exists(/databases/$(database)/documents/omrStudents/$(request.resource.data.sid))
+        && request.resource.data.name is string && request.resource.data.name.size() <= 20
+        && request.resource.data.className is string && request.resource.data.className.size() <= 40
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/boardPosts/$(id)));
       allow update, delete: if omrAdmin();
     }
     // 학생별 내가 쓴 글 id 목록 (학생 코드로만 접근)
