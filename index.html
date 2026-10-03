@@ -583,6 +583,13 @@
     background:var(--ink); color:var(--bg); font-size:14px; font-weight:700; border-radius:3px;
     transition:background .2s; }
   .slide .statement{ margin-bottom:26px; }
+  .slide-feats{ list-style:none; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:-4px 0 26px; max-width:640px; }
+  .slide-feats li{ border:1px solid var(--line); background:#fff; padding:10px 12px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .slide-feats li b{ font-size:14px; font-weight:800; letter-spacing:-.01em; }
+  .slide-feats li b::before{ content:"✓"; color:var(--red); font-weight:900; margin-right:5px; }
+  .slide-feats li span{ font-size:12px; color:var(--dim); line-height:1.35; }
+  .slide-feats.n4{ grid-template-columns:repeat(4,minmax(0,1fr)); max-width:700px; }
+  @media (max-width:640px){ .slide-feats.n4, .slide-feats{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; } .slide-feats li{ padding:8px 10px; } .slide-feats li b{ font-size:13px; } }
   .slide-cta:hover{ background:var(--red); }
   .slider-ctrl{ display:flex; align-items:center; gap:14px; padding:16px 0 36px; }
   .slider-count{ font-size:12.5px; font-weight:600; color:var(--dim); font-variant-numeric:tabular-nums; }
@@ -652,7 +659,7 @@
 
   <section class="hero-slider" id="intro" aria-roledescription="carousel" aria-label="메인 소식">
     <div class="slides" id="slides">
-  <header class="hero slide" aria-roledescription="slide" aria-label="1 / 4">
+  <header class="hero slide" aria-roledescription="slide">
     <p class="kicker">고등수학 · 내신 · 수능</p>
     <h1 class="headline">엄형국<br>수학<span class="accent">.</span></h1>
     <p class="role-line">메가스터디학원 · 메가스터디 러셀 · 대치 상상학원 · 대치 SNT학원 출신</p>
@@ -661,27 +668,62 @@
       <p class="statement-main">조건에 강한 내신성공의 방정식,<br>변수에 흔들리지 않는 수능성공의 항등식</p>
     </div>
   </header>
-      <div class="hero slide" aria-roledescription="slide" aria-label="2 / 4">
-        <p class="kicker">개념 퀴즈 게임</p>
-        <h2 class="headline">놀면서<br>복습<span class="accent">.</span></h2>
-        <p class="role-line">개념의 탑 · 수학몬스터 · 수학 펭귄</p>
+      <div class="hero slide" aria-roledescription="slide">
+        <p class="kicker">All-in-one 학습 관리</p>
+        <h2 class="headline">수업 밖까지<br>관리<span class="accent">.</span></h2>
+        <p class="role-line">시험 · 리포트 · 과제 · 클리닉 · 플래너를 한 곳에서</p>
         <div class="statement">
-          <p class="statement-sub">시간 안에 답하는 문장형 개념 퀴즈.</p>
-          <p class="statement-main">공통수학2 · 미적분 개념을<br>게임으로 점검하세요</p>
+          <p class="statement-sub">학원 수업이 끝나도 관리는 끝나지 않습니다.</p>
+          <p class="statement-main">학생 코드 하나로<br>내 학습 기록이 한 화면에</p>
         </div>
+        <ul class="slide-feats n6"><li><b>시험 OMR</b><span>자동 채점</span></li><li><b>데일리 리포트</b><span>매 수업</span></li><li><b>과제</b><span>사진 제출</span></li><li><b>클리닉</b><span>예약 · 학습지</span></li><li><b>복습 분석</b><span>단원별 추이</span></li><li><b>플래너</b><span>순공 기록</span></li></ul>
+        <a class="slide-cta" href="omr/?demo=1">재원생 화면 둘러보기 →</a>
+      </div>
+      <div class="hero slide" aria-roledescription="slide">
+        <p class="kicker">모바일 OMR · 성적표</p>
+        <h2 class="headline">제출하면<br>바로 분석<span class="accent">.</span></h2>
+        <p class="role-line">5지선다 · 단답형 · 서논술형</p>
+        <div class="statement">
+          <p class="statement-sub">휴대폰으로 답안을 내면 채점이 끝납니다.</p>
+          <p class="statement-main">점수만이 아니라<br>무엇을 놓쳤는지까지</p>
+        </div>
+        <ul class="slide-feats n4"><li><b>등급 · 석차</b><span>반 안에서 내 위치</span></li><li><b>단원 · 난이도</b><span>유형별 득점률</span></li><li><b>오답 분석</b><span>많이 틀린 문항</span></li><li><b>누적 성적</b><span>시험별 추이</span></li></ul>
+        <a class="slide-cta" href="omr/?mode=omr&demo=1">예시 OMR 마킹해 보기 →</a>
+      </div>
+      <div class="hero slide" aria-roledescription="slide">
+        <p class="kicker">데일리 리포트</p>
+        <h2 class="headline">매 수업<br>리포트<span class="accent">.</span></h2>
+        <p class="role-line">학생 · 학부모에게 링크로 바로</p>
+        <div class="statement">
+          <p class="statement-sub">오늘 수업에서 무엇을 했고, 무엇이 남았는지.</p>
+          <p class="statement-main">복습 테스트 점수와<br>보완할 유형을 매번 확인</p>
+        </div>
+        <ul class="slide-feats n4"><li><b>복습 테스트</b><span>반 평균과 비교</span></li><li><b>보완할 유형</b><span>형광펜으로 콕</span></li><li><b>출결 · 과제</b><span>수행률까지</span></li><li><b>선생님 코멘트</b><span>다음 수업 계획</span></li></ul>
+        <a class="slide-cta" href="omr/daily-report.html?demo=1">리포트 예시 보기 →</a>
+      </div>
+      <div class="hero slide" aria-roledescription="slide">
+        <p class="kicker">과제 · 클리닉 · 질문</p>
+        <h2 class="headline">빈틈은<br>바로 메우기<span class="accent">.</span></h2>
+        <p class="role-line">틀린 단원은 맞춤 문제로 다시</p>
+        <div class="statement">
+          <p class="statement-sub">모르는 건 그날 바로, 틀린 건 다음 수업 전에.</p>
+          <p class="statement-main">과제 확인부터 오답 클리닉까지<br>놓치지 않게</p>
+        </div>
+        <ul class="slide-feats n4"><li><b>과제 제출</b><span>사진으로 올리고 확인</span></li><li><b>오답 클리닉</b><span>틀린 단원 맞춤 학습지</span></li><li><b>클리닉 예약</b><span>남은 자리 보고 예약</span></li><li><b>질문하기</b><span>사진 한 장으로</span></li></ul>
+        <a class="slide-cta" href="omr/hw.html?demo=1">과제 화면 예시 보기 →</a>
+      </div>
+      <div class="hero slide" aria-roledescription="slide">
+        <p class="kicker">자기주도 학습</p>
+        <h2 class="headline">혼자서도<br>꾸준히<span class="accent">.</span></h2>
+        <p class="role-line">플래너 · 집중 타이머 · 영상 강의 · 퀴즈 게임</p>
+        <div class="statement">
+          <p class="statement-sub">혼자 공부하는 시간이 실력이 됩니다.</p>
+          <p class="statement-main">계획하고, 집중하고,<br>게임으로 개념 점검</p>
+        </div>
+        <ul class="slide-feats n4"><li><b>스터디 플래너</b><span>할 일 · 시간표</span></li><li><b>집중 타이머</b><span>순공 시간 기록</span></li><li><b>복습 영상</b><span>시청 기록 관리</span></li><li><b>개념 퀴즈 게임</b><span>게임 3종</span></li></ul>
         <a class="slide-cta" href="#games">퀴즈 게임 하러 가기 →</a>
       </div>
-      <div class="hero slide" aria-roledescription="slide" aria-label="3 / 4">
-        <p class="kicker">모바일 OMR</p>
-        <h2 class="headline">제출하고<br>바로 채점<span class="accent">.</span></h2>
-        <p class="role-line">답안 제출 · 자동 채점 · 성적표</p>
-        <div class="statement">
-          <p class="statement-sub">학생 코드 하나로 입장.</p>
-          <p class="statement-main">휴대폰으로 답안을 내고<br>내 성적표를 바로 확인하세요</p>
-        </div>
-        <a class="slide-cta" href="omr/?mode=omr">OMR 입장하기 →</a>
-      </div>
-      <div class="hero slide" aria-roledescription="slide" aria-label="4 / 4">
+      <div class="hero slide" aria-roledescription="slide">
         <p class="kicker">상담 · 레벨테스트</p>
         <h2 class="headline">지금<br>상담하기<span class="accent">.</span></h2>
         <p class="role-line">고1 · 고2 · 고3 내신 · 수능</p>
@@ -693,7 +735,7 @@
       </div>
     </div>
     <div class="slider-ctrl">
-      <span class="slider-count"><b id="slideNow">01</b> / <span id="slideTotal">04</span></span>
+      <span class="slider-count"><b id="slideNow">01</b> / <span id="slideTotal">07</span></span>
       <span class="slider-bar"><i id="slideBar"></i></span>
       <button class="slider-btn" id="slidePrev" type="button" aria-label="이전 슬라이드">←</button>
       <button class="slider-btn" id="slideNext" type="button" aria-label="다음 슬라이드">→</button>
@@ -1345,7 +1387,7 @@
   }
   var t; track.addEventListener('scroll',function(){ clearTimeout(t); t=setTimeout(update,60); },{passive:true});
   function start(){ stop(); if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    timer=setInterval(function(){ if(!document.hidden) go(cur+1); },5000); }
+    timer=setInterval(function(){ if(!document.hidden) go(cur+1); },6500); }
   function stop(){ if(timer){ clearInterval(timer); timer=null; } }
   document.getElementById('slidePrev').addEventListener('click',function(){ go(cur-1); start(); });
   document.getElementById('slideNext').addEventListener('click',function(){ go(cur+1); start(); });
