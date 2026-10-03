@@ -574,11 +574,10 @@
     catch (e) { return null; }
   }
   /** 조교에게 맡긴 반이 정해져 있으면 그 반 학생만 (선생님·반 미지정 조교는 전체) */
-  /** 조교가 볼 수 있는 질문: 선생님이 그 질문을 볼 조교로 고른 것만 (viewers). state: 'open' 답변 대기 / 'answered' 내가 단 답변 */
+  /** 조교가 볼 수 있는 질문: 선생님이 그 질문을 볼 조교로 고른 것만 (viewers). 답변 완료된 질문도 선생님이 고르면 보여요 */
   async function taQuestions(me, state) {
     if (!me) return [];
-    let q = db.collection('questions').where('viewers', 'array-contains', me.uid);
-    q = state === 'answered' ? q.where('answer.uid', '==', me.uid) : q.where('status', '==', 'open');
+    const q = db.collection('questions').where('viewers', 'array-contains', me.uid).where('status', '==', state === 'answered' ? 'answered' : 'open');
     return (await q.get()).docs.map(d => ({ id: d.id, ...d.data() }));
   }
   const taOpenQuestions = me => taQuestions(me, 'open');

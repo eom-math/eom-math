@@ -297,7 +297,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=34"></script>
+<script src="common.js?v=35"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, round } = OMR;
@@ -713,8 +713,7 @@
   $('qnaTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return;
     [...$('qnaTabs').children].forEach(x => x.classList.toggle('on', x === b)); qnaState = b.dataset.s; loadQna(); };
   const isTA = () => me && me.role === 'ta';
-  // 질문은 기본적으로 선생님만. 선생님이 질문마다 '볼 수 있는 조교'(여러 명)를 고르면 그 조교에게도 평소 질문처럼 보여요.
-  // 조교의 '답변 완료'에는 자기가 단 답변만 보여요
+  // 질문은 기본적으로 선생님만. 선생님이 질문마다 '같이 볼 조교'(여러 명)를 고르면 그 조교에게도 평소 질문처럼 보여요 (답변 완료 질문 포함)
   async function fetchQna(){
     if (isTA()) return OMR.taQuestions(me, qnaState);
     return (await db.collection('questions').where('status', '==', qnaState).get()).docs.map(d => ({ id:d.id, ...d.data() }));
@@ -757,7 +756,7 @@
           : '<span class="muted" style="font-size:12px;">조교 계정이 없어요</span>'}
         <span class="muted" style="font-size:12px;" data-vs>${(q.viewers || []).length ? '' : '선생님만 봐요'}</span></div>` : ''}
       ${q.answer ? `<div class="ans"><div class="by">${esc(q.answer.by)} · ${OMR.fmtDateTime(q.answer.at)}</div><div class="txt">${esc(q.answer.text)}</div>${thumbs(q.answer.files)}</div>` : ''}
-      <div class="stack" style="margin-top:10px;">
+      <div class="stack" style="margin-top:10px;${!isTA() || q.status === 'open' || (q.answer && q.answer.uid === me.uid) ? '' : 'display:none;'}">
         <textarea class="input" data-a placeholder="답변을 입력하세요" style="min-height:90px;">${q.answer ? esc(q.answer.text) : ''}</textarea>
         <div class="row"><label class="btn sm">📷 답변 사진<input type="file" accept="image/*" multiple hidden data-f></label><span class="muted" data-fn style="font-size:12px;"></span>
           <button class="btn primary sm" data-send style="margin-left:auto;">${q.answer ? '답변 수정' : '답변 등록'}</button></div>
