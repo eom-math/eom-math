@@ -454,7 +454,8 @@
       const st = document.createElement('style'); st.id = 'anavCss'; st.textContent = NAV_CSS; document.head.appendChild(st);
     }
     const here = current + (current === 'ops.html' && typeof location !== 'undefined' ? (location.hash || '#clinic') : '');
-    const groups = NAV_GROUPS.map(([label, items]) => [label, items.filter(x => role === 'admin' || x[2])]).filter(g => g[1].length);
+    // 조교: 조교용 메뉴만, 질문 답변은 선생님이 '질문 답변' 권한을 준 조교만
+    const groups = NAV_GROUPS.map(([label, items]) => [label, items.filter(x => role === 'admin' || (x[2] && (x[3] !== 'qna' || (lastStaff && lastStaff.qna))))]).filter(g => g[1].length);
     const isCur = items => items.some(([href]) => href === here || href === current);
     const bar = '<div class="gbar">' + groups.map(([label, list], i) => {
       const bd = list.filter(x => x[3]).map(x => x[3]).join(',');
@@ -499,7 +500,7 @@
       try {
         // 조교는 선생님이 토스한 질문만 셀 수 있어요
         const u = firebase.auth().currentUser;
-        const n = navRole === 'ta' && u ? (await db.collection('questions').where('assignee', '==', u.uid).get()).docs.filter(d => d.data().status === 'open').length
+        const n = navRole === 'ta' && u ? (await taOpenQuestions(lastStaff)).length
           : (await db.collection('questions').where('status', '==', 'open').get()).size;
         put('qna', n, `답변 기다리는 질문 ${n}개`); }
       catch (e) { /* 권한 없으면 표시 안 함 */ }
@@ -524,19 +525,47 @@
     };
     $('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
     $('logoutBtn').onclick = () => auth.signOut();
-    auth.onAuthStateChanged(user => {
+    auth.onAuthStateChanged(async user => {
       $('logoutBtn').classList.toggle('hidden', !user);
       $('adminEmail').textContent = user ? user.email : '';
+      // 로그인만 됐다고 들어오면 안 돼요: 선생님(관리자) 계정인지 확인. 조교·다른 계정은 막음
+      if (user && !(await isAdminUser(user))) { denyAdmin(user); return; }
+      clearDeny();
       onChange(user);
     });
+  }
+  /** 선생님(관리자) 계정인지: 관리자만 읽을 수 있는 목록을 읽어 봐서 확인 (보안 규칙이 판단) */
+  async function isAdminUser(user) { const r = user ? await detectStaff(user) : null; return !!(r && r.role === 'admin'); }
+  function clearDeny() { const d = document.getElementById('adminDeny'); if (d) d.remove(); }
+  function denyAdmin(user) {
+    document.querySelectorAll('body > .wrap > section, body > .wrap > nav, #adminNav').forEach(el => { el.classList.add('hidden'); el.hidden = true; });
+    clearDeny();
+    const d = document.createElement('div'); d.id = 'adminDeny';
+    d.style.cssText = 'position:fixed;inset:0;z-index:999;background:#FAFAF8;display:grid;place-items:center;padding:20px;';
+    d.innerHTML = `<div style="max-width:380px;text-align:center;font-family:inherit;">
+      <div style="font-size:42px;margin-bottom:10px;">🔒</div>
+      <h2 style="font-size:20px;font-weight:900;margin:0 0 8px;">선생님 전용 페이지예요</h2>
+      <p style="font-size:14px;color:#63636B;line-height:1.6;margin:0 0 18px;"><b>${esc(staffIdFromEmail(user.email || ''))}</b> 계정은 이 페이지를 볼 수 없어요.<br>조교 계정은 조교 화면에서 맡은 일을 할 수 있어요.</p>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <a href="ops.html#att" style="padding:11px 16px;border-radius:12px;background:#111114;color:#fff;font-weight:800;text-decoration:none;font-size:14px;">조교 화면으로</a>
+        <button type="button" id="denyOut" style="padding:11px 16px;border-radius:12px;border:1px solid rgba(17,17,20,.15);background:#fff;font-weight:800;font-size:14px;">로그아웃</button>
+      </div></div>`;
+    document.body.appendChild(d);
+    d.querySelector('#denyOut').onclick = () => firebase.auth().signOut().then(() => location.reload());
   }
 
   // ───────── 선생님·조교 공통 로그인 ─────────
   // 반환: {uid, name, role:'admin'|'ta'} 또는 null(권한 없음)
+  const staffCache = {};
+  let lastStaff = null;
   async function detectStaff(user) {
+    if (staffCache[user.uid] !== undefined) return (lastStaff = staffCache[user.uid]);
+    return (lastStaff = staffCache[user.uid] = await detectStaff0(user));
+  }
+  async function detectStaff0(user) {
     try {
       const s = await db.collection('omrStaff').doc(user.uid).get();
-      if (s.exists) return { uid: user.uid, name: s.data().name || '조교', role: 'ta', classes: s.data().classes || [] };
+      if (s.exists) return { uid: user.uid, name: s.data().name || '조교', role: 'ta', classes: s.data().classes || [], qna: !!s.data().qna };
     } catch (e) { /* 무시 */ }
     try { await db.collection('omrStaff').limit(1).get(); return { uid: user.uid, name: '엄형국 선생님', role: 'admin' }; }
     catch (e) { /* 새 규칙이 아직 게시되지 않았을 수 있음 */ }
@@ -545,6 +574,14 @@
     catch (e) { return null; }
   }
   /** 조교에게 맡긴 반이 정해져 있으면 그 반 학생만 (선생님·반 미지정 조교는 전체) */
+  /** 질문 권한이 있는 조교가 볼 수 있는 답변 대기 질문 (맡은 반이 있으면 그 반만) */
+  async function taOpenQuestions(me) {
+    if (!me || !me.qna) return [];
+    const c = staffClasses(me);
+    let q = db.collection('questions').where('status', '==', 'open');
+    if (c) q = q.where('className', 'in', c.slice(0, 30));
+    return (await q.get()).docs.map(d => ({ id: d.id, ...d.data() }));
+  }
   function staffClasses(me) { return me && me.role === 'ta' && me.classes && me.classes.length ? me.classes : null; }
   function scopeRoster(list, me) { const c = staffClasses(me); return c ? list.filter(s => c.includes(s.className)) : list; }
   function staffNav(current, role) { return navHtml(current, role === 'admin' ? 'admin' : 'ta'); }
@@ -871,7 +908,7 @@
     QTYPES, examTypes, examSegments, layoutText, shortEq,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, fillNavBadges, mountAdminLogin, commitOps, shuffle, UNTAGGED,
-    ACADEMIES, lectureForStudent, EXT_LINKS, slotForClass, slotClassLabel, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, plannerNotes, markPlannerSeen, plannerSeen, noteSig, PLAN_STAMP, studentDashboard, detectStaff, staffClasses, scopeRoster, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
+    ACADEMIES, lectureForStudent, EXT_LINKS, slotForClass, slotClassLabel, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, plannerNotes, markPlannerSeen, plannerSeen, noteSig, PLAN_STAMP, studentDashboard, detectStaff, isAdminUser, denyAdmin, taOpenQuestions, staffClasses, scopeRoster, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

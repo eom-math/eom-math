@@ -55,7 +55,7 @@
   <section id="vMain" class="hidden">
     <div class="kicker">STAFF</div>
     <h1>조교 관리</h1>
-    <p class="muted" style="margin-bottom:14px;">조교 계정을 만들고, 비밀번호를 확인하고, <b>맡은 반</b>을 정해요. 맡은 반을 정하면 그 조교는 그 반 학생 정보(등원·데일리 리포트·플래너·순공·학생 기록·게시판 글)만 봐요. 질문은 선생님이 <b>질문 답변</b>에서 조교에게 맡긴 것만 보여요.</p>
+    <p class="muted" style="margin-bottom:14px;">조교 계정을 만들고, 비밀번호를 확인하고, <b>맡은 반</b>을 정해요. 맡은 반을 정하면 그 조교는 그 반 학생 정보(등원·데일리 리포트·플래너·순공·학생 기록·게시판 글)만 봐요. <b>질문 답변</b>은 권한을 켠 조교만 볼 수 있어요 (맡은 반 질문만, 다른 조교의 답변은 안 보여요).</p>
     <div id="permWarn" class="note hidden" style="margin-bottom:14px;border:1px solid var(--red);"><b>Firestore 권한 오류</b> — <code>staffSecrets</code> 규칙을 게시했는지 확인하세요.</div>
     <div class="card">
       <h2>조교 계정 만들기</h2>
@@ -65,6 +65,7 @@
         <div><label class="f">비밀번호 (6자 이상)</label><input class="input" id="taPw" placeholder="••••••"></div>
       </div>
       <div style="margin-top:10px;"><label class="f">맡은 반 <span class="muted" style="font-weight:600;">(안 고르면 전체 반)</span></label><div class="chips" id="taCls"></div></div>
+      <label class="row" style="gap:8px;margin-top:10px;font-size:13.5px;font-weight:800;"><input type="checkbox" id="taQna" style="width:18px;height:18px;"> 질문 답변 권한 주기</label>
       <div class="row" style="margin-top:12px;"><button class="btn primary" id="taCreateBtn">계정 만들기</button><span class="muted" id="taMsg"></span></div>
     </div>
     <div class="row between" style="margin:22px 0 10px;"><h2 style="margin:0;">조교 목록</h2><span class="muted" id="taCount"></span></div>
@@ -75,7 +76,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=32"></script>
+<script src="common.js?v=33"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText } = OMR;
@@ -97,24 +98,25 @@
     try {
       list = (await db.collection('omrStaff').get()).docs.map(d => ({ uid: d.id, ...d.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
       secrets = {}; try { (await db.collection('staffSecrets').get()).docs.forEach(d => { secrets[d.id] = d.data(); }); } catch(e){ handleErr(e); }
-      qStat = {}; try { (await db.collection('questions').get()).docs.forEach(d => { const q = d.data(); if (!q.assignee) return;
-        const x = qStat[q.assignee] = qStat[q.assignee] || { open: 0, done: 0 }; q.status === 'open' ? x.open++ : x.done++; }); } catch(e){}
+      qStat = {}; try { (await db.collection('questions').get()).docs.forEach(d => { const q = d.data(); const u = q.answer && q.answer.uid; if (!u) return; qStat[u] = (qStat[u] || 0) + 1; }); } catch(e){}
       render();
     } catch(e){ handleErr(e); $('taList').innerHTML = '<div class="muted">불러오지 못했어요.</div>'; }
   }
   function render(){
     $('taCount').textContent = `${list.length}명`;
     $('taList').innerHTML = list.length ? list.map(t => {
-      const id = t.loginId || OMR.staffIdFromEmail(t.email), sec = secrets[t.uid], q = qStat[t.uid] || { open: 0, done: 0 }, cls = new Set(t.classes || []);
+      const id = t.loginId || OMR.staffIdFromEmail(t.email), sec = secrets[t.uid], cls = new Set(t.classes || []);
       return `<div class="ta" data-uid="${esc(t.uid)}">
         <div class="h"><b>${esc(t.name || '조교')}</b><span class="id">아이디 ${esc(id)}</span>
-          <span class="st">맡긴 질문 · 대기 ${q.open} · 답변 ${q.done}</span></div>
+          <span class="st">답변한 질문 ${qStat[t.uid] || 0}개</span></div>
         <div class="kv"><span>비밀번호</span><div class="pw">${sec && sec.pw
           ? `<code>${showPw[t.uid] ? esc(sec.pw) : '••••••'}</code><button class="btn sm" data-a="eye">${showPw[t.uid] ? '숨기기' : '👁 보기'}</button>
              <button class="btn sm" data-a="copy">로그인 정보 복사</button><input class="input" data-np placeholder="새 비밀번호"><button class="btn sm" data-a="chpw">바꾸기</button>`
           : `<span class="muted" style="font-size:12.5px;">저장 안 됨</span><input class="input" data-kp placeholder="지금 비밀번호"><button class="btn sm" data-a="keep">기록하기</button>`}</div></div>
         <div class="kv"><span>맡은 반</span><div><div class="chips" data-cls>${chips(cls, 'data-tc')}</div>
           <div class="muted" style="font-size:12px;margin-top:4px;">${cls.size ? `${[...cls].join(', ')} 학생만 봐요` : '전체 반을 봐요'} · 누르면 바로 저장돼요</div></div></div>
+        <div class="kv"><span>질문 답변</span><label class="row" style="gap:8px;font-size:13.5px;font-weight:800;cursor:pointer;"><input type="checkbox" data-qna ${t.qna ? 'checked' : ''} style="width:18px;height:18px;">
+          ${t.qna ? '질문을 보고 답변할 수 있어요' : '질문이 안 보여요'}</label></div>
         <div class="row" style="justify-content:flex-end;"><button class="btn sm ghost" data-a="del" style="color:var(--red);">권한 해제</button></div>
       </div>`; }).join('') : '<div class="muted">아직 조교 계정이 없어요.</div>';
   }
@@ -122,6 +124,11 @@
   $('taList').onclick = async e => {
     const card = e.target.closest('.ta'); if (!card) return;
     const t = list.find(x => x.uid === card.dataset.uid), id = t.loginId || OMR.staffIdFromEmail(t.email), sec = secrets[t.uid];
+    const qc = e.target.closest('[data-qna]');
+    if (qc) {
+      try { await db.collection('omrStaff').doc(t.uid).update({ qna: qc.checked }); t.qna = qc.checked; render(); toast(qc.checked ? `${t.name}: 질문 답변 켬` : `${t.name}: 질문 답변 끔`); } catch(err){ handleErr(err); }
+      return;
+    }
     const tc = e.target.closest('[data-tc]');
     if (tc) {
       const cls = new Set(t.classes || []), c = tc.dataset.tc; cls.has(c) ? cls.delete(c) : cls.add(c);
@@ -162,7 +169,7 @@
     const sec = secondary();   // 선생님 로그인을 유지한 채 계정 만들기
     try {
       const cred = await sec.auth().createUserWithEmailAndPassword(OMR.staffEmail(id), pw);
-      await db.collection('omrStaff').doc(cred.user.uid).set({ name, loginId: id, email: OMR.staffEmail(id), role: 'ta', classes: [...newCls], createdAt: FV.serverTimestamp() });
+      await db.collection('omrStaff').doc(cred.user.uid).set({ name, loginId: id, email: OMR.staffEmail(id), role: 'ta', classes: [...newCls], qna: $('taQna').checked, createdAt: FV.serverTimestamp() });
       await db.collection('staffSecrets').doc(cred.user.uid).set({ pw, loginId: id, updatedAt: FV.serverTimestamp() });
       await sec.auth().signOut();
       $('taMsg').textContent = ''; $('taName').value = $('taId').value = $('taPw').value = ''; newCls = new Set(); drawNewCls();

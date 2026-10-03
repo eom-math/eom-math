@@ -467,7 +467,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=32"></script>
+<script src="common.js?v=33"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast, copyText, fmtPhone, normalizePhone } = OMR;
@@ -520,6 +520,8 @@
     $('logoutBtn').classList.toggle('hidden', !user);
     $('adminEmail').textContent = user ? user.email : '';
     if (!user){ show('vLogin'); return; }
+    // 조교·다른 계정은 들어올 수 없어요 (선생님 계정인지 보안 규칙으로 확인)
+    if (!(await OMR.isAdminUser(user))) { OMR.denyAdmin(user); return; }
     show('vMain');
     await Promise.all([loadStudents(), loadExams(), loadTypes()]);
   });
