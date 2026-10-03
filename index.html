@@ -1424,7 +1424,9 @@
 </script>
 <script src="omr/common.js?v=29"></script>
 <script src="notice.js?v=1"></script>
-<script src="omr/calendar.js?v=9"></script>
+<script src="omr/timerange.js?v=1"></script>
+<script src="omr/calendar.js?v=10"></script>
+<script src="omr/mycal.js?v=1"></script>
 <script src="board.js?v=2"></script>
 <script>try { BOARD.mount(document.getElementById('board')); } catch(e){ console.warn(e); }</script>
 <script>
@@ -1434,7 +1436,7 @@
   CAL.injectCss();
   var $ = function(id){ return document.getElementById(id); };
   var db = OMR.db, today = OMR.todayStr();
-  var st = { ym: today.slice(0, 7), tab: 'class', me: null, schedules: [], events: [], docs: {}, loaded: {}, sample: false };
+  var st = { ym: today.slice(0, 7), tab: 'class', me: null, schedules: [], events: [], mine: [], docs: {}, loaded: {}, sample: false };
   function esc(x){ return OMR.esc(x); }
   function sampleDocs(ym){
     CAL.monthDays(ym).filter(function(c){ return c.cur && c.d <= today; }).forEach(function(c, i){
@@ -1449,12 +1451,13 @@
     var cls = st.me ? st.me.className : null;
     var note = $('mcNote');
     if (st.tab === 'class'){
-      var opt = { schedules: st.schedules, events: st.events, className: cls, school: st.me ? (st.me.school || '') : '*', grade: st.me ? (st.me.grade || null) : null, today: today };
+      var opt = { schedules: st.schedules, events: st.events.concat(MYCAL.toEvents(st.mine)), className: cls, school: st.me ? (st.me.school || '') : '*', grade: st.me ? (st.me.grade || null) : null, today: today };
       $('mcBox').innerHTML = CAL.classHtml(st.ym, opt);
       var DW = '일월화수목금토', reg = [];
       st.schedules.forEach(function(s){ (s.slots || []).forEach(function(t){ reg.push(t); }); });
       reg.sort(function(a, b){ return a.dow - b.dow; });
-      $('mcFoot').innerHTML = (reg.length ? '<div class="mc-reg">정규 수업 · ' + reg.map(function(t){ return '<b>' + DW[t.dow] + '</b> ' + esc(t.start) + (t.end ? '~' + esc(t.end) : ''); }).join(' · ') + '</div>' : '') + CAL.listHtml(st.ym, opt);
+      $('mcFoot').innerHTML = (reg.length ? '<div class="mc-reg">정규 수업 · ' + reg.map(function(t){ return '<b>' + DW[t.dow] + '</b> ' + esc(t.start) + (t.end ? '~' + esc(t.end) : ''); }).join(' · ') + '</div>' : '')
+        + (st.me ? '<div class="mc-reg">📌 날짜를 누르면 <b>내 일정</b>을 추가할 수 있어요 (나만 보여요)</div>' : '') + CAL.listHtml(st.ym, opt);
       note.hidden = !!st.me;
       if (!st.me) note.innerHTML = '<span>공휴일과 전체 일정이 보여요. 학생 코드로 입장하면 <b>내 반 수업 시간·휴강·직보</b>가 함께 보여요.</span><button type="button" id="mcLogin">학생 코드로 입장</button>';
     } else {
@@ -1480,7 +1483,13 @@
   $('mcTabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; st.tab = b.dataset.t; render(); };
   $('mcPrev').onclick = function(){ st.ym = CAL.shiftMonth(st.ym, -1); render(); };
   $('mcNext').onclick = function(){ st.ym = CAL.shiftMonth(st.ym, 1); render(); };
-  $('mcBox').onclick = function(e){ var c = e.target.closest('.cc.pl'); if (!c || st.sample) return; if (c.dataset.d <= today) location.href = 'omr/planner.html?d=' + c.dataset.d; };
+  $('mcBox').onclick = function(e){
+    var p = e.target.closest('.cc.pl'); if (p) { if (!st.sample && p.dataset.d <= today) location.href = 'omr/planner.html?d=' + p.dataset.d; return; }
+    var c = e.target.closest('.cc'); if (!c || st.tab !== 'class') return;
+    if (!st.me) { if (window.openGate) window.openGate(); return; }
+    MYCAL.open({ date: c.dataset.d, code: st.me.code, items: st.mine, events: st.events, schedules: st.schedules, className: st.me.className, school: st.me.school || '', grade: st.me.grade || null,
+      onSaved: function(items){ st.mine = items; render(); } });
+  };
   var code = null; try { code = localStorage.getItem('omrStudentCode'); } catch(e){}
   var meP = code ? OMR.studentByCode(code).catch(function(){ return null; }) : Promise.resolve(null);
   meP.then(function(me){
@@ -1489,9 +1498,10 @@
     return Promise.all([
       me ? db.collection('classSchedules').where('className', '==', me.className).get().then(function(q){ return CAL.pickSchedules(q.docs.map(function(d){ return d.data(); }), me.className, me.school || ''); }).catch(function(){ return []; }) : [],
       db.collection('classEvents').get().then(function(q){ return q.docs.map(function(d){ var x = d.data(); x.id = d.id; return x; }); }).catch(function(){ return []; }),
+      me ? MYCAL.load(me.code) : [],
     ]);
   }).then(function(r){
-    st.schedules = r[0];
+    st.schedules = r[0]; st.mine = r[2] || [];
     st.events = st.me ? CAL.prepare(r[1], st.me.className, st.me.school || '', st.me.grade || null) : CAL.expand(r[1]).filter(function(e){ return (e.classNames || ['*']).indexOf('*') >= 0 && !(e.schools || []).length; });
     render();
   });

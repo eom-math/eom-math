@@ -48,6 +48,15 @@
       allow write: if omrAdmin();
     }
 
+    // 학생이 직접 넣는 '내 일정' (학생 코드 문서 하나). 선생님 일정(classEvents)은 관리자만 씀
+    match /studentCal/{code} {
+      allow get: if true;
+      allow list: if omrAdmin();
+      allow write: if omrAdmin() || (exists(/databases/$(database)/documents/omrCodes/$(code))
+        && request.resource.data.keys().hasOnly(['items','updatedAt'])
+        && request.resource.data.items is list && request.resource.data.items.size() <= 300);
+    }
+
     // 메인 게시판: 공지(관리자) + 학생 글(공개/비공개). 비공개 글은 목록 조회 불가, 글 id(추측 불가)로만 열림. 관리자는 전부 봄
     match /boardPosts/{id} {
       function postOk() {

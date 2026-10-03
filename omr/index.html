@@ -403,7 +403,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="common.js?v=29"></script>
 <script src="demo.js?v=3"></script>
-<script src="calendar.js?v=9"></script>
+<script src="timerange.js?v=1"></script>
+<script src="calendar.js?v=10"></script>
+<script src="mycal.js?v=1"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast } = OMR;
@@ -635,7 +637,7 @@
   }
 
   // ───────── 월간 달력 (수업 시간표 · 플래너 공부) ─────────
-  const cal = { ym: OMR.todayStr().slice(0, 7), tab: 'class', schedules: [], events: [], docs: {}, loaded: {}, demo: false };
+  const cal = { ym: OMR.todayStr().slice(0, 7), tab: 'class', schedules: [], events: [], mine: [], docs: {}, loaded: {}, demo: false };
   CAL.injectCss();
   async function loadCalendar(){
     try {
@@ -644,6 +646,7 @@
         db.collection('classEvents').get().then(q => q.docs.map(d => ({ id: d.id, ...d.data() }))).catch(() => []),
       ]);
       cal.schedules = CAL.pickSchedules(s, me.className, me.school || ''); cal.events = CAL.prepare(e, me.className, me.school || '', me.grade || null);
+      cal.mine = await MYCAL.load(me.code);
     } catch(err){ console.warn(err); }
     renderCal();
   }
@@ -660,12 +663,12 @@
     $('calTabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === cal.tab));
     const today = OMR.todayStr();
     if (cal.tab === 'class'){
-      const opt = { schedules: cal.schedules, events: cal.events, className: me.className, school: me.school || '', grade: me.grade || null, today };
+      const opt = { schedules: cal.schedules, events: cal.events.concat(MYCAL.toEvents(cal.mine)), className: me.className, school: me.school || '', grade: me.grade || null, today };
       $('calBox').innerHTML = CAL.classHtml(cal.ym, opt);
       const DW = '일월화수목금토';
       const reg = cal.schedules.flatMap(s => s.slots || []).sort((a, b) => a.dow - b.dow);
       $('calFoot').innerHTML = (reg.length ? `<div class="cal-reg">정규 수업 · ${reg.map(t => `<b>${DW[t.dow]}</b> ${esc(t.start)}${t.end ? '~' + esc(t.end) : ''}${t.place ? ' (' + esc(t.place) + ')' : ''}`).join(' · ')}</div>` : '<div class="cal-reg">정규 수업 시간은 선생님이 등록하면 보여요.</div>')
-        + CAL.listHtml(cal.ym, opt);
+        + '<div class="cal-reg">📌 날짜를 누르면 <b>내 일정</b>을 추가할 수 있어요 (나만 보여요)</div>' + CAL.listHtml(cal.ym, opt);
     } else {
       $('calBox').innerHTML = '<div class="empty">불러오는 중…</div>';
       await loadPlanMonth(cal.ym);
@@ -680,7 +683,13 @@
   $('calTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; cal.tab = b.dataset.t; renderCal(); };
   $('calPrev').onclick = () => { cal.ym = CAL.shiftMonth(cal.ym, -1); renderCal(); };
   $('calNext').onclick = () => { cal.ym = CAL.shiftMonth(cal.ym, 1); renderCal(); };
-  $('calBox').onclick = e => { const c = e.target.closest('.cc.pl'); if (!c || cal.demo) return; if (c.dataset.d <= OMR.todayStr()) location.href = 'planner.html?d=' + c.dataset.d; };
+  $('calBox').onclick = e => {
+    const p = e.target.closest('.cc.pl'); if (p) { if (!cal.demo && p.dataset.d <= OMR.todayStr()) location.href = 'planner.html?d=' + p.dataset.d; return; }
+    const c = e.target.closest('.cc'); if (!c || cal.tab !== 'class') return;
+    if (cal.demo) return toast('학생 코드로 들어오면 날짜를 눌러 내 일정을 넣을 수 있어요');
+    MYCAL.open({ date: c.dataset.d, code: me.code, items: cal.mine, events: cal.events, schedules: cal.schedules, className: me.className, school: me.school || '', grade: me.grade || null,
+      onSaved: items => { cal.mine = items; renderCal(); } });
+  };
 
   // ───────── 플래너 선생님 코멘트 알림 ─────────
   async function loadNotes(){
@@ -1104,7 +1113,7 @@
 
     // 2) 이번 주 한눈에
     const DWn = d => new Date(d + 'T00:00:00').getDay();
-    const evs = cal.events || [], scheds = cal.schedules || [];
+    const evs = (cal.events || []).concat(MYCAL.toEvents(cal.mine)), scheds = cal.schedules || [];
     const booked = slots ? await Promise.all(slots.filter(s2 => next7.includes(s2.date) && OMR.slotForClass(s2, me.className))
       .map(s2 => db.collection('clinicBookings').doc(`${s2.id}_${me.code}`).get().then(x => x.exists ? s2 : null).catch(() => null))) : [];
     await Promise.race([examsReady, new Promise(r => setTimeout(r, 4000))]);
@@ -1113,7 +1122,7 @@
       const it = [], dayEv = evs.filter(e => CAL.inRange(e, d)), off = dayEv.some(e => CAL.OFF[e.kind]);
       const DL = CAL.dayLessons(d, DWn(d), scheds, evs, me.className, me.school || '*', null);
       DL.regular.forEach(t => it.push(DL.cancelled ? { ty: 'off', lab: '휴강', t: '정규 수업 휴강' } : { ty: 'cls', lab: t.changed ? '변경' : '수업', t: (t.changed ? '수업 시간 변경' + (t.from ? ' (원래 ' + t.from + ')' : '') : '정규 수업') + (t.place ? ' · ' + t.place : ''), m: t.start }));
-      dayEv.forEach(e => { if (e.kind === 'makeup' || e.kind === 'bogang') it.push({ ty: 'mk', lab: e.kind === 'bogang' ? '보강' : '직보', t: e.title || CAL.KINDS[e.kind].label, m: e.time || '' }); else if (e.kind === 'trip' || e.kind === 'holiday' || e.kind === 'event') it.push({ ty: 'ex', lab: CAL.KINDS[e.kind].label, t: e.title || CAL.KINDS[e.kind].label, m: e.time || '' }); else if (e.kind === 'exam') it.push({ ty: 'ex', lab: '시험', t: (e.title || '시험기간') + ' 기간' }); else if (e.kind === 'examday') it.push({ ty: 'ex', lab: '시험일', t: '📝 ' + e.title + (e.note ? ' · ' + e.note : ''), m: e.time || '' }); });
+      dayEv.forEach(e => { if (e.kind === 'makeup' || e.kind === 'bogang') it.push({ ty: 'mk', lab: e.kind === 'bogang' ? '보강' : '직보', t: e.title || CAL.KINDS[e.kind].label, m: e.time || '' }); else if (e.kind === 'mine') it.push({ ty: 'pl', lab: '내 일정', t: e.title + (e.note ? ' · ' + e.note : ''), m: e.time ? e.time.split('~')[0] : '' }); else if (e.kind === 'trip' || e.kind === 'holiday' || e.kind === 'event') it.push({ ty: 'ex', lab: CAL.KINDS[e.kind].label, t: e.title || CAL.KINDS[e.kind].label, m: e.time || '' }); else if (e.kind === 'exam') it.push({ ty: 'ex', lab: '시험', t: (e.title || '시험기간') + ' 기간' }); else if (e.kind === 'examday') it.push({ ty: 'ex', lab: '시험일', t: '📝 ' + e.title + (e.note ? ' · ' + e.note : ''), m: e.time || '' }); });
       (hwAll || []).forEach(x => { const dd = toDate(x.a.dueAt); if (dd && ymd(dd) === d) it.push({ ty: 'hw', lab: '마감', t: x.a.title, done: x.done, m: x.done ? '완료' : '', href: x.href }); });
       if (d === td) openEx.forEach(x => it.push({ ty: 'omr', lab: 'OMR', t: x.e.title, href: 'index.html?mode=omr' }));
       booked.filter(Boolean).filter(s2 => s2.date === d).forEach(s2 => it.push({ ty: 'cl', lab: '클리닉', t: s2.place || '클리닉', m: s2.start, href: 'book.html' }));

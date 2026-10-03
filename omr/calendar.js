@@ -24,6 +24,7 @@
     holiday: { label: '방학',       color: '#D6301F', bg: '#FFF5F5' },
     trip:    { label: '수련회',     color: '#B86A00', bg: '#FFF4E0' },
     pubhol:  { label: '공휴일',     color: '#D6301F', bg: '#FFF5F5' },
+    mine:    { label: '내 일정',    color: '#C2185B', bg: '#FDE7F0' },
   };
   // 정규 수업이 쉬는 건 선생님이 '휴강'을 넣은 날뿐 (방학·수련회도 영상 보강 등으로 수업할 수 있어 자동 휴강 안 함)
   var OFF = { cancel: 1 };
@@ -109,6 +110,7 @@
       else L.events.filter(function (e) { return e.kind === 'cancel'; }).forEach(function () { marks += '<span class="cm off">휴강</span>'; });
       L.events.filter(function (e) { return e.kind === 'makeup' || e.kind === 'bogang'; }).forEach(function (e) { marks += '<span class="cm ' + (e.kind === 'bogang' ? 'bg' : 'mk') + '">' + esc(e.title || KINDS[e.kind].label) + (e.time ? ' ' + esc(e.time) : '') + '</span>'; });
       L.events.filter(function (e) { return e.kind === 'event' || e.kind === 'holiday' || e.kind === 'trip'; }).forEach(function (e) { marks += '<span class="cm ' + (e.kind === 'holiday' ? 'hol' : e.kind === 'trip' ? 'trp' : 'ev') + '">' + esc(e.title || KINDS[e.kind].label) + '</span>'; });
+      L.events.filter(function (e) { return e.kind === 'mine'; }).forEach(function (e) { marks += '<span class="cm my">' + esc(e.title) + '</span>'; });
       var red = c.dow === 0 || hol || L.events.some(function (e) { return e.kind === 'holiday'; });
       return '<div class="cc ' + (c.cur ? '' : 'out ') + (c.d === today ? 'today ' : '') + (red ? 'red ' : c.dow === 6 ? 'blue ' : '') + (L.events.some(function (e) { return e.kind === 'exam' || e.kind === 'examday'; }) ? 'examday' : '') + '" data-d="' + c.d + '">'
         + '<span class="dn">' + c.n + '</span>' + (hol ? '<span class="hn">' + esc(hol) + '</span>' : '') + '<div class="ms">' + marks + '</div></div>';
@@ -145,13 +147,13 @@
   var CSS = '.cal-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;}'
     + '.cal-g .ch{text-align:center;font-size:11.5px;font-weight:800;color:#63636B;padding:4px 0;}'
     + '.cal-g .ch.red,.cc.red .dn{color:#D6301F;} .cal-g .ch.blue,.cc.blue .dn{color:#3B6FE0;}'
-    + '.cc{position:relative;min-height:68px;background:#fff;border:1px solid rgba(17,17,20,.08);border-radius:10px;padding:4px 4px 5px;display:flex;flex-direction:column;gap:2px;overflow:hidden;cursor:default;}'
+    + '.cc{position:relative;min-height:68px;background:#fff;border:1px solid rgba(17,17,20,.08);border-radius:10px;padding:4px 4px 5px;display:flex;flex-direction:column;gap:2px;overflow:hidden;cursor:pointer;}'
     + '.cc.out{opacity:.35;} .cc.today{border:2px solid #111114;} .cc.examday{background:#FFF7F4;}'
     + '.cc .dn{font-size:12.5px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1;}'
     + '.cc .hn{font-size:9.5px;font-weight:800;color:#D6301F;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
     + '.cc .ms{display:flex;flex-direction:column;gap:2px;}'
     + '.cm{display:block;font-size:9.5px;font-weight:800;line-height:1.25;padding:1px 4px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
-    + '.cm.cls{background:#111114;color:#fff;} .cm.off{background:#F1F0EC;color:#9A9AA2;text-decoration:line-through;} .cm.mk{background:#3B6FE0;color:#fff;} .cm.chg{background:#7B3FD0;color:#fff;} .cm.bg{background:#0E8A8A;color:#fff;} .cm.trp{background:#FFF4E0;color:#B86A00;}'
+    + '.cm.cls{background:#111114;color:#fff;} .cm.off{background:#F1F0EC;color:#9A9AA2;text-decoration:line-through;} .cm.mk{background:#3B6FE0;color:#fff;} .cm.chg{background:#7B3FD0;color:#fff;} .cm.bg{background:#0E8A8A;color:#fff;} .cm.trp{background:#FFF4E0;color:#B86A00;} .cm.my{background:#FDE7F0;color:#C2185B;}'
     + '.cm.exam{background:#FFE3DA;color:#B4261A;} .cm.exd{background:#D6301F;color:#fff;} .cm.ev{background:#EAF6EF;color:#1F7A4D;} .cm.hol{background:#FFF5F5;color:#D6301F;}'
     + '.cc.pl{align-items:center;justify-content:flex-start;gap:1px;} .cc.pl .dn{align-self:flex-start;}'
     + '.cc.pl.lv1{background:#FFF1EC;} .cc.pl.lv2{background:#FFD9CC;} .cc.pl.lv3{background:#FFB39C;} .cc.pl.lv4{background:#FF8466;}'
