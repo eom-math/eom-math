@@ -609,12 +609,14 @@
   }
 
   // 최근 5회 복습 테스트 (내 점수 막대 + 반 평균 점선, 백분율)
+  // 그래프를 화면 너비에 맞춰 그려서(1단위 ≈ 1px) 넓은 화면에서도 글씨·그래프가 커지지 않게
+  function chartW(pad){ const w = (document.querySelector('.wrap') || {}).clientWidth || window.innerWidth || 360; return Math.round(Math.max(260, Math.min(720, w - pad))); }
   function trendCard(list, href = 'review.html'){
     const pct = x => x.max ? x.score / x.max * 100 : x.score;
     const last = list[list.length - 1], prev = list[list.length - 2];
     const diff = prev ? Math.round((pct(last) - pct(prev)) * 10) / 10 : null;
-    const W = 320, H = 132, pl = 4, pr = 4, pt = 20, pb = 22, n = list.length;
-    const bw = Math.min(52, (W - pl - pr) / n * 0.78);
+    const W = chartW(66), H = 120, pl = 4, pr = 4, pt = 20, pb = 22, n = list.length;
+    const bw = Math.min(44, (W - pl - pr) / n * 0.6);
     const cx = i => pl + (i + 0.5) * (W - pl - pr) / n;
     const y = v => pt + (1 - Math.max(0, Math.min(100, v)) / 100) * (H - pt - pb);
     const avgPts = list.map((x, i) => x.avg != null ? `${cx(i).toFixed(1)},${y(x.max ? x.avg / x.max * 100 : x.avg).toFixed(1)}` : null).filter(Boolean);
@@ -997,7 +999,7 @@
         <div class="its">${x.items.length ? x.items.map(i => `<a class="it ${i.done ? 'done' : ''}" href="${esc(i.href || '#')}"><span class="ty ${i.ty}">${esc(i.lab)}</span><span class="t">${esc(i.t)}</span>${i.m ? `<span class="m">${esc(i.m)}</span>` : ''}</a>`).join('') : '<div class="none">일정 없음</div>'}</div></div>`; }).join('')}</div></div>`;
   }
   function lineSvg(pts, opt){
-    const W = 320, H = 150, pl = 26, pr = 12, pt = 20, pb = 26, n = pts.length;
+    const W = chartW(68), H = 140, pl = 26, pr = 14, pt = 20, pb = 26, n = pts.length;
     const x = i => pl + (n === 1 ? (W - pl - pr) / 2 : i * (W - pl - pr) / (n - 1)), y = v => pt + (1 - v / 100) * (H - pt - pb);
     const line = (key, color, dash) => { const ps = pts.map((p, i) => p[key] != null ? `${x(i).toFixed(1)},${y(p[key]).toFixed(1)}` : null).filter(Boolean); return ps.length > 1 ? `<polyline points="${ps.join(' ')}" fill="none" stroke="${color}" stroke-width="${dash ? 1.5 : 2.4}" ${dash ? 'stroke-dasharray="4 4"' : ''} stroke-linejoin="round"/>` : ''; };
     return `<svg class="lc" viewBox="0 0 ${W} ${H}">${[0, 50, 100].map(v => `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(17,17,20,.07)"/><text x="${pl - 5}" y="${y(v) + 3}" text-anchor="end" font-size="9" fill="#9A9AA2">${v}</text>`).join('')}
