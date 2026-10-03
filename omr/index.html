@@ -96,6 +96,15 @@
   .me-foot{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 18px;margin:30px 0 0;padding-top:18px;border-top:1px solid var(--line);font-size:13px;}
   .me-foot a{color:var(--dim);font-weight:700;text-decoration:none;}
   .sec-h{scroll-margin-top:14px;}
+  /* 방문자 예시 */
+  .demo-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1.5px solid var(--red);border-radius:14px;padding:11px 12px 11px 14px;margin:0 0 14px;}
+  .demo-bar.hidden{display:none !important;}
+  .demo-bar .db-k{font-size:11px;font-weight:900;letter-spacing:.08em;color:#fff;background:var(--red);padding:3px 8px;border-radius:6px;}
+  .demo-bar .db-t{flex:1;min-width:180px;font-size:12.5px;color:var(--dim);line-height:1.5;}
+  .demo-bar .db-b{border:0;background:var(--ink);color:#fff;font-weight:800;font-size:12.5px;padding:9px 12px;border-radius:9px;white-space:nowrap;}
+  .demo-try{margin-top:14px;background:#fff;border:1px dashed var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:6px;}
+  .demo-try b{font-size:14.5px;} .demo-try span{font-size:13px;color:var(--dim);line-height:1.55;}
+  .demo-try .btn{align-self:flex-start;margin-top:6px;}
   /* 시험 OMR만 보기 (index.html?mode=omr) */
   .oo-head{display:none;}
   #vList.omr-only > :not(.oo-keep){display:none !important;}
@@ -160,10 +169,20 @@
       <button class="btn primary block" id="loginBtn">입장하기</button>
       <p class="muted" id="loginMsg"></p>
     </div>
+    <div class="demo-try">
+      <b>아직 학생 코드가 없나요?</b>
+      <span>재원생 화면을 예시로 둘러볼 수 있어요. 시험 OMR 마킹도 직접 해 보세요.</span>
+      <a class="btn" href="index.html?demo=1">예시로 둘러보기 →</a>
+    </div>
   </section>
 
   <!-- 2. 학생 개인 페이지 -->
   <section id="vList" class="hidden">
+    <div class="demo-bar oo-keep dd-keep hidden" id="demoBar">
+      <span class="db-k">예시</span>
+      <span class="db-t">재원생이 보는 화면이에요. 눌러서 둘러보세요 — 실제 학생은 학생 코드로 입장하면 내 기록이 이렇게 나와요.</span>
+      <button type="button" class="db-b" id="demoLogin">학생 코드로 입장</button>
+    </div>
     <div class="oo-head oo-keep">
       <div><div class="kicker" style="margin-bottom:4px;" id="ooK">MOBILE OMR</div><h1 style="margin:0;" id="ooTitle">시험 OMR</h1><p class="muted" id="ooWho"></p></div>
       <a class="btn sm" href="index.html">내 페이지 →</a>
@@ -221,6 +240,18 @@
   </section>
 </div>
 
+<div class="modal-bg hidden" id="lockModal">
+  <div class="modal">
+    <h2 id="lockTitle">재원생 전용 기능이에요</h2>
+    <p class="muted" id="lockText" style="line-height:1.65;">학생 코드로 입장하면 바로 쓸 수 있어요.</p>
+    <div class="row" style="margin-top:18px;">
+      <button class="btn grow" id="lockClose">계속 둘러보기</button>
+      <button class="btn red grow" id="lockLogin">학생 코드로 입장</button>
+    </div>
+    <a class="btn ghost block" style="margin-top:8px;" href="https://open.kakao.com/o/gvaZ3mHi" target="_blank" rel="noopener">수업 상담 문의 →</a>
+  </div>
+</div>
+
 <div class="modal-bg hidden" id="confirmModal">
   <div class="modal">
     <h2>최종 제출할까요?</h2>
@@ -236,6 +267,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="common.js?v=20"></script>
+<script src="demo.js?v=2"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast } = OMR;
@@ -254,6 +286,8 @@
   const MODE_OMR = MODE === 'omr', MODE_DAILY = MODE === 'daily';
   if (MODE_OMR) document.title = '시험 OMR — 엄형국 수학';
   if (MODE_DAILY) document.title = '데일리 리포트 — 엄형국 수학';
+  // 학생 코드가 없는 방문자 → 재원생 화면을 예시 데이터로 보여 줌 (?demo=1 이면 코드가 있어도 예시)
+  let DEMO = new URLSearchParams(location.search).has('demo') || (!new URLSearchParams(location.search).get('code') && !(() => { try { return localStorage.getItem('omrStudentCode'); } catch(e){ return null; } })());
   let me = null;          // {code, name, className}
   let cur = null;         // {exam, examId, answers, status, submittedAt}
   let saveTimer = null;
@@ -267,6 +301,7 @@
       const snap = await db.collection('omrCodes').doc(code).get();
       if (!snap.exists){ $('loginMsg').textContent = '등록되지 않은 코드입니다. 선생님께 확인해 주세요.'; return false; }
       me = { code, ...snap.data() };
+      if (DEMO){ DEMO = false; $('demoBar').classList.add('hidden'); $('logoutBtn').textContent = '코드 변경'; }
       ls.set(LS_KEY, code); ls.set('omrStudentName', me.name || '');
       const next = new URLSearchParams(location.search).get('next');
       if (next && /^[a-z-]+\.html(\?[\w=&%-]*)?$/.test(next)){ location.href = next; return true; }
@@ -390,32 +425,38 @@
       // 최신 데일리 리포트 요약 카드
       const latest = items[0];
       const rep0 = await db.collection('dailyReports').doc(latest.token).get().then(x => x.exists ? x.data() : null).catch(() => null);
-      if (rep0){
-        const weak = rep0.weak || [];
-        $('dailyCardBox').innerHTML = `<a class="pcard" href="daily-report.html?t=${encodeURIComponent(latest.token)}">
-          <div class="ph"><h3>최근 리포트</h3><span>${esc(OMR.fmtKDate(rep0.date))}${rep0.title ? ' · ' + esc(rep0.title) : ''}</span></div>
-          <div class="dsum">
-            ${rep0.attendance === 'absent' ? '<div class="sc" style="font-size:26px;">결석</div>' : rep0.score != null ? `<div class="sc">${rep0.score}<small>/${rep0.maxScore}</small></div>` : ''}
-            <div class="info">
-              <div class="m">${rep0.avg != null && rep0.score != null ? `반 평균 ${rep0.avg}` : ''}${rep0.homework != null ? `${rep0.avg != null && rep0.score != null ? ' · ' : ''}과제 ${rep0.homework}%` : ''}</div>
-              ${weak.length ? `<div class="m" style="margin:2px 0 3px;font-size:12px;">보완할 유형</div><div class="hl">${weak.map(w => `<div><span>${esc(w)}</span></div>`).join('')}</div>` : `<div class="ok">${rep0.attendance === 'absent' ? '진도와 과제를 확인해 주세요' : '보완할 유형 없음 👏'}</div>`}
-            </div>
-          </div></a>`;
-      }
-      box.insertAdjacentHTML('beforeend', `<div class="fg-h" style="margin-top:14px;">${MODE_DAILY ? `전체 리포트 ${items.length}개` : '지난 리포트'}</div>`);
-      items.slice(0, MODE_DAILY ? 60 : 5).forEach((x, i) => {
-        const a = document.createElement('a');
-        a.className = 'exam-item'; a.href = 'daily-report.html?t=' + encodeURIComponent(x.token);
-        a.innerHTML = `<div><div class="t">${esc(OMR.fmtKDate(x.date))}${x.title ? ' · ' + esc(x.title) : ''}</div>
-          <div class="m">${x.absent ? '결석' : x.score != null ? `복습 테스트 ${x.score}/${x.max}점` + (x.avg != null ? ` · 반 평균 ${x.avg}` : '') : '수업 리포트'}</div></div>
-          <span class="pill ${i === 0 ? 'published' : 'draft'}" style="margin-left:auto;">${i === 0 ? 'NEW' : '보기'}</span>`;
-        box.appendChild(a);
-      });
+      if (rep0) $('dailyCardBox').innerHTML = dailyCardHTML(rep0, 'daily-report.html?t=' + encodeURIComponent(latest.token));
+      dailyListRender(items, x => 'daily-report.html?t=' + encodeURIComponent(x.token));
     } catch(e){ console.warn(e); }
   }
 
+  function dailyCardHTML(rep0, href){
+    const weak = rep0.weak || [];
+    return `<a class="pcard" href="${esc(href)}">
+      <div class="ph"><h3>최근 리포트</h3><span>${esc(OMR.fmtKDate(rep0.date))}${rep0.title ? ' · ' + esc(rep0.title) : ''}</span></div>
+      <div class="dsum">
+        ${rep0.attendance === 'absent' ? '<div class="sc" style="font-size:26px;">결석</div>' : rep0.score != null ? `<div class="sc">${rep0.score}<small>/${rep0.maxScore}</small></div>` : ''}
+        <div class="info">
+          <div class="m">${rep0.avg != null && rep0.score != null ? `반 평균 ${rep0.avg}` : ''}${rep0.homework != null ? `${rep0.avg != null && rep0.score != null ? ' · ' : ''}과제 ${rep0.homework}%` : ''}</div>
+          ${weak.length ? `<div class="m" style="margin:2px 0 3px;font-size:12px;">보완할 유형</div><div class="hl">${weak.map(w => `<div><span>${esc(w)}</span></div>`).join('')}</div>` : `<div class="ok">${rep0.attendance === 'absent' ? '진도와 과제를 확인해 주세요' : '보완할 유형 없음 👏'}</div>`}
+        </div>
+      </div></a>`;
+  }
+  function dailyListRender(items, hrefOf){
+    const box = $('dailyList');
+    box.insertAdjacentHTML('beforeend', `<div class="fg-h" style="margin-top:14px;">${MODE_DAILY ? `전체 리포트 ${items.length}개` : '지난 리포트'}</div>`);
+    items.slice(0, MODE_DAILY ? 60 : 5).forEach((x, i) => {
+      const a = document.createElement('a');
+      a.className = 'exam-item'; a.href = hrefOf(x);
+      a.innerHTML = `<div><div class="t">${esc(OMR.fmtKDate(x.date))}${x.title ? ' · ' + esc(x.title) : ''}</div>
+        <div class="m">${x.absent ? '결석' : x.score != null ? `복습 테스트 ${x.score}/${x.max}점` + (x.avg != null ? ` · 반 평균 ${x.avg}` : '') : '수업 리포트'}</div></div>
+        <span class="pill ${i === 0 ? 'published' : 'draft'}" style="margin-left:auto;">${i === 0 ? 'NEW' : '보기'}</span>`;
+      box.appendChild(a);
+    });
+  }
+
   // 최근 5회 복습 테스트 (내 점수 막대 + 반 평균 점선, 백분율)
-  function trendCard(list){
+  function trendCard(list, href = 'review.html'){
     const pct = x => x.max ? x.score / x.max * 100 : x.score;
     const last = list[list.length - 1], prev = list[list.length - 2];
     const diff = prev ? Math.round((pct(last) - pct(prev)) * 10) / 10 : null;
@@ -435,7 +476,7 @@
       ${avgPts.length > 1 ? `<polyline points="${avgPts.join(' ')}" fill="none" stroke="#D6301F" stroke-width="1.5" stroke-dasharray="4 4" opacity=".75"/>` : ''}
       ${avgPts.map(p => `<circle cx="${p.split(',')[0]}" cy="${p.split(',')[1]}" r="2.5" fill="#fff" stroke="#D6301F" stroke-width="1.5"/>`).join('')}
     </svg>`;
-    return `<a class="trend" href="review.html" style="display:block;text-decoration:none;color:inherit;">
+    return `<a class="trend" href="${href}" style="display:block;text-decoration:none;color:inherit;">
       <div class="top"><b>${last.score}</b><small>/ ${last.max}점 · ${esc(OMR.fmtKDate(last.date))}</small>
         ${diff != null && diff !== 0 ? `<span class="chg ${diff > 0 ? 'up' : 'down'}">${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)}%p</span>` : ''}</div>
       ${svg}
@@ -557,6 +598,9 @@
     } else if (exam.status !== 'open'){
       lb.innerHTML = `<b>응시가 마감된 시험입니다</b><span>답안을 제출할 수 없습니다.</span>`;
       lb.classList.remove('hidden');
+    } else if (DEMO){
+      lb.innerHTML = `<b>예시 답안지예요</b><span>번호를 눌러 마킹해 보세요. 저장·제출되지 않고, 최종 제출을 누르면 채점된 성적표 예시가 나와요.</span>`;
+      lb.classList.remove('hidden');
     } else lb.classList.add('hidden');
     renderGrid(canEdit);
     show('vOmr');
@@ -652,6 +696,7 @@
   }
 
   function scheduleSave(){
+    if (DEMO){ $('saveState').className = 'save-state muted'; $('saveState').textContent = '예시 · 저장되지 않아요'; return; }
     ls.set(lsDraftKey(), JSON.stringify(cur.answers));
     const st = $('saveState');
     st.className = 'save-state saving'; st.textContent = '저장 중…';
@@ -687,6 +732,12 @@
   $('confirmNo').onclick = () => $('confirmModal').classList.add('hidden');
   $('confirmYes').onclick = async () => {
     const btn = $('confirmYes');
+    if (DEMO){
+      $('confirmModal').classList.add('hidden');
+      toast('예시라 실제로 제출되지는 않아요 · 채점된 성적표 예시로 이동합니다', 2600);
+      setTimeout(() => { location.href = 'report.html?demo=1'; }, 1400);
+      return;
+    }
     btn.disabled = true; btn.textContent = '제출 중…';
     clearTimeout(saveTimer);
     try {
@@ -704,12 +755,106 @@
     }
   };
 
-  $('backBtn').onclick = () => { clearTimeout(saveTimer); if ($('saveState').classList.contains('saving')) saveDraft(); loadList(); };
+  $('backBtn').onclick = () => { if (DEMO) return renderDemo(); clearTimeout(saveTimer); if ($('saveState').classList.contains('saving')) saveDraft(); loadList(); };
+
+  // ───────── 방문자 예시 화면 ─────────
+  function lockFeature(name){
+    $('lockTitle').textContent = `🔒 ${name}`;
+    $('lockText').innerHTML = '재원생 전용 기능이에요. 학생 코드로 입장하면 바로 쓸 수 있어요.<br>코드는 수업 등록 후 선생님이 알려 드려요.';
+    $('lockModal').classList.remove('hidden');
+  }
+  $('lockClose').onclick = () => $('lockModal').classList.add('hidden');
+  $('lockLogin').onclick = $('demoLogin').onclick = () => { $('lockModal').classList.add('hidden'); show('vLogin'); setTimeout(() => $('codeInput').focus(), 50); };
+  const LOCKED = { planner: '스터디 플래너', timer: '집중 타이머', book: '클리닉 예약', ask: '질문하기', lec: '영상 강의' };
+  $('vList').addEventListener('click', e => {
+    if (!DEMO) return;
+    const a = e.target.closest('a[data-k], a[data-lock]'); if (!a) return;
+    const k = a.dataset.lock || a.dataset.k;
+    if (LOCKED[k]){ e.preventDefault(); lockFeature(LOCKED[k]); return; }
+    if (k === 'review'){ e.preventDefault(); location.href = 'review.html?demo=1'; }
+  });
+  // 예시 화면 안에서 오가는 링크(시험 OMR · 데일리 리포트 · 내 페이지)는 예시 유지
+  function demoLinks(){
+    document.querySelectorAll('#vList a[href^="index.html"]').forEach(a => {
+      const h = a.getAttribute('href'); if (!/demo=1/.test(h)) a.setAttribute('href', h + (h.includes('?') ? '&' : '?') + 'demo=1');
+    });
+  }
+  function demoExam(){
+    return { id: 'demo', title: '모의평가 대비 OMR (예시)', subject: '미적분I', questionCount: 22, choiceCount: 5, status: 'open',
+      layout: [{ type: 'mc', count: 18 }, { type: 'short', count: 2 }, { type: 'essay', count: 2 }] };
+  }
+  function renderDemo(){
+    const X = window.DEMO;
+    me = { code: 'DEMO00', name: '예시 학생', className: '고1 예시반', grade: 1 };
+    show('vList');
+    $('whoami').textContent = '방문자 · 예시';
+    $('demoBar').classList.remove('hidden');
+    demoLinks();
+    $('vList').classList.toggle('omr-only', MODE_OMR);
+    $('vList').classList.toggle('daily-only', MODE_DAILY);
+    $('ooWho').textContent = '예시 학생 · 고1 예시반';
+    $('helloName').textContent = '예시 학생';
+    $('meAv').textContent = '예';
+    $('helloClass').innerHTML = '<span>고1 예시반</span><span>1학년</span>';
+    $('logoutBtn').textContent = '코드 입장';
+    $('logoutBtn').onclick = () => show('vLogin');
+    const ex = X.examReport(), dr = X.dailyReport();
+    const exam = demoExam();
+    // 요약 숫자
+    setStat(0, `${ex.score}<small>/${ex.maxScore}</small>`, `${ex.grade}등급 · ${ex.rank}/${ex.n}등`);
+    const tr = dr.trend, last = tr[tr.length - 1], prev = tr[tr.length - 2];
+    const df = Math.round(last.score / last.max * 100 - prev.score / prev.max * 100);
+    setStat(1, `${last.score}<small>/${last.max}</small>`, `${df > 0 ? '▲' : '▼'} ${Math.abs(df)}%p · 지난번보다`, df > 0 ? 'up' : 'down');
+    setStat(2, '2<small>개</small>', '가장 빠른 기한 내일');
+    setStat(3, '1<small>시간</small> 25<small>분</small>', '할 일 3/5 완료');
+    badge('omr', 1); badge('hw', 2);
+    // 이번 주 할 일
+    const t1 = new Date(Date.now() + 864e5), t3 = new Date(Date.now() + 3 * 864e5);
+    const rows = [
+      { d: 'OMR', cls: 'red', t: exam.title, m: '시험 OMR', exam: true },
+      { d: 'D-1', cls: 'red', t: '쎈 B단계 212~240번', m: '과제', href: 'hw.html?demo=1' },
+      { d: `${t3.getMonth() + 1}/${t3.getDate()}`, cls: 'ink', t: '클리닉 14:00–16:00', m: '본관 3층', lock: 'book' },
+      { d: '영상', cls: '', t: '함수의 연속 3강 — 사잇값의 정리', m: '40% 시청', lock: 'lec' },
+      { d: '오늘', cls: '', t: '미적분 오답노트 정리', m: '플래너', lock: 'planner' },
+    ];
+    $('weekBox').innerHTML = `<div class="pcard"><div class="ph"><h3>이번 주 할 일</h3><span>${rows.length}개</span></div>
+      <div class="wk">${rows.map((r, i) => `<a href="${r.href || '#'}" data-i="${i}" ${r.lock ? `data-lock="${r.lock}"` : ''}><span class="d ${r.cls}">${esc(r.d)}</span>
+        <span class="t">${esc(r.t)}</span><span class="m">${esc(r.m)}</span></a>`).join('')}</div></div>`;
+    $('weekBox').querySelector('a[data-i="0"]').onclick = e => { e.preventDefault(); openExam(exam, null); };
+    // 시험 OMR
+    const eb = $('examList'); eb.innerHTML = '';
+    const b1 = document.createElement('button'); b1.className = 'exam-item'; b1.onclick = () => openExam(exam, null);
+    b1.innerHTML = `<div><div class="t">${esc(exam.title)}</div><div class="m">${esc(exam.subject)} · 22문항 · ${esc(OMR.layoutText(exam))}</div></div><span class="pill open" style="margin-left:auto;">응시 가능</span>`;
+    eb.appendChild(b1);
+    eb.appendChild(item('report.html?demo=1', ex.examTitle, `${esc(ex.subject)} · 22문항 · 채점 완료`, '성적표 보기', 'published'));
+    if (MODE_OMR && !autoOpened){ autoOpened = true; openExam(exam, null); return; }
+    // 과제
+    const tb = document.createElement('div');
+    tb.appendChild(item('hw.html?demo=1', '쎈 B단계 212~240번', `기한 ${fmtDateTime(t1)}`, '미제출', 'red'));
+    const om = item('#', '[OMR] ' + exam.title, '기한 없음 · OMR 답안을 제출하면 완료', '미제출', 'red');
+    om.onclick = e => { e.preventDefault(); openExam(exam, null); }; tb.appendChild(om);
+    tb.appendChild(item('hw.html?demo=1', '함수의 극한 워크북 p.32~40', '기한 지남', '확인 완료 ✓', 'published'));
+    tb.insertAdjacentHTML('beforeend', '<h2 class="sec-h">클리닉 학습지</h2>');
+    const cl = item('#', '함수의 연속 오답 클리닉', '12문항 · 틀린 단원 맞춤 문제', '풀기', 'open'); cl.dataset.lock = 'book';
+    cl.onclick = e => { e.preventDefault(); lockFeature('클리닉 학습지'); }; tb.appendChild(cl);
+    $('todoList').replaceChildren(...tb.childNodes);
+    // 시험 성적표
+    const rb = $('reportList'); rb.innerHTML = '';
+    ex.history.slice().reverse().slice(0, 4).forEach((h, i) => rb.appendChild(item('report.html?demo=1', h.title,
+      `${esc(h.date)} · ${h.score}/${h.max}점 · ${h.rank}/${h.n}등 · 평균 ${h.avg}`, `${h.grade}등급`, i === 0 ? 'published' : 'draft')));
+    // 데일리 리포트
+    $('dailyCardBox').innerHTML = dailyCardHTML(dr, 'daily-report.html?demo=1');
+    $('trendBox').innerHTML = `<div class="pcard"><div class="ph"><h3>복습 테스트 추이</h3><span>최근 ${tr.length}회</span></div>${trendCard(tr, 'review.html?demo=1')}</div>`;
+    $('dailyList').innerHTML = '';
+    const ditems = tr.slice().reverse().map((x, i) => ({ ...x, title: `${13 - i}회차` }));
+    dailyListRender(ditems, () => 'daily-report.html?demo=1');
+  }
 
   // ───────── 시작 ─────────
   const params = new URLSearchParams(location.search);
   const saved = params.get('code') || ls.get(LS_KEY);
-  if (saved){ $('codeInput').value = saved; login(saved).then(ok => { if (!ok) show('vLogin'); }); }
+  if (DEMO) renderDemo();
+  else if (saved){ $('codeInput').value = saved; login(saved).then(ok => { if (!ok) show('vLogin'); }); }
   else show('vLogin');
 })();
 </script>

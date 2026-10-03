@@ -1568,7 +1568,7 @@
     $('dashNote').innerHTML = '<span><b>아래는 예시 화면이에요.</b> 과제 · 시험 성적표 · 데일리 리포트 · 복습 추이를 눌러 실제 화면처럼 둘러보세요. 재원생은 학생 코드로 입장하면 내 기록이 나와요.</span><button type="button" id="dashLogin">학생 코드로 입장</button>';
     $('dashLogin').onclick = function(e){ e.preventDefault(); if (window.openGate) window.openGate(); else location.href = 'omr/'; };
     $('dashWho').textContent = '';
-    $('dashMe').onclick = function(e){ if (window.openGate){ e.preventDefault(); window.openGate('omr/'); } };
+    $('dashMe').href = 'omr/?demo=1'; $('dashMe').innerHTML = '재원생 페이지 예시 <i>→</i>';
   }
   // 방문자 예시: 과제·성적표·데일리 리포트·복습 추이는 예시 화면으로, 플래너만 입장창
   ['bnWeek'].forEach(function(id){
@@ -1596,7 +1596,12 @@
   box.addEventListener('click', function(e){
     var a = e.target.closest('a.qs-i'); if (!a) return;
     var c = null; try { c = localStorage.getItem('omrStudentCode'); } catch(err){}
-    if (!c && window.openGate){ e.preventDefault(); window.openGate(a.getAttribute('href')); return; }
+    // 코드가 없는 방문자: 시험 OMR · 데일리 리포트 · 복습 분석은 재원생 화면 예시로, 나머지는 입장창
+    if (!c){
+      var demo = { omr:'omr/?mode=omr&demo=1', report:'omr/?mode=daily&demo=1', review:'omr/review.html?demo=1' }[a.dataset.q];
+      if (demo){ e.preventDefault(); location.href = demo; return; }
+      if (window.openGate){ e.preventDefault(); window.openGate(a.getAttribute('href')); return; }
+    }
   });
 })();
 </script>

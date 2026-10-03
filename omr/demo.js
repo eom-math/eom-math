@@ -49,7 +49,7 @@
     const an = OMR.examAnalytics(exam, graded);
     const r = graded.results.find(x => x.code === 'S0'), st = graded.stats;
     const hist = [[-35, 71, 9, 24], [-28, 76, 7, 24], [-21, 74, 8, 23], [-14, 81, 6, 24], [-7, 79, 6, 24]]
-      .map(([off, score, rank, n], i) => ({ title: `${9 + Math.floor(i / 2)}월 주간평가 ${i % 2 + 1}회`, date: dayStr(off - 1), score, max: 100, rank, n, grade: rank <= 2 ? 1 : rank <= 8 ? 2 : 3, avg: 64 + i, className: CLASS }));
+      .map(([off, score, rank, n], i) => ({ title: `${+dayStr(off - 1).slice(5, 7)}월 주간평가`, date: dayStr(off - 1), score, max: 100, rank, n, grade: rank <= 2 ? 1 : rank <= 8 ? 2 : 3, avg: 64 + i, className: CLASS }));
     hist.push({ title: exam.title, date: exam.examDate, score: r.score, max: st.maxScore, rank: r.rank, n: st.n, grade: an.byCode.S0.grade, avg: st.avg, className: CLASS });
     return {
       demo: true, examTitle: exam.title, subject: exam.subject, className: CLASS, examDate: exam.examDate,
