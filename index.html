@@ -496,6 +496,24 @@
 
   /* ---------- 나의 학습 배너 (가로형) ---------- */
   .dash{ padding:56px 0 8px; }
+  /* 메인 달력 */
+  .mcal{ padding:48px 0 8px; }
+  .mc-card{ background:#fff; border:1px solid var(--line); padding:14px; }
+  .mc-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .mc-seg{ display:flex; gap:3px; background:var(--bg2); padding:3px; }
+  .mc-seg button{ border:0; background:none; padding:8px 12px; font:inherit; font-size:13px; font-weight:800; color:var(--dim); cursor:pointer; }
+  .mc-seg button.on{ background:#fff; color:var(--ink); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  .mc-nav{ display:flex; align-items:center; gap:6px; }
+  .mc-nav b{ font-size:15px; font-weight:900; min-width:92px; text-align:center; font-variant-numeric:tabular-nums; }
+  .mc-nav button{ width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:#fff; font-size:16px; cursor:pointer; color:var(--ink); }
+  .mc-note{ font-size:12.5px; color:var(--dim); background:var(--bg2); padding:9px 12px; margin:0 0 10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .mc-note[hidden]{ display:none; }
+  .mc-note button{ margin-left:auto; border:0; background:var(--ink); color:#fff; font:inherit; font-size:12px; font-weight:800; padding:7px 10px; cursor:pointer; }
+  .mc-sum{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .mc-sum span{ font-size:12.5px; font-weight:800; background:var(--bg2); padding:5px 10px; border-radius:99px; }
+  .mc-sum span b{ color:var(--red); }
+  .mc-reg{ font-size:12.5px; color:var(--dim); margin-top:10px; font-weight:700; }
+  .mc-reg b{ color:var(--ink); }
   .dash-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:16px; }
   .dash-who{ font-size:12.5px; font-weight:700; color:var(--dim); white-space:nowrap; }
   .dash-r{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
@@ -1058,6 +1076,22 @@
     </a>
   </section>
 
+  <section class="mcal" id="calendar" aria-label="달력">
+    <div class="dash-head">
+      <div><p class="hub-kicker">Calendar</p><h2 class="hub-title" id="mcTitle">수업 달력</h2></div>
+      <span class="dash-who" id="mcWho"></span>
+    </div>
+    <div class="mc-card">
+      <div class="mc-top">
+        <div class="mc-seg" id="mcTabs"><button type="button" data-t="class" class="on">수업 시간표</button><button type="button" data-t="plan">플래너 공부</button></div>
+        <div class="mc-nav"><button type="button" id="mcPrev" aria-label="이전 달">‹</button><b id="mcLabel"></b><button type="button" id="mcNext" aria-label="다음 달">›</button></div>
+      </div>
+      <p class="mc-note" id="mcNote" hidden></p>
+      <div id="mcBox"></div>
+      <div id="mcFoot"></div>
+    </div>
+  </section>
+
   <footer>
     <span>© 2026 엄형국 수학</span>
     <span>내신성공의 방정식</span>
@@ -1110,6 +1144,7 @@
     <a class="sub" href="tower.html?mode=penguin">수학 펭귄</a>
     <a href="#quick" data-spy="quick"><span class="n">06</span>학생 바로가기 (OMR · 클리닉 · 영상 · 질문)</a>
     <a href="#channel" data-spy="channel"><span class="n">07</span>채널</a>
+    <a href="#calendar" data-spy="calendar"><span class="n">08</span>달력 (수업 시간표 · 플래너)</a>
   </nav>
   <div class="toc-foot"><a href="https://open.kakao.com/o/gvaZ3mHi" target="_blank" rel="noopener">카카오톡 상담 신청 →</a></div>
 </aside>
@@ -1341,6 +1376,77 @@
 </script>
 <script src="omr/common.js?v=27"></script>
 <script src="notice.js?v=1"></script>
+<script src="omr/calendar.js?v=2"></script>
+<script>
+// 메인 화면 맨 아래 달력: 학생은 내 반 수업 시간표·내 플래너, 방문자는 공휴일·전체 일정 + 플래너 예시
+(function(){
+  if (!window.CAL || !window.OMR) return;
+  CAL.injectCss();
+  var $ = function(id){ return document.getElementById(id); };
+  var db = OMR.db, today = OMR.todayStr();
+  var st = { ym: today.slice(0, 7), tab: 'class', me: null, schedules: [], events: [], docs: {}, loaded: {}, sample: false };
+  function esc(x){ return OMR.esc(x); }
+  function sampleDocs(ym){
+    CAL.monthDays(ym).filter(function(c){ return c.cur && c.d <= today; }).forEach(function(c, i){
+      var m = [0, 90, 150, 60, 200, 120, 0, 180, 240, 30][i % 10];
+      if (m) st.docs[c.d] = { studyMin: m, done: Math.min(5, Math.round(m / 50)), total: 5, sticker: m >= 200 ? '🔥' : '' };
+    });
+  }
+  function render(){
+    var p = st.ym.split('-');
+    $('mcLabel').textContent = p[0] + '. ' + (+p[1]) + '월';
+    [].forEach.call($('mcTabs').children, function(b){ b.classList.toggle('on', b.dataset.t === st.tab); });
+    var cls = st.me ? st.me.className : null;
+    var note = $('mcNote');
+    if (st.tab === 'class'){
+      var opt = { schedules: st.schedules, events: st.events, className: cls, today: today };
+      $('mcBox').innerHTML = CAL.classHtml(st.ym, opt);
+      var DW = '일월화수목금토', reg = [];
+      st.schedules.forEach(function(s){ (s.slots || []).forEach(function(t){ reg.push(t); }); });
+      reg.sort(function(a, b){ return a.dow - b.dow; });
+      $('mcFoot').innerHTML = (reg.length ? '<div class="mc-reg">정규 수업 · ' + reg.map(function(t){ return '<b>' + DW[t.dow] + '</b> ' + esc(t.start) + (t.end ? '~' + esc(t.end) : ''); }).join(' · ') + '</div>' : '') + CAL.listHtml(st.ym, opt);
+      note.hidden = !!st.me;
+      if (!st.me) note.innerHTML = '<span>공휴일과 전체 일정이 보여요. 학생 코드로 입장하면 <b>내 반 수업 시간·휴강·직보</b>가 함께 보여요.</span><button type="button" id="mcLogin">학생 코드로 입장</button>';
+    } else {
+      if (st.sample) sampleDocs(st.ym);
+      else if (!st.loaded[st.ym]) {
+        st.loaded[st.ym] = true;
+        $('mcBox').innerHTML = '<div class="bn-empty" style="padding:20px 0;">불러오는 중…</div>';
+        var days = CAL.monthDays(st.ym).filter(function(c){ return c.cur && c.d <= today; }).map(function(c){ return c.d; });
+        Promise.all(days.map(function(d){ return db.collection('planners').doc(st.me.code + '_' + d).get().then(function(x){ return x.exists ? x.data() : null; }).catch(function(){ return null; }); }))
+          .then(function(got){ days.forEach(function(d, i){ if (got[i]){ var sm = OMR.plannerTodos(got[i]); got[i].done = sm.done; got[i].total = sm.total; st.docs[d] = got[i]; } }); render(); });
+        return;
+      }
+      $('mcBox').innerHTML = CAL.plannerHtml(st.ym, { docs: st.docs, today: today });
+      var ds = Object.keys(st.docs).filter(function(d){ return d.slice(0, 7) === st.ym; }).map(function(d){ return st.docs[d]; });
+      var min = ds.reduce(function(a, x){ return a + (x.studyMin || 0); }, 0), on = ds.filter(function(x){ return x.studyMin || x.done; }).length;
+      var dn = ds.reduce(function(a, x){ return a + (x.done || 0); }, 0), tt = ds.reduce(function(a, x){ return a + (x.total || 0); }, 0);
+      $('mcFoot').innerHTML = '<div class="mc-sum"><span>이번 달 공부 <b>' + (min >= 60 ? Math.floor(min / 60) + '시간 ' + (min % 60) + '분' : min + '분') + '</b></span><span>기록한 날 <b>' + on + '일</b></span><span>할 일 완료 <b>' + dn + '/' + tt + '</b></span></div>';
+      note.hidden = !st.sample;
+      if (st.sample) note.innerHTML = '<span><b>예시 화면이에요.</b> 학생 코드로 입장하면 내 플래너 공부 기록이 달력에 쌓여요.</span><button type="button" id="mcLogin">학생 코드로 입장</button>';
+    }
+    var lb = $('mcLogin'); if (lb) lb.onclick = function(){ if (window.openGate) window.openGate(); else location.href = 'omr/'; };
+  }
+  $('mcTabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; st.tab = b.dataset.t; render(); };
+  $('mcPrev').onclick = function(){ st.ym = CAL.shiftMonth(st.ym, -1); render(); };
+  $('mcNext').onclick = function(){ st.ym = CAL.shiftMonth(st.ym, 1); render(); };
+  $('mcBox').onclick = function(e){ var c = e.target.closest('.cc.pl'); if (!c || st.sample) return; if (c.dataset.d <= today) location.href = 'omr/planner.html?d=' + c.dataset.d; };
+  var code = null; try { code = localStorage.getItem('omrStudentCode'); } catch(e){}
+  var meP = code ? OMR.studentByCode(code).catch(function(){ return null; }) : Promise.resolve(null);
+  meP.then(function(me){
+    st.me = me; st.sample = !me;
+    if (me){ $('mcTitle').textContent = me.name + ' 학생의 달력'; $('mcWho').textContent = me.className; }
+    return Promise.all([
+      me ? db.collection('classSchedules').where('className', '==', me.className).get().then(function(q){ return q.docs.map(function(d){ return d.data(); }); }).catch(function(){ return []; }) : [],
+      db.collection('classEvents').get().then(function(q){ return q.docs.map(function(d){ var x = d.data(); x.id = d.id; return x; }); }).catch(function(){ return []; }),
+    ]);
+  }).then(function(r){
+    st.schedules = r[0];
+    st.events = r[1].filter(function(e){ return st.me ? CAL.forClass(e, st.me.className) : (e.classNames || ['*']).indexOf('*') >= 0; });
+    render();
+  });
+})();
+</script>
 <script>try { NOTICE.mount(document.getElementById('noticeBoard')); } catch(e){ console.warn(e); }</script>
 <script>
 (function(){
