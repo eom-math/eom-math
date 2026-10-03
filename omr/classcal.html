@@ -117,6 +117,7 @@
             <div><label class="f">시험기간 <span class="muted" style="font-weight:600;">(이 학교 모든 학생 공통)</span></label>
               <div class="se-p"><input class="input" type="date" id="seStart" aria-label="시험 시작"><input class="input" type="date" id="seEnd" aria-label="시험 끝"></div></div>
             <label class="f" style="margin-bottom:-4px;">학년별 시험일 <span class="muted" style="font-weight:600;">(그 학년 학생에게만 · 비워 둔 학년은 시험기간만 보여요)</span></label>
+            <p class="muted hidden" id="seWarn" style="font-size:12px;color:var(--red);margin:0;"></p>
             <div id="seGrades"></div>
             <div class="row"><button class="btn red" id="seSave">학교 시험 저장</button><button class="btn ghost hidden" id="seCancel">새로 쓰기</button><button class="btn ghost hidden" id="seDel" style="color:var(--red);">삭제</button><span class="muted" id="seMsg"></span></div>
           </div>
@@ -178,14 +179,14 @@
   </div>
 </div></div>
 <script src="timerange.js?v=1"></script>
-<script src="calendar.js?v=7"></script>
+<script src="calendar.js?v=8"></script>
 <script>
 (function(){
   const { db, FV, esc, toast } = OMR;
   const $ = id => document.getElementById(id);
   const DOW = ['일','월','화','수','목','금','토'];
   const today = OMR.todayStr();
-  let classSchools = {}, curSchool = '', evSch = new Set(), allSchools = [], studentsBySchool = {}, seId = null, seG = {};
+  let roster = [], classSchools = {}, curSchool = '', evSch = new Set(), allSchools = [], studentsBySchool = {}, seId = null, seG = {};
   let classes = [], schedules = [], events = [], ym = today.slice(0, 7), kind = 'makeup', evCls = new Set(['*']), editId = null, slots = [];
   CAL.injectCss();
   $('adminNav').innerHTML = OMR.adminNav('classcal.html');
@@ -195,7 +196,7 @@
     ['vLogin','vMain'].forEach(x => $(x).classList.toggle('hidden', x !== (user ? 'vMain' : 'vLogin')));
     if (!user) return;
     try {
-      const codes = (await db.collection('omrCodes').get()).docs.map(d => d.data());
+      const codes = roster = (await db.collection('omrCodes').get()).docs.map(d => d.data());
       classes = [...new Set(codes.map(d => d.className).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'));
       codes.forEach(d => { if (d.className && d.school) (classSchools[d.className] = classSchools[d.className] || new Set()).add(d.school); });
       codes.forEach(d => { if (d.school) studentsBySchool[d.school] = (studentsBySchool[d.school] || 0) + 1; });
@@ -237,10 +238,8 @@
   function render(){
     const [y, m] = ym.split('-');
     $('mLabel').textContent = `${y}년 ${+m}월`;
-    // 학교 시험은 이 반 학생들이 다니는 학교 것만
-    const sch = schoolsOf(curCls());
-    const evs = events.filter(e => e.kind !== 'schoolExam' || (curSchool ? e.school === curSchool : sch.includes(e.school)));
-    const opt = { schedules: CAL.pickSchedules(schedules, curCls(), curSchool), events: evs, className: curCls(), school: curSchool || '*', grade: $('gr').value || null, today, editable: true };
+    // 학교 시험은 이 반 학생들이 다니는 학교 것만, 시험일은 이 반에 있는 학년 것만
+    const opt = { schedules: CAL.pickSchedules(schedules, curCls(), curSchool), events: viewEvents(), className: curCls(), school: curSchool || '*', grade: $('gr').value || '*', today, editable: true };
     $('calBox').innerHTML = CAL.classHtml(ym, opt);
     $('listBox').innerHTML = CAL.listHtml(ym, opt);
   }
@@ -322,7 +321,13 @@
   // ═════ 날짜 팝업: 그날 일정 보기 · 추가 · 삭제 ═════
   let dmDay = null, dmKind = 'makeup', dmScope = 'cls', dmTR = null;
   const DOWK = '일월화수목금토';
-  function viewEvents(){ const sch = schoolsOf(curCls()); return events.filter(e => e.kind !== 'schoolExam' || (curSchool ? e.school === curSchool : sch.includes(e.school))); }
+  // 지금 보는 반·학교·학년에 해당하는 일정 (학교 시험은 펼쳐서, 시험일은 이 반에 그 학년 학생이 있을 때만)
+  function viewEvents(){
+    const c = curCls(), sch = schoolsOf(c), g = $('gr').value;
+    const ex = CAL.expand(events.filter(e => e.kind !== 'schoolExam' || (curSchool ? e.school === curSchool : sch.includes(e.school))));
+    const has = (gr, schools) => roster.some(r => r.className === c && String(r.grade || '') === String(gr) && (!schools || !schools.length || schools.includes(r.school)) && (!curSchool || r.school === curSchool));
+    return ex.filter(e => !e.grades || !e.grades.length || (g ? e.grades.map(String).includes(g) : e.grades.some(x => has(x, e.schools))));
+  }
   function openDay(d){
     dmDay = d; const t = new Date(d + 'T00:00:00');
     $('dmDate').textContent = `${t.getMonth() + 1}월 ${t.getDate()}일 (${DOWK[t.getDay()]})`;
@@ -341,8 +346,8 @@
   $('dayM').addEventListener('click', e => { if (e.target === $('dayM')) closeDay(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('dayM').hidden) closeDay(); });
   function drawDay(){
-    const d = dmDay, dow = new Date(d + 'T00:00:00').getDay(), grade = $('gr').value || null;
-    const list = CAL.expand(viewEvents()).filter(e => CAL.inRange(e, d) && CAL.forClass(e, curCls(), curSchool || '*', grade));
+    const d = dmDay, dow = new Date(d + 'T00:00:00').getDay(), grade = $('gr').value || '*';
+    const list = viewEvents().filter(e => CAL.inRange(e, d) && CAL.forClass(e, curCls(), curSchool || '*', grade));
     const off = list.some(e => CAL.OFF[e.kind]);
     const L = CAL.dayLessons(d, dow, CAL.pickSchedules(schedules, curCls(), curSchool), list, curCls(), curSchool || '*', grade);
     const scope = e => [(e.classNames || ['*']).includes('*') ? '전체 반' : (e.classNames || []).join('·'), (e.schools || []).join('·'), e.gradeLabel || ''].filter(Boolean).join(' · ');
@@ -368,7 +373,7 @@
   $('dmList').onclick = async e => {
     const de = e.target.closest('[data-de]'), dd = e.target.closest('[data-dd]'), cc = e.target.closest('[data-cancel]');
     if (de) return editEvent(de.dataset.de);
-    if (dd) { const v = CAL.expand(viewEvents()).find(x => x.id === dd.dataset.vid); if (await deleteEvent(dd.dataset.dd, v)) drawDay(); return; }
+    if (dd) { const v = viewEvents().find(x => x.id === dd.dataset.vid); if (await deleteEvent(dd.dataset.dd, v)) drawDay(); return; }
     if (e.target.closest('[data-chg]')) return openChg();
     if (e.target.closest('[data-unchg]')) { const c = dayChange(); if (c) { try { await db.collection('classEvents').doc(c.id).delete(); toast('원래 시간으로 되돌렸어요'); await load(); } catch(err){ handleErr(err); } } drawDay(); return; }
     if (cc) { await addEvent({ kind: 'cancel', date: dmDay, endDate: null, title: '휴강', time: '', note: '', classNames: [curCls()], schools: curSchool ? [curSchool] : [] }); drawDay(); }
@@ -380,7 +385,7 @@
     return schedules.find(x => x.className === curCls() && (x.school || '') === curSchool) || schedules.find(x => x.className === curCls() && !x.school) || null; }
   function openChg(){
     const dow = new Date(dmDay + 'T00:00:00').getDay();
-    const L = CAL.dayLessons(dmDay, dow, CAL.pickSchedules(schedules, curCls(), curSchool), CAL.expand(viewEvents()), curCls(), curSchool || '*', null);
+    const L = CAL.dayLessons(dmDay, dow, CAL.pickSchedules(schedules, curCls(), curSchool), viewEvents(), curCls(), curSchool || '*', '*');
     const r = L.regular[0] || { start: '18:00', end: '21:00' };
     $('dmChg').classList.remove('hidden');
     if (!chgTR) chgTR = TR.mount($('dmChgTR'), { start: r.start, end: r.end || '' }); else chgTR.set(r.start, r.end || '');
@@ -438,9 +443,15 @@
     const list = [...new Set([...allSchools, ...(v ? [v] : [])])].sort((a, b) => a.localeCompare(b, 'ko'));
     $('seSel').innerHTML = '<option value="">학교 선택</option>' + list.map(x => {
       const n = studentsBySchool[x] || 0; return `<option value="${esc(x)}">${esc(x)}${n ? ` (학생 ${n}명)` : ''}</option>`; }).join('') + '<option value="__new">+ 직접 입력</option>';
-    $('seSel').value = v || ''; $('seSchool').value = v || ''; $('seSchool').classList.add('hidden');
+    $('seSel').value = v || ''; $('seSchool').value = v || ''; $('seSchool').classList.add('hidden'); seWarn();
   }
-  $('seSel').onchange = () => { const v = $('seSel').value; $('seSchool').classList.toggle('hidden', v !== '__new'); $('seSchool').value = v === '__new' ? '' : v; if (v === '__new') $('seSchool').focus(); };
+  // 학년이 비어 있는 학생은 학년별 시험일이 안 보여요 → 미리 알려 줌
+  function seWarn(){
+    const v = $('seSchool').value.trim(), miss = roster.filter(r => r.school === v && ![1, 2, 3].includes(Number(r.grade)));
+    $('seWarn').classList.toggle('hidden', !miss.length);
+    $('seWarn').textContent = miss.length ? `⚠ ${v} 학생 중 학년이 비어 있는 ${miss.length}명(${miss.slice(0, 5).map(r => r.name).join(', ')}${miss.length > 5 ? ' 외' : ''})은 시험기간만 보이고 학년별 시험일은 안 보여요. 학생 관리에서 학년을 넣어 주세요.` : '';
+  }
+  $('seSel').onchange = () => { const v = $('seSel').value; $('seSchool').classList.toggle('hidden', v !== '__new'); $('seSchool').value = v === '__new' ? '' : v; if (v === '__new') $('seSchool').focus(); seWarn(); };
   $('seStart').onchange = () => { if (!$('seEnd').value || $('seEnd').value < $('seStart').value) $('seEnd').value = $('seStart').value; };
   function resetSE(){ seId = null; seG = { 1: blankG(), 2: blankG(), 3: blankG() }; setSchool(curSchool || ''); $('seName').value = ''; $('seStart').value = ''; $('seEnd').value = '';
     $('seTitle').textContent = '🏫 학교 시험 일정'; $('seCancel').classList.add('hidden'); $('seDel').classList.add('hidden'); drawSE(); }

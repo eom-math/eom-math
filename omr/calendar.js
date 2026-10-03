@@ -34,12 +34,12 @@
   function hm(min) { return min >= 60 ? Math.floor(min / 60) + 'h' + (min % 60 ? pad(min % 60) : '') : min + 'm'; }
   function inRange(e, d) { return d >= e.date && d <= (e.endDate || e.date); }
   // 반 · 학교 대상인지. school: '*' 또는 없음 = 학교 구분 없이 모두, '' = 학교 미지정 학생(학교 지정 일정은 안 보임)
-  // grade: 학년(1~3). 없거나 '*'면 학년 구분 없이 보여요 (학년 미입력 학생은 그 학교 모든 학년 시험이 보임)
+  // grade: 학년(1~3). '*'면 모든 학년(관리자 미리보기). 학년이 없는 학생에게는 학년별 일정(시험일)이 안 보여요
   function forClass(e, cls, school, grade) {
     var c = e.classNames || ['*'];
     if (cls && c.indexOf('*') < 0 && c.indexOf(cls) < 0) return false;
     var gs = e.grades;
-    if (gs && gs.length && grade && grade !== '*' && gs.map(String).indexOf(String(grade)) < 0) return false;
+    if (gs && gs.length && grade !== '*' && (!grade || gs.map(String).indexOf(String(grade)) < 0)) return false;
     var sc = e.schools || [];
     if (!sc.length || school === undefined || school === null || school === '*') return true;
     return sc.indexOf(school) >= 0;
@@ -102,7 +102,7 @@
     var cells = monthDays(ym).map(function (c) {
       var hol = HOLIDAYS[c.d], L = dayLessons(c.d, c.dow, schedules, events, cls, school, grade);
       var marks = '';
-      L.events.filter(function (e) { return e.kind === 'examday'; }).forEach(function (e) { marks += '<span class="cm exd">📝' + esc((e.gradeLabel && !grade ? e.gradeLabel.charAt(0) + '·' : '') + (e.subject || e.title)) + '</span>'; });
+      L.events.filter(function (e) { return e.kind === 'examday'; }).forEach(function (e) { marks += '<span class="cm exd">📝' + esc((e.gradeLabel && (!grade || grade === '*') ? e.gradeLabel.charAt(0) + '·' : '') + (e.subject || e.title)) + '</span>'; });
       var exs = L.events.filter(function (e) { return e.kind === 'exam'; });
       if (exs.length) marks += '<span class="cm exam">' + (exs.some(function (e) { return e.date === c.d; }) ? esc(exs.filter(function (e) { return e.date === c.d; })[0].title || '시험기간') : '시험기간') + '</span>';
       if (L.regular.length) marks += L.regular.map(function (r) { return '<span class="cm ' + (L.cancelled ? 'off' : r.changed ? 'chg' : 'cls') + '">' + (L.cancelled ? '휴강' : (r.changed ? '⇄' : '') + esc(r.start)) + '</span>'; }).join('');
