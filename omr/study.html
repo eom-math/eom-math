@@ -42,6 +42,12 @@
   .board{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
   .pc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;position:relative;}
   .pc.sel{box-shadow:0 0 0 2px var(--ink);}
+  .bd-h{grid-column:1/-1;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:10px 2px 0;padding-bottom:6px;border-bottom:2px solid var(--ink);}
+  .bd-h:first-child{margin-top:0;}
+  .bd-h b{font-size:15px;font-weight:900;} .bd-h .n{font-size:13px;font-weight:800;color:var(--red);}
+  .bd-h .muted{font-size:12px;}
+  .bd-h.g1{border-bottom-color:var(--line);} .bd-h.g1 .n{color:var(--dim);}
+  .bd-h.g2{border-bottom-color:var(--ok);} .bd-h.g2 .n{color:var(--ok);}
   .pc .h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .pc .h input{width:18px;height:18px;accent-color:var(--ink);}
   .pc .h b{font-size:15px;} .pc .h .m{margin-left:auto;font-size:12px;color:var(--dim);font-weight:700;font-variant-numeric:tabular-nums;}
@@ -317,12 +323,29 @@
     $('board').innerHTML = '<div class="muted">불러오는 중…</div>';
     try {
       const by = await plannersBetween(date, date);
-      bdRows = inClass($('bdClass').value).map(s => ({ s, p: (by[s.code] || {})[date] || null }))
-        .sort((a, b) => (b.p ? 1 : 0) - (a.p ? 1 : 0) || a.s.name.localeCompare(b.s.name, 'ko'));
-      $('board').innerHTML = bdRows.map((r, i) => card(r, i)).join('') || '<div class="muted">학생이 없습니다.</div>';
-      bindBoard();
+      bdRows = inClass($('bdClass').value).map(s => ({ s, p: (by[s.code] || {})[date] || null }));
+      renderBoard();
       if (focusCode){ const el = $('board').querySelector(`[data-code="${focusCode}"]`); if (el){ el.scrollIntoView({ behavior:'smooth', block:'center' }); el.classList.add('sel'); } focusCode = null; }
     } catch(e){ $('board').innerHTML = '<div class="muted">불러오지 못했습니다.</div>'; handleErr(e); }
+  }
+  // 정렬: ① 플래너를 쓰거나 완료했고 아직 확인 안 한 학생 → ② 아직 안 쓴 학생 → ③ 도장·코멘트로 확인한 학생
+  const wrote = p => !!(p && ((p.todos || []).length || p.studyMin || p.pledge || p.feedback || p.sticker || (p.tdone || []).length || (p.closed && !p.closedAuto)));
+  const checked = p => !!(p && (p.tstamp || p.tcomment));
+  const groupOf = r => checked(r.p) ? 2 : wrote(r.p) ? 0 : 1;
+  function renderBoard(){
+    const sel = new Set([...$('board').querySelectorAll('.pc')].filter(el => el.querySelector('.pick-one').checked).map(el => el.dataset.code));
+    bdRows.sort((a, b) => groupOf(a) - groupOf(b)
+      || (groupOf(a) === 0 ? ((b.p.closed && !b.p.closedAuto ? 1 : 0) - (a.p.closed && !a.p.closedAuto ? 1 : 0)) || ((b.p.done || 0) / (b.p.total || 1) - (a.p.done || 0) / (a.p.total || 1)) : 0)
+      || a.s.name.localeCompare(b.s.name, 'ko'));
+    const G = [['확인할 플래너', '작성했거나 완료한 학생 — 도장·코멘트를 남기면 아래로 내려가요'], ['아직 안 쓴 학생', ''], ['확인 완료', '도장이나 코멘트를 남긴 학생']];
+    let html = '', last = -1;
+    bdRows.forEach((r, i) => { const g = groupOf(r);
+      if (g !== last){ const n = bdRows.filter(x => groupOf(x) === g).length;
+        html += `<div class="bd-h g${g}"><b>${G[g][0]}</b><span class="n">${n}명</span>${G[g][1] ? `<span class="muted">${G[g][1]}</span>` : ''}</div>`; last = g; }
+      html += card(r, i); });
+    $('board').innerHTML = html || '<div class="muted">학생이 없습니다.</div>';
+    $('board').querySelectorAll('.pc').forEach(el => { if (sel.has(el.dataset.code)){ el.querySelector('.pick-one').checked = true; el.classList.add('sel'); } });
+    bindBoard();
   }
   function card(r, i){
     const p = r.p, sm = OMR.plannerTodos(p);
@@ -347,6 +370,8 @@
     await db.collection('planners').doc(`${r.s.code}_${date}`).set({
       code: r.s.code, name: r.s.name, className: r.s.className, date,
       ...fields, tby: me.name, tat: FV.serverTimestamp() }, { merge: true });
+    r.p = { ...(r.p || { code: r.s.code, date }), ...fields, tby: me.name };
+    setTimeout(renderBoard, 700);                    // 확인한 학생은 잠시 뒤 아래로
   }
   function bindBoard(){
     $('board').querySelectorAll('.pc').forEach(el => {
