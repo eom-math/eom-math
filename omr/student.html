@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#FAFAF8">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../icons/favicon-64.png">
+<script src="../pwa.js" defer></script>
+<script src="../back.js?v=1" defer></script>
+<title>학생 상세 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=6">
+<style>
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+  @media (max-width:640px){ .grid2{grid-template-columns:1fr;} .grid4{grid-template-columns:1fr 1fr;} }
+  /* 프로필 */
+  .prof{background:var(--ink);color:#fff;border-radius:18px;padding:18px;margin-bottom:14px;}
+  .prof-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .prof .av{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;font-size:22px;font-weight:900;background:linear-gradient(135deg,#F2553F,#D6301F);flex:0 0 auto;}
+  .prof h1{color:#fff;margin:0 0 6px;font-size:24px;}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;}
+  .chips span{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.9);}
+  .prof .acts{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;}
+  .prof .acts a{color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:9px;padding:7px 11px;font-size:12.5px;font-weight:800;text-decoration:none;white-space:nowrap;}
+  .prof .acts a:hover{background:#fff;color:var(--ink);}
+  .kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:14px;}
+  @media (max-width:640px){ .kv{grid-template-columns:1fr 1fr;} }
+  .kv div{background:rgba(255,255,255,.07);border-radius:12px;padding:10px 12px;min-width:0;}
+  .kv span{display:block;font-size:11px;color:rgba(255,255,255,.6);font-weight:700;}
+  .kv b{display:block;font-size:17px;font-weight:900;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .kv b small{font-size:11.5px;color:rgba(255,255,255,.55);font-weight:700;}
+  .kv a{color:#fff;}
+  /* 상담 */
+  .kinds{display:flex;gap:6px;flex-wrap:wrap;}
+  .kinds button{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:7px 12px;font-size:13px;font-weight:800;}
+  .kinds button.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .tl{position:relative;margin-top:6px;}
+  .tl-i{position:relative;padding:0 0 18px 22px;border-left:2px solid var(--line2);margin-left:6px;}
+  .tl-i:last-child{border-left-color:transparent;}
+  .tl-i::before{content:"";position:absolute;left:-7px;top:4px;width:12px;height:12px;border-radius:50%;background:#fff;border:2.5px solid var(--red);}
+  .tl-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .tl-h .d{font-weight:900;font-size:14px;font-variant-numeric:tabular-nums;}
+  .tl-h .k{font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--bg2);}
+  .tl-h .k.parent{background:#fde8e6;color:#b42318;} .tl-h .k.call{background:#e7eefc;color:#1d4ed8;} .tl-h .k.msg{background:#e8f5ec;color:#15803d;}
+  .tl-h .by{font-size:12px;color:var(--faint);}
+  .tl-h .ops{margin-left:auto;display:flex;gap:4px;}
+  #sTbl td{vertical-align:middle;}
+  .tl-b{margin-top:6px;font-size:14.5px;line-height:1.7;white-space:pre-wrap;word-break:keep-all;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+  .tl-n{margin-top:6px;font-size:13px;font-weight:700;color:var(--red);}
+  .tl-n.done{color:var(--ok);text-decoration:line-through;}
+  /* 성적 */
+  .terms{display:flex;gap:6px;flex-wrap:wrap;}
+  .terms button{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:8px 11px;font-size:13px;font-weight:800;}
+  .terms button.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .chart{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 12px 6px;margin-bottom:12px;}
+  .chart svg{width:100%;height:auto;display:block;}
+  .lg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--dim);font-weight:700;margin:2px 4px 6px;}
+  .lg i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px;}
+  .chg{font-size:12px;font-weight:800;white-space:nowrap;} .chg.up{color:var(--ok);} .chg.down{color:var(--red);}
+  .seg2{display:flex;gap:4px;background:var(--bg2);padding:3px;border-radius:10px;width:max-content;}
+  .seg2 button{border:0;background:none;padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:800;color:var(--dim);}
+  .seg2 button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .ty{font-size:11.5px;font-weight:800;padding:2px 7px;border-radius:6px;background:var(--bg2);white-space:nowrap;}
+  .ty.mock{background:#e7eefc;color:#1d4ed8;}
+  .mini{display:flex;gap:8px;flex-wrap:wrap;}
+  .mini a{flex:1 1 200px;display:block;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-decoration:none;}
+  .mini a:hover{border-color:var(--ink);}
+  .mini .t{font-size:12px;color:var(--dim);font-weight:700;} .mini .v{font-size:18px;font-weight:900;margin-top:2px;}
+  .mini .v small{font-size:12px;color:var(--dim);font-weight:700;}
+</style>
+</head>
+<body data-back="students.html">
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="students.html">학생 관리</a>
+    <div class="row"><span class="sub" id="adminEmail"></span><button class="btn sm hidden" id="logoutBtn">로그아웃</button></div>
+  </div>
+
+  <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
+    <h1>관리자 로그인</h1>
+    <p class="lead">상담 기록과 학교 성적은 선생님 계정에서만 볼 수 있어요.</p>
+    <div class="card stack">
+      <input class="input" type="email" id="loginEmail" placeholder="이메일" autocomplete="username">
+      <input class="input" type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
+      <button class="btn primary block" id="loginBtn">로그인</button>
+      <p class="muted" id="loginMsg"></p>
+    </div>
+  </section>
+
+  <section id="vMain" class="hidden">
+    <div id="permWarn" class="note hidden" style="margin-bottom:14px;border:1px solid var(--red);">
+      <b>Firestore 권한 오류</b> — 상담 기록·학교 성적 규칙(<code>studentCounsel</code>, <code>studentScores</code>)을 Firebase 콘솔에 게시했는지 확인하세요.
+    </div>
+    <div class="prof" id="prof"><div class="muted">불러오는 중…</div></div>
+
+    <div class="tabs" id="tabs">
+      <button class="on" data-tab="counsel">상담 기록</button>
+      <button data-tab="scores">학교 성적</button>
+      <button data-tab="academy">학원 기록</button>
+    </div>
+
+    <!-- 상담 기록 -->
+    <div data-pane="counsel">
+      <div class="card">
+        <div class="row between" style="margin-bottom:10px;"><h2 style="margin:0;" id="cFormTitle">상담 기록 남기기</h2><button class="btn sm ghost hidden" id="cCancel">새로 쓰기</button></div>
+        <div class="stack">
+          <div class="row" style="gap:10px;align-items:flex-end;">
+            <div style="flex:0 0 160px;"><label class="f">날짜</label><input class="input" type="date" id="cDate"></div>
+            <div class="grow"><label class="f">상담 방식</label><div class="kinds" id="cKind"></div></div>
+          </div>
+          <div><label class="f">상담 내용</label><textarea class="input" id="cText" rows="5" maxlength="3000" placeholder="예) 학부모 상담 — 2학기 중간고사 대비 계획 공유. 함수의 극한 계산 실수가 잦아 클리닉 주 1회 추가하기로 함."></textarea></div>
+          <div><label class="f">다음에 할 일 <span class="muted" style="font-weight:600;">(선택 · 체크해서 완료 표시)</span></label><input class="input" id="cNext" maxlength="200" placeholder="예) 10/10 클리닉 결과 학부모님께 공유"></div>
+          <div class="row"><button class="btn primary" id="cSave">저장</button><span class="muted" id="cMsg"></span></div>
+        </div>
+      </div>
+      <div class="row between" style="margin:18px 0 10px;"><h2 style="margin:0;">상담 이력</h2><div class="row" style="gap:6px;"><span class="muted" id="cCount"></span><button class="btn sm" id="cCopy">전체 복사</button></div></div>
+      <div class="tl" id="cList"><div class="muted">불러오는 중…</div></div>
+    </div>
+
+    <!-- 학교 성적 -->
+    <div data-pane="scores" class="hidden">
+      <div class="chart">
+        <div class="row between" style="padding:0 4px 4px;"><b style="font-size:15px;">성적 변화</b><div class="seg2" id="chMode"><button class="on" data-v="score">점수</button><button data-v="grade">등급</button></div></div>
+        <div class="lg"><span><i style="background:#D6301F"></i>내신</span><span><i style="background:#3b6fe0"></i>모의고사</span><span><i style="background:#9A9AA2;height:2px;"></i>반·전체 평균 (내신)</span></div>
+        <div id="chartBox"></div>
+      </div>
+      <div class="card">
+        <div class="row between" style="margin-bottom:10px;"><h2 style="margin:0;" id="sFormTitle">성적 입력</h2><button class="btn sm ghost hidden" id="sCancel">새로 입력</button></div>
+        <div class="stack">
+          <div class="grid4">
+            <div><label class="f">학년</label><select class="input" id="sGrade"><option value="1">고1</option><option value="2">고2</option><option value="3">고3</option></select></div>
+            <div><label class="f">연도</label><input class="input" type="number" id="sYear" min="2020" max="2040"></div>
+            <div style="grid-column:span 2;"><label class="f">과목</label><input class="input" id="sSubj" list="subjList" placeholder="수학"></div>
+          </div>
+          <div><label class="f">시험</label><div class="terms" id="sTerm"></div></div>
+          <div class="grid4">
+            <div><label class="f">점수</label><input class="input" type="number" step="0.1" id="sScore" inputmode="decimal" placeholder="예: 87"></div>
+            <div><label class="f">만점</label><input class="input" type="number" id="sMax" value="100"></div>
+            <div><label class="f" id="sAvgL">평균 (선택)</label><input class="input" type="number" step="0.1" id="sAvg" inputmode="decimal"></div>
+            <div><label class="f">등급 (선택)</label><select class="input" id="sRank"><option value="">—</option></select></div>
+          </div>
+          <div class="grid2">
+            <div><label class="f" id="sExtraL">석차 / 인원 (선택)</label><input class="input" id="sExtra" placeholder="예: 12/240"></div>
+            <div><label class="f">메모 (선택)</label><input class="input" id="sNote" maxlength="200" placeholder="예: 서술형 2문항 감점, 시간 부족"></div>
+          </div>
+          <div class="row"><button class="btn primary" id="sSave">저장</button><span class="muted" id="sMsg"></span></div>
+        </div>
+      </div>
+      <div class="row between" style="margin:18px 0 10px;"><h2 style="margin:0;">성적 기록</h2><span class="muted" id="sCount"></span></div>
+      <div class="tbl-wrap"><table class="tbl" id="sTbl"></table></div>
+    </div>
+
+    <!-- 학원 기록 -->
+    <div data-pane="academy" class="hidden">
+      <div class="mini" id="acMini"><div class="muted">불러오는 중…</div></div>
+      <h2 style="margin:18px 0 10px;">시험 OMR 결과</h2>
+      <div class="tbl-wrap"><table class="tbl" id="acExam"></table></div>
+      <h2 style="margin:18px 0 10px;">데일리 리포트 (최근)</h2>
+      <div class="tbl-wrap"><table class="tbl" id="acDaily"></table></div>
+    </div>
+  </section>
+</div>
+<datalist id="subjList"><option value="수학"><option value="공통수학1"><option value="공통수학2"><option value="대수"><option value="미적분I"><option value="미적분II"><option value="확률과 통계"><option value="기하"><option value="국어"><option value="영어"></datalist>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=21"></script>
+<script>
+(function(){
+  const { db, FV, esc, toast, copyText, fmtPhone } = OMR;
+  const $ = id => document.getElementById(id);
+  const ACAD = Object.fromEntries(OMR.ACADEMIES);
+  const SID = new URLSearchParams(location.search).get('id');
+  const today = OMR.todayStr();
+  const KINDS = { student: '학생 상담', parent: '학부모 상담', call: '전화', msg: '문자·카톡' };
+  // 시험 종류: 내신 4번 + 모의고사(월). ord = 한 학년 안에서의 시간 순서
+  const TERMS = [
+    { k: '1m', label: '1학기 중간', ord: 4.5, type: 'school' }, { k: '1f', label: '1학기 기말', ord: 7, type: 'school' },
+    { k: '2m', label: '2학기 중간', ord: 10.3, type: 'school' }, { k: '2f', label: '2학기 기말', ord: 12.3, type: 'school' },
+    { k: 'mk3', label: '3월 모의', ord: 3.3, type: 'mock' }, { k: 'mk5', label: '5월 모의', ord: 5.1, type: 'mock' },
+    { k: 'mk6', label: '6월 모의', ord: 6.1, type: 'mock' }, { k: 'mk7', label: '7월 모의', ord: 7.5, type: 'mock' },
+    { k: 'mk9', label: '9월 모의', ord: 9.1, type: 'mock' }, { k: 'mk10', label: '10월 모의', ord: 10.1, type: 'mock' },
+    { k: 'mk11', label: '11월 수능', ord: 11.2, type: 'mock' },
+  ];
+  const termOf = k => TERMS.find(t => t.k === k) || TERMS[0];
+  let stu = null, counsel = [], scores = [], cKind = 'student', cEdit = null, sTerm = '1m', sEdit = null, chMode = 'score';
+
+  function show(v){ ['vLogin','vMain'].forEach(x => $(x).classList.toggle('hidden', x !== v)); }
+  function handleErr(e, msg){
+    console.error(e);
+    if (e && e.code === 'permission-denied') $('permWarn').classList.remove('hidden');
+    toast(msg || ('오류: ' + (e && e.message || e)), 3500);
+  }
+  OMR.mountAdminLogin(async user => {
+    if (!user) return show('vLogin');
+    show('vMain'); load();
+  });
+
+  $('tabs').onclick = e => { const b = e.target.closest('button'); if (!b) return;
+    [...$('tabs').children].forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('hidden', p.dataset.pane !== b.dataset.tab));
+    history.replaceState(null, '', location.pathname + location.search + '#' + b.dataset.tab);
+    if (b.dataset.tab === 'scores') renderChart();
+    if (b.dataset.tab === 'academy') loadAcademy();
+  };
+
+  async function load(){
+    if (!SID){ $('prof').innerHTML = '<div>학생을 고르세요. <a href="students.html" style="color:#fff;">학생 관리 →</a></div>'; return; }
+    try {
+      const d = await db.collection('omrStudents').doc(SID).get();
+      if (!d.exists){ $('prof').innerHTML = '<div>학생을 찾을 수 없어요.</div>'; return; }
+      stu = { id: d.id, ...d.data() };
+    } catch(e){ handleErr(e); return; }
+    document.title = `${stu.name} — 학생 상세`;
+    renderProfile();
+    initForms();
+    await Promise.all([loadCounsel(), loadScores()]);
+    const h = location.hash.slice(1);
+    if (['scores','academy'].includes(h)) $('tabs').querySelector(`[data-tab="${h}"]`).click();
+  }
+  function renderProfile(){
+    const g = [1,2,3].includes(Number(stu.grade)) ? stu.grade + '학년' : null;
+    const lastC = counsel[0], lastS = sortedScores().slice(-1)[0];
+    $('prof').innerHTML = `<div class="prof-top"><div class="av">${esc((stu.name || '?').slice(stu.name && stu.name.length >= 3 ? 1 : 0, (stu.name && stu.name.length >= 3 ? 2 : 1)))}</div>
+      <div><h1>${esc(stu.name)}</h1><div class="chips">${[stu.className, ACAD[stu.academy], g, '코드 ' + (stu.code || '')].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}</div></div>
+      <div class="acts"><a href="planner.html?view=${encodeURIComponent(stu.code || '')}">플래너 보기</a><a href="students.html">학생 목록</a></div></div>
+      <div class="kv">
+        <div><span>학생 연락처</span><b>${stu.phone ? `<a href="tel:${esc(stu.phone)}">${esc(fmtPhone(stu.phone))}</a>` : '—'}</b></div>
+        <div><span>학부모 연락처</span><b>${stu.parentPhone ? `<a href="tel:${esc(stu.parentPhone)}">${esc(fmtPhone(stu.parentPhone))}</a>` : '—'}</b></div>
+        <div><span>최근 상담</span><b>${lastC ? esc(lastC.date.slice(5).replace('-', '/')) + ` <small>${esc(KINDS[lastC.kind] || '')}</small>` : '—'}</b></div>
+        <div><span>최근 학교 성적</span><b>${lastS ? `${lastS.score}<small>/${lastS.max} · ${esc(termOf(lastS.term).label)}</small>` : '—'}</b></div>
+      </div>`;
+  }
+
+  // ═════════ 상담 기록 ═════════
+  function initForms(){
+    $('cDate').value = today;
+    $('cKind').innerHTML = Object.entries(KINDS).map(([k, v]) => `<button type="button" data-k="${k}" class="${k === cKind ? 'on' : ''}">${v}</button>`).join('');
+    $('sGrade').value = [1,2,3].includes(Number(stu.grade)) ? String(stu.grade) : '1';
+    $('sYear').value = today.slice(0, 4);
+    $('sSubj').value = '수학';
+    renderTerms(); renderRankOpts();
+  }
+  $('cKind').onclick = e => { const b = e.target.closest('button'); if (!b) return; cKind = b.dataset.k; $('cKind').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
+  async function loadCounsel(){
+    try {
+      const qs = await db.collection('studentCounsel').where('sid', '==', SID).get();
+      counsel = qs.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.date || '').localeCompare(a.date || '') || ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+    } catch(e){ counsel = []; handleErr(e, '상담 기록을 불러오지 못했어요'); }
+    renderCounsel(); renderProfile();
+  }
+  function renderCounsel(){
+    $('cCount').textContent = counsel.length ? `${counsel.length}건` : '';
+    $('cList').innerHTML = counsel.length ? counsel.map((c, i) => `<div class="tl-i">
+      <div class="tl-h"><span class="d">${esc(OMR.fmtKDate(c.date))}</span><span class="k ${c.kind}">${esc(KINDS[c.kind] || c.kind)}</span>${c.by ? `<span class="by">${esc(c.by)}</span>` : ''}
+        <span class="ops"><button class="btn sm ghost" data-ce="${i}">수정</button><button class="btn sm ghost" data-cd="${i}" style="color:var(--red);">삭제</button></span></div>
+      <div class="tl-b">${esc(c.text)}</div>
+      ${c.next ? `<label class="tl-n ${c.nextDone ? 'done' : ''}" style="display:flex;gap:6px;align-items:center;cursor:pointer;"><input type="checkbox" data-cn="${i}" ${c.nextDone ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--ok);">다음에 할 일 · ${esc(c.next)}</label>` : ''}
+    </div>`).join('') : '<div class="empty">아직 상담 기록이 없어요. 위에서 첫 기록을 남겨 보세요.</div>';
+  }
+  $('cList').addEventListener('click', async e => {
+    const ed = e.target.closest('[data-ce]'), dl = e.target.closest('[data-cd]');
+    if (ed){ const c = counsel[+ed.dataset.ce]; cEdit = c.id;
+      $('cDate').value = c.date; $('cText').value = c.text; $('cNext').value = c.next || ''; cKind = c.kind;
+      $('cKind').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.k === cKind));
+      $('cFormTitle').textContent = '상담 기록 수정'; $('cCancel').classList.remove('hidden'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    if (dl){ const c = counsel[+dl.dataset.cd];
+      if (!confirm(`${c.date} 상담 기록을 삭제할까요?`)) return;
+      try { await db.collection('studentCounsel').doc(c.id).delete(); toast('삭제했어요'); loadCounsel(); } catch(err){ handleErr(err); } }
+  });
+  $('cList').addEventListener('change', async e => {
+    const cb = e.target.closest('[data-cn]'); if (!cb) return;
+    const c = counsel[+cb.dataset.cn];
+    try { await db.collection('studentCounsel').doc(c.id).update({ nextDone: cb.checked }); c.nextDone = cb.checked; renderCounsel(); } catch(err){ handleErr(err); }
+  });
+  function resetCounsel(){ cEdit = null; $('cText').value = ''; $('cNext').value = ''; $('cDate').value = today; $('cFormTitle').textContent = '상담 기록 남기기'; $('cCancel').classList.add('hidden'); $('cMsg').textContent = ''; }
+  $('cCancel').onclick = resetCounsel;
+  $('cSave').onclick = async () => {
+    const text = $('cText').value.trim(), date = $('cDate').value;
+    if (!date) return toast('날짜를 고르세요');
+    if (!text) return toast('상담 내용을 적어 주세요');
+    const data = { sid: SID, code: stu.code || '', name: stu.name, date, kind: cKind, text, next: $('cNext').value.trim(), updatedAt: FV.serverTimestamp() };
+    $('cSave').disabled = true;
+    try {
+      if (cEdit) await db.collection('studentCounsel').doc(cEdit).update(data);
+      else await db.collection('studentCounsel').add({ ...data, nextDone: false, by: (firebase.auth().currentUser || {}).email ? '선생님' : '', createdAt: FV.serverTimestamp() });
+      toast(cEdit ? '수정했어요' : '상담 기록을 남겼어요'); resetCounsel(); loadCounsel();
+    } catch(e){ handleErr(e); }
+    $('cSave').disabled = false;
+  };
+  $('cCopy').onclick = () => {
+    if (!counsel.length) return toast('복사할 기록이 없어요');
+    copyText(`[${stu.name} 상담 기록]\n` + counsel.map(c => `■ ${c.date} ${KINDS[c.kind] || ''}\n${c.text}${c.next ? `\n→ 다음: ${c.next}${c.nextDone ? ' (완료)' : ''}` : ''}`).join('\n\n'));
+  };
+
+  // ═════════ 학교 성적 ═════════
+  function renderTerms(){
+    $('sTerm').innerHTML = '<span class="muted" style="font-size:12px;font-weight:700;align-self:center;">내신</span>'
+      + TERMS.filter(t => t.type === 'school').map(t => `<button type="button" data-k="${t.k}" class="${t.k === sTerm ? 'on' : ''}">${t.label}</button>`).join('')
+      + '<span class="muted" style="font-size:12px;font-weight:700;align-self:center;margin-left:6px;">모의고사</span>'
+      + TERMS.filter(t => t.type === 'mock').map(t => `<button type="button" data-k="${t.k}" class="${t.k === sTerm ? 'on' : ''}">${t.label}</button>`).join('');
+    const mock = termOf(sTerm).type === 'mock';
+    $('sAvgL').textContent = mock ? '백분위 (선택)' : '평균 (선택)';
+    $('sExtraL').textContent = mock ? '표준점수 (선택)' : '석차 / 인원 (선택)';
+    $('sExtra').placeholder = mock ? '예: 131' : '예: 12/240';
+    renderRankOpts();
+  }
+  function renderRankOpts(){
+    const mock = termOf(sTerm).type === 'mock';
+    const n = mock || Number($('sGrade').value) >= 2 ? 9 : 5;     // 2028 수능 체제 고1 내신 5등급 · 모의고사 9등급
+    const cur = $('sRank').value;
+    $('sRank').innerHTML = '<option value="">—</option>' + [...Array(n)].map((_, i) => `<option value="${i + 1}">${i + 1}등급</option>`).join('');
+    $('sRank').value = cur;
+  }
+  $('sTerm').onclick = e => { const b = e.target.closest('button'); if (!b) return; sTerm = b.dataset.k; renderTerms(); };
+  $('sGrade').onchange = renderRankOpts;
+  async function loadScores(){
+    try {
+      const qs = await db.collection('studentScores').where('sid', '==', SID).get();
+      scores = qs.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e){ scores = []; handleErr(e, '학교 성적을 불러오지 못했어요'); }
+    renderScores(); renderProfile();
+  }
+  const keyOf = s => (Number(s.year) || 0) * 100 + termOf(s.term).ord;
+  const sortedScores = () => scores.slice().sort((a, b) => keyOf(a) - keyOf(b) || (a.subject || '').localeCompare(b.subject || '', 'ko'));
+  const pct = s => s.max ? s.score / s.max * 100 : s.score;
+  function renderScores(){
+    const list = sortedScores();
+    $('sCount').textContent = list.length ? `${list.length}건` : '';
+    // 같은 과목·같은 종류(내신/모의)의 바로 전 시험과 비교
+    const prevOf = s => { const same = list.filter(x => x.subject === s.subject && termOf(x.term).type === termOf(s.term).type && keyOf(x) < keyOf(s)); return same[same.length - 1]; };
+    $('sTbl').innerHTML = list.length ? `<tr><th>시기</th><th>시험</th><th>과목</th><th class="num">점수</th><th class="num">변화</th><th class="num">등급</th><th class="num">평균·백분위</th><th>석차·표점</th><th>메모</th><th></th></tr>`
+      + list.slice().reverse().map(s => { const t = termOf(s.term), p = prevOf(s);
+        const d = p ? Math.round((pct(s) - pct(p)) * 10) / 10 : null;
+        const dg = p && s.rank && p.rank ? p.rank - s.rank : null;
+        return `<tr><td>${esc(s.year)} · 고${esc(s.grade)}</td><td><span class="ty ${t.type}">${t.type === 'mock' ? '모의' : '내신'}</span> ${esc(t.label)}</td><td>${esc(s.subject)}</td>
+          <td class="num"><b>${s.score}</b><span class="muted">/${s.max}</span></td>
+          <td class="num">${d == null ? '<span class="muted">—</span>' : d === 0 ? '<span class="muted">=</span>' : `<span class="chg ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}${s.max === 100 && p.max === 100 ? '점' : '%p'}</span>`}</td>
+          <td class="num">${s.rank ? `<b>${s.rank}</b>등급${dg ? ` <span class="chg ${dg > 0 ? 'up' : 'down'}">${dg > 0 ? '▲' : '▼'}${Math.abs(dg)}</span>` : ''}` : '—'}</td>
+          <td class="num">${s.avg != null && s.avg !== '' ? esc(s.avg) : '—'}</td><td>${esc(s.extra || '')}</td><td class="muted" style="max-width:220px;">${esc(s.note || '')}</td>
+          <td style="white-space:nowrap;text-align:right;"><button class="btn sm ghost" data-se="${s.id}">수정</button><button class="btn sm ghost" data-sd="${s.id}" style="color:var(--red);">삭제</button></td></tr>`; }).join('')
+      : '<tr><td class="empty">아직 입력한 학교 성적이 없어요.</td></tr>';
+    renderChart();
+  }
+  $('sTbl').addEventListener('click', async e => {
+    const ed = e.target.closest('[data-se]'), dl = e.target.closest('[data-sd]');
+    if (ed){ const s = scores.find(x => x.id === ed.dataset.se); sEdit = s.id;
+      $('sGrade').value = String(s.grade); $('sYear').value = s.year; $('sSubj').value = s.subject; sTerm = s.term; renderTerms();
+      $('sScore').value = s.score; $('sMax').value = s.max; $('sAvg').value = s.avg ?? ''; $('sRank').value = s.rank || ''; $('sExtra').value = s.extra || ''; $('sNote').value = s.note || '';
+      $('sFormTitle').textContent = '성적 수정'; $('sCancel').classList.remove('hidden'); $('sFormTitle').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    if (dl){ const s = scores.find(x => x.id === dl.dataset.sd);
+      if (!confirm(`${s.year} ${termOf(s.term).label} ${s.subject} 성적을 삭제할까요?`)) return;
+      try { await db.collection('studentScores').doc(s.id).delete(); toast('삭제했어요'); loadScores(); } catch(err){ handleErr(err); } }
+  });
+  function resetScore(){ sEdit = null; ['sScore','sAvg','sExtra','sNote'].forEach(id => $(id).value = ''); $('sRank').value = ''; $('sMax').value = 100; $('sFormTitle').textContent = '성적 입력'; $('sCancel').classList.add('hidden'); }
+  $('sCancel').onclick = resetScore;
+  $('sSave').onclick = async () => {
+    const score = parseFloat($('sScore').value), max = parseFloat($('sMax').value) || 100;
+    if (isNaN(score)) return toast('점수를 입력하세요');
+    if (score < 0 || score > max) return toast('점수가 만점보다 커요');
+    const subject = $('sSubj').value.trim() || '수학';
+    const year = Number($('sYear').value) || Number(today.slice(0, 4));
+    const avg = $('sAvg').value.trim() === '' ? null : parseFloat($('sAvg').value);
+    const data = { sid: SID, code: stu.code || '', name: stu.name, grade: Number($('sGrade').value), year, term: sTerm, subject,
+      score, max, avg, rank: $('sRank').value ? Number($('sRank').value) : null, extra: $('sExtra').value.trim(), note: $('sNote').value.trim(), updatedAt: FV.serverTimestamp() };
+    const dup = scores.find(x => x.id !== sEdit && x.year === year && x.term === sTerm && x.subject === subject);
+    if (dup && !confirm(`${year} ${termOf(sTerm).label} ${subject} 성적이 이미 있어요 (${dup.score}점). 새로 덮어쓸까요?`)) return;
+    $('sSave').disabled = true;
+    try {
+      const id = sEdit || (dup && dup.id);
+      if (id) await db.collection('studentScores').doc(id).set(data, { merge: true });
+      else await db.collection('studentScores').add({ ...data, createdAt: FV.serverTimestamp() });
+      toast('성적을 저장했어요'); resetScore(); loadScores();
+    } catch(e){ handleErr(e); }
+    $('sSave').disabled = false;
+  };
+  $('chMode').onclick = e => { const b = e.target.closest('button'); if (!b) return; chMode = b.dataset.v; $('chMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); renderChart(); };
+
+  // 시험 순서대로 x축, 내신·모의고사 두 줄 (점수는 백분율, 등급은 위가 1등급)
+  function renderChart(){
+    const list = sortedScores().filter(s => chMode === 'score' || s.rank);
+    const box = $('chartBox');
+    if (!list.length){ box.innerHTML = `<div class="empty" style="padding:28px 0;">${chMode === 'grade' ? '등급을 입력한 성적이 없어요.' : '성적을 입력하면 변화가 그래프로 보여요.'}</div>`; return; }
+    // 같은 시험(연도+시기)은 같은 x 위치
+    const slots = [...new Set(list.map(s => s.year + '_' + s.term))].sort((a, b) => keyOf({ year: a.split('_')[0], term: a.split('_')[1] }) - keyOf({ year: b.split('_')[0], term: b.split('_')[1] }));
+    const W = Math.max(320, slots.length * 74), H = 220, pl = 34, pr = 16, pt = 18, pb = 44;
+    const ix = 26, x = i => pl + ix + (slots.length === 1 ? (W - pl - pr - 2 * ix) / 2 : i * (W - pl - pr - 2 * ix) / (slots.length - 1));
+    const yS = v => pt + (1 - Math.max(0, Math.min(100, v)) / 100) * (H - pt - pb);
+    const yG = g => pt + (g - 1) / 8 * (H - pt - pb);
+    const y = s => chMode === 'score' ? yS(pct(s)) : yG(s.rank);
+    const series = (type, color, dash) => {
+      const subjects = [...new Set(list.filter(s => termOf(s.term).type === type).map(s => s.subject))];
+      return subjects.map((sub, si) => {
+        const pts = list.filter(s => termOf(s.term).type === type && s.subject === sub).map(s => ({ s, i: slots.indexOf(s.year + '_' + s.term) }));
+        const op = si === 0 ? 1 : .55;
+        return `<polyline points="${pts.map(p => `${x(p.i).toFixed(1)},${y(p.s).toFixed(1)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="2.4" stroke-opacity="${op}" ${dash ? 'stroke-dasharray="5 4"' : ''} stroke-linejoin="round"/>`
+          + pts.map(p => `<circle cx="${x(p.i).toFixed(1)}" cy="${y(p.s).toFixed(1)}" r="4" fill="#fff" stroke="${color}" stroke-width="2.2" stroke-opacity="${op}"/>
+            <text x="${x(p.i).toFixed(1)}" y="${(y(p.s) - 9).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="800" fill="${color}">${chMode === 'score' ? p.s.score : p.s.rank + '등급'}</text>`).join('');
+      }).join('');
+    };
+    const avgLine = chMode === 'score' ? (() => { const pts = list.filter(s => termOf(s.term).type === 'school' && s.avg != null && s.avg !== '').map(s => `${x(slots.indexOf(s.year + '_' + s.term)).toFixed(1)},${yS(s.max ? s.avg / s.max * 100 : s.avg).toFixed(1)}`);
+      return pts.length > 1 ? `<polyline points="${pts.join(' ')}" fill="none" stroke="#9A9AA2" stroke-width="1.5" stroke-dasharray="3 4"/>` : ''; })() : '';
+    const grid = chMode === 'score' ? [0, 25, 50, 75, 100].map(v => `<line x1="${pl}" x2="${W - pr}" y1="${yS(v)}" y2="${yS(v)}" stroke="rgba(17,17,20,.07)"/><text x="${pl - 6}" y="${yS(v) + 3.5}" text-anchor="end" font-size="10" fill="#9A9AA2">${v}</text>`).join('')
+      : [1, 3, 5, 7, 9].map(g => `<line x1="${pl}" x2="${W - pr}" y1="${yG(g)}" y2="${yG(g)}" stroke="rgba(17,17,20,.07)"/><text x="${pl - 6}" y="${yG(g) + 3.5}" text-anchor="end" font-size="10" fill="#9A9AA2">${g}</text>`).join('');
+    const labels = slots.map((k, i) => { const [yr, t] = k.split('_'), s = list.find(z => z.year + '_' + z.term === k);
+      return `<text x="${x(i).toFixed(1)}" y="${H - 24}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#111114">${termOf(t).label.replace('학기 ', '-').replace(' 모의', '모').replace(' 수능', '수능')}</text>
+        <text x="${x(i).toFixed(1)}" y="${H - 10}" text-anchor="middle" font-size="9.5" fill="#9A9AA2">고${s ? s.grade : ''}·${String(yr).slice(2)}</text>`; }).join('');
+    box.innerHTML = `<div style="overflow-x:auto;"><svg viewBox="0 0 ${W} ${H}" style="min-width:${Math.min(W, 640)}px;" role="img" aria-label="학교 성적 변화">${grid}${avgLine}${series('school', '#D6301F')}${series('mock', '#3b6fe0', true)}${labels}</svg></div>`;
+  }
+
+  // ═════════ 학원 기록 (OMR·데일리) ═════════
+  let acLoaded = false;
+  async function loadAcademy(){
+    if (acLoaded || !stu || !stu.code) return; acLoaded = true;
+    try {
+      const [rl, dl] = await Promise.all([
+        db.collection('omrReportLinks').doc(stu.code).get().then(x => x.exists ? (x.data().items || []) : []).catch(() => []),
+        db.collection('dailyReportLinks').doc(stu.code).get().then(x => x.exists ? (x.data().items || []) : []).catch(() => []),
+      ]);
+      const ex = rl.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      const dr = dl.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      const sc = dr.filter(x => x.score != null && !x.absent);
+      const avgPct = sc.length ? Math.round(sc.slice(0, 10).reduce((a, x) => a + (x.max ? x.score / x.max * 100 : x.score), 0) / Math.min(10, sc.length)) : null;
+      $('acMini').innerHTML = `<a href="#"><div class="t">시험 OMR</div><div class="v">${ex.length}<small>회 응시${ex[0] ? ` · 최근 ${ex[0].score}/${ex[0].max}` : ''}</small></div></a>
+        <a href="#"><div class="t">데일리 리포트</div><div class="v">${dr.length}<small>건${avgPct != null ? ` · 복습 테스트 평균 ${avgPct}%` : ''}</small></div></a>
+        <a href="planner.html?view=${encodeURIComponent(stu.code)}"><div class="t">스터디 플래너</div><div class="v">보기 <small>읽기 전용 →</small></div></a>`;
+      $('acExam').innerHTML = ex.length ? '<tr><th>날짜</th><th>시험</th><th class="num">점수</th><th class="num">석차</th><th class="num">등급</th><th class="num">반 평균</th><th></th></tr>'
+        + ex.map(x => `<tr><td>${esc(x.date || '')}</td><td>${esc(x.title)}</td><td class="num"><b>${x.score}</b>/${x.max}</td><td class="num">${x.rank ? `${x.rank}/${x.n}` : '—'}</td><td class="num">${x.grade || '—'}</td><td class="num">${x.avg ?? '—'}</td>
+          <td><a class="btn sm ghost" href="report.html?t=${encodeURIComponent(x.token)}" target="_blank" rel="noopener">성적표</a></td></tr>`).join('') : '<tr><td class="empty">OMR 시험 기록이 없어요.</td></tr>';
+      $('acDaily').innerHTML = dr.length ? '<tr><th>날짜</th><th>수업</th><th class="num">복습 테스트</th><th class="num">반 평균</th><th></th></tr>'
+        + dr.slice(0, 15).map(x => `<tr><td>${esc(x.date || '')}</td><td>${esc(x.title || '')}</td><td class="num">${x.absent ? '결석' : x.score != null ? `<b>${x.score}</b>/${x.max}` : '—'}</td><td class="num">${x.avg ?? '—'}</td>
+          <td><a class="btn sm ghost" href="daily-report.html?t=${encodeURIComponent(x.token)}" target="_blank" rel="noopener">리포트</a></td></tr>`).join('') : '<tr><td class="empty">데일리 리포트가 없어요.</td></tr>';
+      $('acMini').querySelectorAll('a[href="#"]').forEach(a => a.onclick = e => e.preventDefault());
+    } catch(e){ handleErr(e); }
+  }
+})();
+</script>
+</body>
+</html>
