@@ -110,6 +110,8 @@
   #vList.omr-only > :not(.oo-keep){display:none !important;}
   #vList.daily-only > :not(.oo-head):not(.dd-keep){display:none !important;}
   #vList.daily-only .oo-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 0 16px;}
+  #vList.report-only > :not(.oo-head):not(.rp-keep), #vList.hw-only > :not(.oo-head):not(.hw-keep){display:none !important;}
+  #vList.report-only .oo-head, #vList.hw-only .oo-head,
   #vList.omr-only .oo-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 0 16px;}
   .quick a:hover{border-color:var(--ink);}
   .quick .qi svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
@@ -178,7 +180,7 @@
 
   <!-- 2. 학생 개인 페이지 -->
   <section id="vList" class="hidden">
-    <div class="demo-bar oo-keep dd-keep hidden" id="demoBar">
+    <div class="demo-bar oo-keep dd-keep rp-keep hw-keep hidden" id="demoBar">
       <span class="db-k">예시</span>
       <span class="db-t">재원생이 보는 화면이에요. 눌러서 둘러보세요 — 실제 학생은 학생 코드로 입장하면 내 기록이 이렇게 나와요.</span>
       <button type="button" class="db-b" id="demoLogin">학생 코드로 입장</button>
@@ -204,14 +206,14 @@
         <a href="planner.html"><span>오늘 공부</span><b>–</b><small>&nbsp;</small></a>
       </div>
     </div>
-    <div class="feat"><div class="fg"><div class="fg-h">공부하기</div><nav class="quick"><a href="index.html?mode=omr" data-k="omr"><span class="qi"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17.5" rx="2"/><path d="M9 3.5h6v2.5H9z"/><path d="M8.5 13l2.3 2.3 4.7-4.8"/></svg><em class="bdg" hidden></em></span><b>시험 OMR</b><small>답안 제출</small></a><a href="#hwSec" data-k="hw"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4.5 19.5h4L19 9l-4-4L4.5 15.5z"/><path d="M13 7l4 4"/></svg><em class="bdg" hidden></em></span><b>과제</b><small>제출 · 확인</small></a><a href="lectures.html" data-k="lec"><span class="qi"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.2v5.6l4.8-2.8z" fill="currentColor"/></svg><em class="bdg" hidden></em></span><b>영상 강의</b><small>복습 영상</small></a><a href="../index.html#materials" data-k="lib"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"/><path d="M6.5 8h2M15.5 8h2M15.5 11h2"/></svg><em class="bdg" hidden></em></span><b>자료실</b><small>학원·학년 자료</small></a></nav></div><div class="fg"><div class="fg-h">관리하기</div><nav class="quick"><a href="planner.html" data-k="planner"><span class="qi"><svg viewBox="0 0 24 24"><path d="M6 3.5h11.5A1.5 1.5 0 0 1 19 5v15a.5.5 0 0 1-.5.5H6A1.5 1.5 0 0 1 4.5 19V5A1.5 1.5 0 0 1 6 3.5z"/><path d="M8 8.5l1.3 1.3L12 7.2M8 13.5l1.3 1.3L12 12.2M14 9h2.5M14 14h2.5"/></svg><em class="bdg" hidden></em></span><b>플래너</b><small>할 일 · 시간표</small></a><a href="timer.html" data-k="timer"><span class="qi"><svg viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.5l2.3 1.6M10 3.5h4M18.5 7l1.2-1.2"/></svg><em class="bdg" hidden></em></span><b>집중 타이머</b><small>순공 기록</small></a><a href="book.html" data-k="book"><span class="qi"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><em class="bdg" hidden></em></span><b>클리닉 예약</b><small>자리 보고 예약</small></a><a href="ask.html" data-k="ask"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A1.5 1.5 0 0 1 4 14.5z"/><path d="M10.2 8.4a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3"/></svg><em class="bdg" hidden></em></span><b>질문하기</b><small>사진으로 질문</small></a></nav></div><div class="fg"><div class="fg-h">돌아보기</div><nav class="quick"><a href="index.html?mode=daily" data-k="daily"><span class="qi"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5A.5.5 0 0 1 6.5 20V4a.5.5 0 0 1 .5-.5z"/><path d="M9.5 12h5M9.5 15.5h5"/></svg><em class="bdg" hidden></em></span><b>데일리 리포트</b><small>수업별 리포트</small></a><a href="#reportSec" data-k="report"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 19.5h16"/><path d="M7 16v-5M12 16V7M17 16v-8"/></svg><em class="bdg" hidden></em></span><b>시험 성적표</b><small>등급 · 오답</small></a><a href="review.html" data-k="review"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 19.5h16"/><path d="M6.5 16V12M11 16V8.5M15.5 16v-5M20 5l-4.5 4.5-4-3L6 11"/></svg><em class="bdg" hidden></em></span><b>복습 분석</b><small>단원별 추이</small></a><a href="../index.html#games" data-k="game"><span class="qi"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.3" r=".9" fill="currentColor"/><circle cx="17.8" cy="13.7" r=".9" fill="currentColor"/></svg><em class="bdg" hidden></em></span><b>개념 퀴즈</b><small>게임으로 복습</small></a></nav></div></div>
+    <div class="feat"><div class="fg"><div class="fg-h">공부하기</div><nav class="quick"><a href="index.html?mode=omr" data-k="omr"><span class="qi"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17.5" rx="2"/><path d="M9 3.5h6v2.5H9z"/><path d="M8.5 13l2.3 2.3 4.7-4.8"/></svg><em class="bdg" hidden></em></span><b>시험 OMR</b><small>답안 제출</small></a><a href="index.html?mode=hw" data-k="hw"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4.5 19.5h4L19 9l-4-4L4.5 15.5z"/><path d="M13 7l4 4"/></svg><em class="bdg" hidden></em></span><b>과제</b><small>제출 · 확인</small></a><a href="lectures.html" data-k="lec"><span class="qi"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.2v5.6l4.8-2.8z" fill="currentColor"/></svg><em class="bdg" hidden></em></span><b>영상 강의</b><small>복습 영상</small></a><a href="../index.html#materials" data-k="lib"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"/><path d="M6.5 8h2M15.5 8h2M15.5 11h2"/></svg><em class="bdg" hidden></em></span><b>자료실</b><small>학원·학년 자료</small></a></nav></div><div class="fg"><div class="fg-h">관리하기</div><nav class="quick"><a href="planner.html" data-k="planner"><span class="qi"><svg viewBox="0 0 24 24"><path d="M6 3.5h11.5A1.5 1.5 0 0 1 19 5v15a.5.5 0 0 1-.5.5H6A1.5 1.5 0 0 1 4.5 19V5A1.5 1.5 0 0 1 6 3.5z"/><path d="M8 8.5l1.3 1.3L12 7.2M8 13.5l1.3 1.3L12 12.2M14 9h2.5M14 14h2.5"/></svg><em class="bdg" hidden></em></span><b>플래너</b><small>할 일 · 시간표</small></a><a href="timer.html" data-k="timer"><span class="qi"><svg viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.5l2.3 1.6M10 3.5h4M18.5 7l1.2-1.2"/></svg><em class="bdg" hidden></em></span><b>집중 타이머</b><small>순공 기록</small></a><a href="book.html" data-k="book"><span class="qi"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><em class="bdg" hidden></em></span><b>클리닉 예약</b><small>자리 보고 예약</small></a><a href="ask.html" data-k="ask"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A1.5 1.5 0 0 1 4 14.5z"/><path d="M10.2 8.4a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3"/></svg><em class="bdg" hidden></em></span><b>질문하기</b><small>사진으로 질문</small></a></nav></div><div class="fg"><div class="fg-h">돌아보기</div><nav class="quick"><a href="index.html?mode=daily" data-k="daily"><span class="qi"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5A.5.5 0 0 1 6.5 20V4a.5.5 0 0 1 .5-.5z"/><path d="M9.5 12h5M9.5 15.5h5"/></svg><em class="bdg" hidden></em></span><b>데일리 리포트</b><small>수업별 리포트</small></a><a href="index.html?mode=report" data-k="report"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 19.5h16"/><path d="M7 16v-5M12 16V7M17 16v-8"/></svg><em class="bdg" hidden></em></span><b>시험 성적표</b><small>등급 · 오답</small></a><a href="review.html" data-k="review"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 19.5h16"/><path d="M6.5 16V12M11 16V8.5M15.5 16v-5M20 5l-4.5 4.5-4-3L6 11"/></svg><em class="bdg" hidden></em></span><b>복습 분석</b><small>단원별 추이</small></a><a href="../index.html#games" data-k="game"><span class="qi"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.3" r=".9" fill="currentColor"/><circle cx="17.8" cy="13.7" r=".9" fill="currentColor"/></svg><em class="bdg" hidden></em></span><b>개념 퀴즈</b><small>게임으로 복습</small></a></nav></div></div>
     <div id="weekBox"></div>
     <h2 class="sec-h" id="examSec">시험 OMR</h2>
     <div id="examList" class="oo-keep"><div class="empty">불러오는 중…</div></div>
     <h2 class="sec-h" id="hwSec">과제</h2>
-    <div id="todoList"><div class="empty">불러오는 중…</div></div>
+    <div id="todoList" class="hw-keep"><div class="empty">불러오는 중…</div></div>
     <h2 class="sec-h" id="reportSec">시험 성적표</h2>
-    <div id="reportList"><div class="empty">불러오는 중…</div></div>
+    <div id="reportList" class="rp-keep"><div class="empty">불러오는 중…</div></div>
     <h2 class="sec-h" id="dailySec">데일리 리포트</h2>
     <div id="dailyCardBox" class="dd-keep"></div>
     <div id="trendBox" class="dd-keep"></div>
@@ -266,7 +268,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=20"></script>
+<script src="common.js?v=21"></script>
 <script src="demo.js?v=2"></script>
 <script>
 (function(){
@@ -283,7 +285,13 @@
   };
 
   const MODE = new URLSearchParams(location.search).get('mode');
-  const MODE_OMR = MODE === 'omr', MODE_DAILY = MODE === 'daily';
+  const MODE_OMR = MODE === 'omr', MODE_DAILY = MODE === 'daily', MODE_REPORT = MODE === 'report', MODE_HW = MODE === 'hw';
+  const MODE_HEAD = { report: ['EXAM REPORT', '시험 성적표'], hw: ['HOMEWORK', '과제'], daily: ['DAILY REPORT', '데일리 리포트'], omr: ['MOBILE OMR', '시험 OMR'] }[MODE];
+  if (MODE_HEAD && MODE !== 'omr') document.title = MODE_HEAD[1] + ' — 엄형국 수학';
+  function applyMode(){
+    ['omr', 'daily', 'report', 'hw'].forEach(m => $('vList').classList.toggle(m + '-only', MODE === m));
+    if (MODE_HEAD){ $('ooK').textContent = MODE_HEAD[0]; $('ooTitle').textContent = MODE_HEAD[1]; }
+  }
   if (MODE_OMR) document.title = '시험 OMR — 엄형국 수학';
   if (MODE_DAILY) document.title = '데일리 리포트 — 엄형국 수학';
   // 학생 코드가 없는 방문자 → 재원생 화면을 예시 데이터로 보여 줌 (?demo=1 이면 코드가 있어도 예시)
@@ -332,11 +340,11 @@
     const acad = (OMR.ACADEMIES.find(a => a[0] === me.academy) || [])[1];
     $('helloClass').innerHTML = [me.className, acad, me.grade ? (/학년|공통/.test(me.grade) ? me.grade : me.grade + '학년') : null]
       .filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('');
-    $('vList').classList.toggle('omr-only', MODE_OMR);
+    applyMode();
     $('ooWho').textContent = `${me.name} 학생 · ${me.className}`;
-    $('vList').classList.toggle('daily-only', MODE_DAILY);
-    if (MODE_DAILY){ $('ooK').textContent = 'DAILY REPORT'; $('ooTitle').textContent = '데일리 리포트'; loadDaily(); return; }
-    if (!MODE_OMR){ loadTodos(); loadDaily(); loadDash(); }
+    if (MODE_DAILY){ loadDaily(); return; }
+    if (MODE_HW){ loadTodos(); return; }
+    if (!MODE){ loadTodos(); loadDaily(); loadDash(); }
     const box = $('examList');
     box.innerHTML = '<div class="empty">불러오는 중…</div>';
     const qs = await OMR.examsForStudent(me);
@@ -397,7 +405,7 @@
       const d = await db.collection('omrReportLinks').doc(me.code).get();
       const st = Object.fromEntries(exams.map(e => [e.id, e.status]));
       const items = (d.exists ? (d.data().items || []) : []).filter(x => st[x.examId] === 'published')
-        .sort((a,b) => (b.date || '').localeCompare(a.date || '')).slice(0, 6);
+        .sort((a,b) => (b.date || '').localeCompare(a.date || '')).slice(0, MODE_REPORT ? 60 : 6);
       const x0 = items[0];
       if (x0) setStat(0, `${x0.score}<small>/${x0.max}</small>`, [x0.grade ? x0.grade + '등급' : '', x0.rank ? `${x0.rank}/${x0.n}등` : ''].filter(Boolean).join(' · ') || esc(x0.title));
       else setStat(0, '–', '공개된 시험 없음');
@@ -790,8 +798,7 @@
     $('whoami').textContent = '방문자 · 예시';
     $('demoBar').classList.remove('hidden');
     demoLinks();
-    $('vList').classList.toggle('omr-only', MODE_OMR);
-    $('vList').classList.toggle('daily-only', MODE_DAILY);
+    applyMode();
     $('ooWho').textContent = '예시 학생 · 고1 예시반';
     $('helloName').textContent = '예시 학생';
     $('meAv').textContent = '예';

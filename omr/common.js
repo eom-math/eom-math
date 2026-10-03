@@ -614,7 +614,9 @@
     ]);
     // 최근 시험 OMR 성적표 (결과 공개된 것)
     const rl = await db.collection('omrReportLinks').doc(me.code).get().then(x => x.exists ? (x.data().items || []) : []).catch(() => []);
-    const lastExam = rl.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0] || null;
+    // 결과 공개된 시험만 (채점만 하고 공개 전인 점수는 보이지 않게)
+    const pubIds = new Set(exams ? exams.docs.filter(d => d.data().status === 'published').map(d => d.id) : []);
+    const lastExam = rl.filter(x => pubIds.has(x.examId)).sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0] || null;
     const rows = [];
     // 과제: 진행 중인 것 + 최근 끝낸 것 (나의 학습 「과제」 배너용), 이번 주 할 일에는 7일 안 기한의 미완료만
     const hw = (hwAll || []).filter(x => x.a.status === 'open' || x.status === 'revise' || (!x.done && toDate(x.a.dueAt) && toDate(x.a.dueAt) > new Date(now.getTime() - 14 * 864e5))).slice(0, 12);

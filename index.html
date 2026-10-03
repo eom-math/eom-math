@@ -1327,7 +1327,7 @@
     acadState.admin = !!user; applyAcad();
   });
 </script>
-<script src="omr/common.js?v=20"></script>
+<script src="omr/common.js?v=21"></script>
 <script>
 (function(){
   var btn=document.getElementById('tocBtn'), toc=document.getElementById('toc'),
@@ -1571,9 +1571,9 @@
     ['bnWeek','bnHw','bnExam','bnDaily','bnTrend'].forEach(function(id){ $(id).classList.toggle('sample', !!sample); });
     $('bnExamBody').innerHTML = exHtml(d.exam);
     $('bnExamDate').textContent = d.exam ? (d.exam.date ? OMR.fmtKDate(d.exam.date) : '최근 시험') : '시험 OMR';
-    if (d.exam && d.exam.token) $('bnExam').href = 'omr/report.html?t=' + encodeURIComponent(d.exam.token);
     if (sample){
       $('bnExam').href = 'omr/report.html?demo=1';
+      var hg2 = document.querySelector('#bnHw .bn-go'); if (hg2) hg2.href = 'omr/?mode=hw&demo=1';
       $('bnDaily').href = 'omr/daily-report.html?demo=1';
       $('bnTrend').href = 'omr/review.html?demo=1';
     }
@@ -1591,6 +1591,8 @@
     $('bnTrendCnt').textContent = d.trend.length ? '최근 ' + d.trend.length + '회' : '최근 5회';
     if (!sample){
       $('bnDaily').href = 'omr/?mode=daily';
+      $('bnExam').href = 'omr/?mode=report';
+      var hg = document.querySelector('#bnHw .bn-go'); if (hg) hg.href = 'omr/?mode=hw';
       $('bnTrend').href = 'omr/review.html';
       $('bnWeek').href = 'omr/planner.html';
     }
