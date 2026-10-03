@@ -69,7 +69,7 @@
     const weak = [...new Set(ex.questions.filter(q => !q.ok && q.tag).map(q => q.note || q.tag))].slice(0, 3);
     return {
       demo: true, name: NAME, className: CLASS, date: ex.examDate, title: '13회차',
-      progress: '미적분I 함수의 연속 — 사잇값의 정리, 구간별로 정의된 함수', nextHomework: '쎈 B단계 212~240번 · 오답노트 3문항',
+      progress: '미적분I 함수의 연속 — 사잇값의 정리, 구간별로 정의된 함수', nextHomework: '기출오마주 212~240번 · 오답노트 3문항',
       testName: ex.examTitle + ' (OMR)', unit: '함수의 연속', maxScore: ex.maxScore, attendance: 'present',
       score: ex.score, homework: 90, weak, comment: '오늘 시험에서 기본 개념 문항은 거의 완벽했어요. 노란색 유형과 서술형의 경우 나누기만 조금 더 연습하면 1등급도 충분합니다. 이번 주 클리닉에서 22번 유형을 같이 다시 풀어 봐요!',
       extra: { needed: true, when: '토요일 14:00 클리닉', reason: '서술형 미분가능성 경우 나누기' },
@@ -103,10 +103,10 @@
     const due = new Date(); due.setDate(due.getDate() + 1); due.setHours(22, 0, 0, 0);
     const at = new Date(); at.setHours(at.getHours() - 3);
     return {
-      a: { title: '쎈 B단계 212~240번', description: '풀이 과정이 보이게 사진을 찍어 올리세요.\n틀린 문제는 빨간 펜으로 다시 풀어 오답노트에 적어 오세요.', dueAt: due, status: 'open', className: CLASS },
+      a: { title: '기출오마주 212~240번', description: '풀이 과정이 보이게 사진을 찍어 올리세요.\n틀린 문제는 빨간 펜으로 다시 풀어 오답노트에 적어 오세요.', dueAt: due, status: 'open', className: CLASS },
       me: { name: NAME, className: CLASS },
       sub: { status: 'approved', submittedAt: at, memo: '230번은 풀이가 잘 안 떠올라서 해설을 봤어요.',
-        files: [{ name: '쎈_212-220.jpg', size: 1.6e6, type: 'image/jpeg' }, { name: '쎈_221-230.jpg', size: 1.4e6, type: 'image/jpeg' }, { name: '쎈_231-240.jpg', size: 1.5e6, type: 'image/jpeg' }] },
+        files: [{ name: '기출오마주_212-220.jpg', size: 1.6e6, type: 'image/jpeg' }, { name: '기출오마주_221-230.jpg', size: 1.4e6, type: 'image/jpeg' }, { name: '기출오마주_231-240.jpg', size: 1.5e6, type: 'image/jpeg' }] },
     };
   }
 

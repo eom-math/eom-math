@@ -269,7 +269,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="common.js?v=21"></script>
-<script src="demo.js?v=2"></script>
+<script src="demo.js?v=3"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast } = OMR;
@@ -819,7 +819,7 @@
     const t1 = new Date(Date.now() + 864e5), t3 = new Date(Date.now() + 3 * 864e5);
     const rows = [
       { d: 'OMR', cls: 'red', t: exam.title, m: '시험 OMR', exam: true },
-      { d: 'D-1', cls: 'red', t: '쎈 B단계 212~240번', m: '과제', href: 'hw.html?demo=1' },
+      { d: 'D-1', cls: 'red', t: '기출오마주 212~240번', m: '과제', href: 'hw.html?demo=1' },
       { d: `${t3.getMonth() + 1}/${t3.getDate()}`, cls: 'ink', t: '클리닉 14:00–16:00', m: '본관 3층', lock: 'book' },
       { d: '영상', cls: '', t: '함수의 연속 3강 — 사잇값의 정리', m: '40% 시청', lock: 'lec' },
       { d: '오늘', cls: '', t: '미적분 오답노트 정리', m: '플래너', lock: 'planner' },
@@ -837,7 +837,7 @@
     if (MODE_OMR && !autoOpened){ autoOpened = true; openExam(exam, null); return; }
     // 과제
     const tb = document.createElement('div');
-    tb.appendChild(item('hw.html?demo=1', '쎈 B단계 212~240번', `기한 ${fmtDateTime(t1)}`, '미제출', 'red'));
+    tb.appendChild(item('hw.html?demo=1', '기출오마주 212~240번', `기한 ${fmtDateTime(t1)}`, '미제출', 'red'));
     const om = item('#', '[OMR] ' + exam.title, '기한 없음 · OMR 답안을 제출하면 완료', '미제출', 'red');
     om.onclick = e => { e.preventDefault(); openExam(exam, null); }; tb.appendChild(om);
     tb.appendChild(item('hw.html?demo=1', '함수의 극한 워크북 p.32~40', '기한 지남', '확인 완료 ✓', 'published'));
