@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#FAFAF8">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../icons/favicon-64.png">
+<script src="../pwa.js" defer></script>
+<title>수업 달력 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=6">
+<style>
+  .lay{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;align-items:start;}
+  @media (max-width:900px){ .lay{grid-template-columns:1fr;} }
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chips button{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:7px 12px;font-size:13px;font-weight:800;}
+  .chips button.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .slot{display:grid;grid-template-columns:80px 1fr 1fr 1.2fr 34px;gap:6px;align-items:center;margin-bottom:6px;}
+  .slot .input{padding:8px 9px;font-size:14px;}
+  .slot button{border:0;background:var(--bg2);border-radius:8px;height:36px;font-size:16px;color:var(--red);}
+  @media (max-width:520px){ .slot{grid-template-columns:64px 1fr 1fr 34px;} .slot .pl{display:none;} }
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  @media (max-width:520px){ .grid3{grid-template-columns:1fr 1fr;} }
+  .mnav{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .mnav b{font-size:17px;font-weight:900;min-width:110px;text-align:center;}
+  .mnav button{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:16px;}
+  .lg{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11.5px;font-weight:700;color:var(--dim);margin:8px 0 2px;}
+  .lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px;}
+  .cc{cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="wrap wide">
+  <div class="topbar">
+    <a class="brand" href="../index.html">엄형국 <span>수학</span> · 관리</a>
+    <div class="row"><span class="sub" id="adminEmail"></span><button class="btn sm hidden" id="logoutBtn">로그아웃</button></div>
+  </div>
+  <nav class="row" id="adminNav" style="gap:4px;margin:-8px 0 16px;"></nav>
+
+  <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
+    <h1>관리자 로그인</h1>
+    <div class="card stack">
+      <input class="input" type="email" id="loginEmail" placeholder="이메일" autocomplete="username">
+      <input class="input" type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
+      <button class="btn primary block" id="loginBtn">로그인</button>
+      <p class="muted" id="loginMsg"></p>
+    </div>
+  </section>
+
+  <section id="vMain" class="hidden">
+    <div class="kicker">CLASS CALENDAR</div>
+    <h1>수업 달력</h1>
+    <p class="muted" style="margin-bottom:14px;">반별 정규 수업 시간과 휴강·직보(직전보강)·시험기간을 넣으면 학생 개인 페이지 맨 아래 <b>📅 달력</b>에 보여요. 공휴일은 자동으로 표시돼요.</p>
+    <div id="permWarn" class="note hidden" style="margin-bottom:14px;border:1px solid var(--red);"><b>Firestore 권한 오류</b> — <code>classSchedules</code>, <code>classEvents</code> 규칙을 게시했는지 확인하세요.</div>
+    <div class="row" style="margin-bottom:12px;"><label class="f" style="margin:0;">반</label><select class="input" id="cls" style="width:auto;min-width:160px;"></select></div>
+
+    <div class="lay">
+      <div>
+        <div class="card">
+          <div class="mnav"><button id="mPrev" aria-label="이전 달">‹</button><b id="mLabel"></b><button id="mNext" aria-label="다음 달">›</button><button class="btn sm" id="mToday" style="width:auto;border-radius:8px;">이번 달</button></div>
+          <div id="calBox"></div>
+          <div class="lg"><span><i style="background:#111114"></i>정규 수업</span><span><i style="background:#3B6FE0"></i>직보·보강</span><span><i style="background:#D6301F"></i>시험기간</span><span><i style="background:#F1F0EC"></i>휴강</span><span style="color:#D6301F;">빨간 날짜 = 공휴일</span></div>
+          <p class="muted" style="font-size:12px;margin-top:4px;">날짜를 누르면 오른쪽 일정 추가에 그 날짜가 들어가요.</p>
+          <div id="listBox"></div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h2 id="evTitle">일정 추가</h2>
+          <div class="stack">
+            <div><label class="f">종류</label><div class="chips" id="evKind"></div></div>
+            <div class="grid2">
+              <div><label class="f">날짜</label><input class="input" type="date" id="evDate"></div>
+              <div><label class="f">끝나는 날 <span class="muted" style="font-weight:600;">(기간이면)</span></label><input class="input" type="date" id="evEnd"></div>
+            </div>
+            <div class="grid2">
+              <div><label class="f">이름</label><input class="input" id="evName" maxlength="20" placeholder="예: 직보 1회차"></div>
+              <div><label class="f">시간 <span class="muted" style="font-weight:600;">(선택)</span></label><input class="input" id="evTime" maxlength="20" placeholder="예: 14:00~17:00"></div>
+            </div>
+            <div><label class="f">메모 <span class="muted" style="font-weight:600;">(선택 · 학생에게 보여요)</span></label><input class="input" id="evNote" maxlength="80" placeholder="예: 3층 자습실 · 교재 지참"></div>
+            <div><label class="f">대상 반</label><div class="chips" id="evCls"></div></div>
+            <div class="row"><button class="btn primary" id="evSave">저장</button><button class="btn ghost hidden" id="evCancel">새로 쓰기</button><span class="muted" id="evMsg"></span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>정규 수업 시간 <span class="muted" id="slotFor" style="font-size:13px;font-weight:700;"></span></h2>
+          <p class="muted" style="font-size:12.5px;margin-bottom:10px;">매주 같은 요일에 달력에 표시돼요. 휴강을 넣은 날은 줄이 그어져요.</p>
+          <div id="slots"></div>
+          <div class="row"><button class="btn sm" id="slotAdd">+ 요일 추가</button><button class="btn primary sm" id="slotSave">시간표 저장</button><span class="muted" id="slotMsg"></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=27"></script>
+<script src="calendar.js?v=1"></script>
+<script>
+(function(){
+  const { db, FV, esc, toast } = OMR;
+  const $ = id => document.getElementById(id);
+  const DOW = ['일','월','화','수','목','금','토'];
+  const today = OMR.todayStr();
+  let classes = [], schedules = [], events = [], ym = today.slice(0, 7), kind = 'makeup', evCls = new Set(['*']), editId = null, slots = [];
+  CAL.injectCss();
+  $('adminNav').innerHTML = OMR.adminNav('classcal.html');
+  function handleErr(e){ console.error(e); if (e && e.code === 'permission-denied') $('permWarn').classList.remove('hidden'); toast('오류: ' + (e.message || e), 3500); }
+
+  OMR.mountAdminLogin(async user => {
+    ['vLogin','vMain'].forEach(x => $(x).classList.toggle('hidden', x !== (user ? 'vMain' : 'vLogin')));
+    if (!user) return;
+    try { classes = [...new Set((await db.collection('omrCodes').get()).docs.map(d => d.data().className).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')); } catch(e){ classes = []; }
+    $('cls').innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('') || '<option value="">반 없음</option>';
+    $('evKind').innerHTML = Object.entries(CAL.KINDS).map(([k, v]) => `<button type="button" data-k="${k}" class="${k === kind ? 'on' : ''}">${v.label}</button>`).join('');
+    $('evDate').value = today;
+    await load();
+  });
+  async function load(){
+    try {
+      const [s, e] = await Promise.all([db.collection('classSchedules').get(), db.collection('classEvents').get()]);
+      schedules = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      events = e.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(err){ handleErr(err); }
+    renderSlots(); renderEvCls(); render();
+  }
+  const curCls = () => $('cls').value;
+  function render(){
+    const [y, m] = ym.split('-');
+    $('mLabel').textContent = `${y}년 ${+m}월`;
+    const opt = { schedules: schedules.filter(s => s.className === curCls()), events, className: curCls(), today, editable: true };
+    $('calBox').innerHTML = CAL.classHtml(ym, opt);
+    $('listBox').innerHTML = CAL.listHtml(ym, opt);
+  }
+  $('cls').onchange = () => { renderSlots(); evCls = new Set([curCls()]); renderEvCls(); render(); };
+  $('mPrev').onclick = () => { ym = CAL.shiftMonth(ym, -1); render(); };
+  $('mNext').onclick = () => { ym = CAL.shiftMonth(ym, 1); render(); };
+  $('mToday').onclick = () => { ym = today.slice(0, 7); render(); };
+  $('calBox').onclick = e => { const c = e.target.closest('.cc'); if (!c) return; $('evDate').value = c.dataset.d; $('evEnd').value = ''; $('evDate').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+
+  // ═════ 일정 ═════
+  const DEF = { cancel: '휴강', makeup: '직보', exam: '시험기간', event: '', holiday: '' };
+  $('evKind').onclick = e => { const b = e.target.closest('button'); if (!b) return; kind = b.dataset.k; $('evKind').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    $('evName').placeholder = { cancel: '예: 휴강', makeup: '예: 직보 1회차', exam: '예: 2학기 중간고사', event: '예: 학부모 설명회', holiday: '예: 겨울방학 · 임시공휴일' }[kind]; };
+  function renderEvCls(){
+    $('evCls').innerHTML = ['*', ...classes].map(c => `<button type="button" data-c="${esc(c)}" class="${evCls.has(c) ? 'on' : ''}">${c === '*' ? '전체 반' : esc(c)}</button>`).join('');
+  }
+  $('evCls').onclick = e => { const b = e.target.closest('button'); if (!b) return; const c = b.dataset.c;
+    if (c === '*') evCls = new Set(['*']); else { evCls.delete('*'); evCls.has(c) ? evCls.delete(c) : evCls.add(c); if (!evCls.size) evCls.add('*'); }
+    renderEvCls(); };
+  function resetEv(){ editId = null; $('evTitle').textContent = '일정 추가'; $('evCancel').classList.add('hidden'); ['evEnd','evName','evTime','evNote'].forEach(id => $(id).value = ''); }
+  $('evCancel').onclick = resetEv;
+  $('evSave').onclick = async () => {
+    const date = $('evDate').value, end = $('evEnd').value;
+    if (!date) return toast('날짜를 고르세요');
+    if (end && end < date) return toast('끝나는 날이 시작보다 빨라요');
+    const data = { kind, date, endDate: end && end !== date ? end : null, title: $('evName').value.trim() || DEF[kind] || CAL.KINDS[kind].label,
+      time: $('evTime').value.trim(), note: $('evNote').value.trim(), classNames: [...evCls], updatedAt: FV.serverTimestamp() };
+    $('evSave').disabled = true;
+    try {
+      if (editId) await db.collection('classEvents').doc(editId).update(data);
+      else await db.collection('classEvents').add({ ...data, createdAt: FV.serverTimestamp() });
+      toast(editId ? '일정을 고쳤어요' : '달력에 넣었어요'); ym = date.slice(0, 7); resetEv(); await load();
+    } catch(e){ handleErr(e); }
+    $('evSave').disabled = false;
+  };
+  $('listBox').onclick = async e => {
+    const ed = e.target.closest('[data-ee]'), dl = e.target.closest('[data-ed]');
+    if (dl){ const ev = events.find(x => x.id === dl.dataset.ed); if (!ev || !confirm(`${ev.date} '${ev.title}' 일정을 지울까요?`)) return;
+      try { await db.collection('classEvents').doc(ev.id).delete(); toast('지웠어요'); await load(); } catch(err){ handleErr(err); } }
+    if (ed){ const ev = events.find(x => x.id === ed.dataset.ee); if (!ev) return; editId = ev.id; kind = ev.kind;
+      $('evKind').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.k === kind));
+      $('evDate').value = ev.date; $('evEnd').value = ev.endDate || ''; $('evName').value = ev.title || ''; $('evTime').value = ev.time || ''; $('evNote').value = ev.note || '';
+      evCls = new Set(ev.classNames || ['*']); renderEvCls(); $('evTitle').textContent = '일정 수정'; $('evCancel').classList.remove('hidden'); $('evTitle').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  };
+
+  // ═════ 정규 수업 시간 ═════
+  function renderSlots(){
+    const s = schedules.find(x => x.className === curCls());
+    slots = s ? (s.slots || []).map(x => ({ ...x })) : [];
+    $('slotFor').textContent = curCls() ? '· ' + curCls() : '';
+    drawSlots();
+  }
+  function drawSlots(){
+    $('slots').innerHTML = slots.length ? slots.map((t, i) => `<div class="slot" data-i="${i}">
+      <select class="input" data-f="dow">${DOW.map((d, k) => `<option value="${k}" ${+t.dow === k ? 'selected' : ''}>${d}요일</option>`).join('')}</select>
+      <input class="input" type="time" data-f="start" value="${esc(t.start || '18:00')}"><input class="input" type="time" data-f="end" value="${esc(t.end || '21:00')}">
+      <input class="input pl" data-f="place" placeholder="강의실 (선택)" value="${esc(t.place || '')}"><button type="button" data-rm="${i}" aria-label="삭제">✕</button></div>`).join('')
+      : '<div class="muted" style="margin-bottom:8px;">아직 정규 수업 시간이 없어요. 요일을 추가하세요.</div>';
+  }
+  $('slots').addEventListener('input', e => { const r = e.target.closest('.slot'), f = e.target.dataset.f; if (!r || !f) return; slots[+r.dataset.i][f] = f === 'dow' ? +e.target.value : e.target.value; });
+  $('slots').addEventListener('change', e => { const r = e.target.closest('.slot'), f = e.target.dataset.f; if (!r || !f) return; slots[+r.dataset.i][f] = f === 'dow' ? +e.target.value : e.target.value; });
+  $('slots').onclick = e => { const b = e.target.closest('[data-rm]'); if (!b) return; slots.splice(+b.dataset.rm, 1); drawSlots(); };
+  $('slotAdd').onclick = () => { const last = slots[slots.length - 1]; slots.push({ dow: last ? (last.dow + 2) % 7 : 2, start: last ? last.start : '18:00', end: last ? last.end : '21:00', place: last ? last.place : '' }); drawSlots(); };
+  $('slotSave').onclick = async () => {
+    const c = curCls(); if (!c) return toast('반을 먼저 만드세요');
+    const clean = slots.filter(t => t.start).map(t => ({ dow: +t.dow, start: t.start, end: t.end || '', place: (t.place || '').slice(0, 30) })).sort((a, b) => a.dow - b.dow || a.start.localeCompare(b.start));
+    try {
+      const s = schedules.find(x => x.className === c);
+      if (s) await db.collection('classSchedules').doc(s.id).set({ className: c, slots: clean, updatedAt: FV.serverTimestamp() });
+      else await db.collection('classSchedules').add({ className: c, slots: clean, updatedAt: FV.serverTimestamp() });
+      toast(`${c} 시간표를 저장했어요`); await load();
+    } catch(e){ handleErr(e); }
+  };
+})();
+</script>
+</body>
+</html>

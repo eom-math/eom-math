@@ -115,6 +115,20 @@
   .note-al .ic{font-size:17px;} .note-al .d{font-size:12px;font-weight:800;color:var(--dim);}
   .note-al .t{flex:1;min-width:0;font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .note-al .go{font-size:12px;font-weight:800;color:var(--red);white-space:nowrap;}
+  /* 월간 달력 */
+  .cal-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;}
+  .cal-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .cal-seg{display:flex;gap:3px;background:var(--bg2);padding:3px;border-radius:11px;}
+  .cal-seg button{border:0;background:none;padding:8px 12px;border-radius:9px;font-size:13px;font-weight:800;color:var(--dim);}
+  .cal-seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .cal-nav{display:flex;align-items:center;gap:6px;}
+  .cal-nav b{font-size:15px;font-weight:900;min-width:92px;text-align:center;font-variant-numeric:tabular-nums;}
+  .cal-nav button{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:16px;}
+  .cal-sum{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+  .cal-sum span{font-size:12.5px;font-weight:800;background:var(--bg2);padding:5px 10px;border-radius:99px;}
+  .cal-sum span b{color:var(--red);}
+  .cal-reg{font-size:12.5px;color:var(--dim);margin-top:10px;font-weight:700;}
+  .cal-reg b{color:var(--ink);}
   /* 방문자 예시 */
   .demo-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1.5px solid var(--red);border-radius:14px;padding:11px 12px 11px 14px;margin:0 0 14px;}
   .demo-bar.hidden{display:none !important;}
@@ -239,6 +253,15 @@
     <div id="dailyCardBox" class="dd-keep"></div>
     <div id="trendBox" class="dd-keep"></div>
     <div id="dailyList" class="dd-keep"></div>
+    <h2 class="sec-h" id="calSec">📅 달력</h2>
+    <div class="cal-card">
+      <div class="cal-top">
+        <div class="cal-seg" id="calTabs"><button type="button" data-t="class" class="on">수업 시간표</button><button type="button" data-t="plan">플래너 공부</button></div>
+        <div class="cal-nav"><button type="button" id="calPrev" aria-label="이전 달">‹</button><b id="calLabel"></b><button type="button" id="calNext" aria-label="다음 달">›</button></div>
+      </div>
+      <div id="calBox"><div class="empty">불러오는 중…</div></div>
+      <div id="calFoot"></div>
+    </div>
     <div class="me-foot">
       <a href="../index.html#course">수업소개</a><a href="../index.html#channel">소식 · 상담</a><a href="../index.html">메인 홈</a>
     </div>
@@ -299,8 +322,9 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=26"></script>
+<script src="common.js?v=27"></script>
 <script src="demo.js?v=3"></script>
+<script src="calendar.js?v=1"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast } = OMR;
@@ -375,7 +399,7 @@
     $('ooWho').textContent = `${me.name} 학생 · ${me.className}`;
     if (MODE_DAILY){ loadDaily(); return; }
     if (MODE_HW){ loadTodos(); return; }
-    if (!MODE){ loadTodos(); loadDaily(); loadDash(); loadNotes(); }
+    if (!MODE){ loadTodos(); loadDaily(); loadDash(); loadNotes(); loadCalendar(); }
     const box = $('examList');
     box.innerHTML = '<div class="empty">불러오는 중…</div>';
     const qs = await OMR.examsForStudent(me);
@@ -521,6 +545,54 @@
       ${svg}
       <div class="lg"><span><i style="background:#E4E3DF;height:8px;width:10px;border-radius:2px;"></i>내 점수</span><span><i style="background:repeating-linear-gradient(90deg,#D6301F 0 3px,transparent 3px 6px);"></i>반 평균</span></div></a>`;
   }
+
+  // ───────── 월간 달력 (수업 시간표 · 플래너 공부) ─────────
+  const cal = { ym: OMR.todayStr().slice(0, 7), tab: 'class', schedules: [], events: [], docs: {}, loaded: {}, demo: false };
+  CAL.injectCss();
+  async function loadCalendar(){
+    try {
+      const [s, e] = await Promise.all([
+        db.collection('classSchedules').where('className', '==', me.className).get().then(q => q.docs.map(d => d.data())).catch(() => []),
+        db.collection('classEvents').get().then(q => q.docs.map(d => ({ id: d.id, ...d.data() }))).catch(() => []),
+      ]);
+      cal.schedules = s; cal.events = e.filter(x => CAL.forClass(x, me.className));
+    } catch(err){ console.warn(err); }
+    renderCal();
+  }
+  async function loadPlanMonth(ym){
+    if (cal.demo || cal.loaded[ym]) return;
+    cal.loaded[ym] = true;
+    const days = CAL.monthDays(ym).filter(c => c.cur && c.d <= OMR.todayStr()).map(c => c.d);
+    const got = await Promise.all(days.map(d => db.collection('planners').doc(`${me.code}_${d}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
+    days.forEach((d, i) => { if (got[i]){ const sm = OMR.plannerTodos(got[i]); cal.docs[d] = { ...got[i], done: sm.done, total: sm.total }; } });
+  }
+  async function renderCal(){
+    const [y, m] = cal.ym.split('-');
+    $('calLabel').textContent = `${y}. ${+m}월`;
+    $('calTabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === cal.tab));
+    const today = OMR.todayStr();
+    if (cal.tab === 'class'){
+      const opt = { schedules: cal.schedules, events: cal.events, className: me.className, today };
+      $('calBox').innerHTML = CAL.classHtml(cal.ym, opt);
+      const DW = '일월화수목금토';
+      const reg = cal.schedules.flatMap(s => s.slots || []).sort((a, b) => a.dow - b.dow);
+      $('calFoot').innerHTML = (reg.length ? `<div class="cal-reg">정규 수업 · ${reg.map(t => `<b>${DW[t.dow]}</b> ${esc(t.start)}${t.end ? '~' + esc(t.end) : ''}${t.place ? ' (' + esc(t.place) + ')' : ''}`).join(' · ')}</div>` : '<div class="cal-reg">정규 수업 시간은 선생님이 등록하면 보여요.</div>')
+        + CAL.listHtml(cal.ym, opt);
+    } else {
+      $('calBox').innerHTML = '<div class="empty">불러오는 중…</div>';
+      await loadPlanMonth(cal.ym);
+      const ds = Object.entries(cal.docs).filter(([d]) => d.slice(0, 7) === cal.ym).map(([, p]) => p);
+      $('calBox').innerHTML = CAL.plannerHtml(cal.ym, { docs: cal.docs, today });
+      const min = ds.reduce((a, p) => a + (p.studyMin || 0), 0), on = ds.filter(p => p.studyMin || p.done).length;
+      const dn = ds.reduce((a, p) => a + (p.done || 0), 0), tt = ds.reduce((a, p) => a + (p.total || 0), 0);
+      $('calFoot').innerHTML = `<div class="cal-sum"><span>이번 달 공부 <b>${min >= 60 ? Math.floor(min / 60) + '시간 ' + (min % 60) + '분' : min + '분'}</b></span><span>기록한 날 <b>${on}일</b></span><span>할 일 완료 <b>${dn}/${tt}</b></span></div>`
+        + `<div class="cal-reg">색이 진할수록 공부를 많이 한 날이에요 · 날짜를 누르면 그날 플래너로 가요</div>`;
+    }
+  }
+  $('calTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; cal.tab = b.dataset.t; renderCal(); };
+  $('calPrev').onclick = () => { cal.ym = CAL.shiftMonth(cal.ym, -1); renderCal(); };
+  $('calNext').onclick = () => { cal.ym = CAL.shiftMonth(cal.ym, 1); renderCal(); };
+  $('calBox').onclick = e => { const c = e.target.closest('.cc.pl'); if (!c || cal.demo) return; if (c.dataset.d <= OMR.todayStr()) location.href = 'planner.html?d=' + c.dataset.d; };
 
   // ───────── 플래너 선생님 코멘트 알림 ─────────
   async function loadNotes(){
@@ -901,6 +973,15 @@
     $('dailyList').innerHTML = '';
     const ditems = tr.slice().reverse().map((x, i) => ({ ...x, title: `${13 - i}회차` }));
     dailyListRender(ditems, () => 'daily-report.html?demo=1');
+    // 달력 예시
+    const ym0 = OMR.todayStr().slice(0, 7), d0 = n => `${ym0}-${String(n).padStart(2, '0')}`;
+    cal.demo = true;
+    cal.schedules = [{ className: '고1 예시반', slots: [{ dow: 2, start: '18:00', end: '21:00', place: '본관 3층' }, { dow: 4, start: '18:00', end: '21:00', place: '본관 3층' }, { dow: 6, start: '13:00', end: '16:00' }] }];
+    cal.events = [{ kind: 'cancel', date: d0(14), title: '휴강', note: '선생님 연수', classNames: ['*'] }, { kind: 'makeup', date: d0(18), title: '직보 1회차', time: '14:00~17:00', classNames: ['*'] },
+      { kind: 'makeup', date: d0(25), title: '직보 2회차', time: '14:00~17:00', classNames: ['*'] }, { kind: 'exam', date: d0(20), endDate: d0(23), title: '2학기 중간고사', classNames: ['*'] }];
+    const td = OMR.todayStr();
+    CAL.monthDays(ym0).filter(c => c.cur && c.d <= td).forEach((c, i) => { const m = [0, 90, 150, 60, 200, 120, 0, 180, 240, 30][i % 10]; if (m) cal.docs[c.d] = { studyMin: m, done: Math.min(5, Math.round(m / 50)), total: 5, sticker: m >= 200 ? '🔥' : '' }; });
+    renderCal();
   }
 
   // ───────── 시작 ─────────
