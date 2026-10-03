@@ -65,8 +65,11 @@
   .ring .v small{font-size:10.5px;color:var(--dim);font-weight:700;letter-spacing:0;}
 
   /* 보완 유형 (노란 형광펜) */
-  .hl{display:flex;flex-wrap:wrap;gap:8px;}
-  .hl span{font-weight:800;font-size:14.5px;padding:3px 4px;background:linear-gradient(transparent 45%, var(--hl) 45%, var(--hl) 92%, transparent 92%);}
+  .hl{display:flex;flex-wrap:wrap;gap:12px 10px;}
+  .hl > div{max-width:100%;line-height:1.7;}
+  /* 줄이 바뀌어도 줄마다 형광펜이 칠해지도록 inline + box-decoration-break */
+  .hl span{font-weight:800;font-size:14.5px;padding:2px 4px;word-break:keep-all;background:linear-gradient(transparent 50%, var(--hl) 50%, var(--hl) 92%, transparent 92%);
+    -webkit-box-decoration-break:clone;box-decoration-break:clone;}
   .none{font-size:13.5px;color:var(--dim);}
 
   .comment{font-size:15px;line-height:1.75;white-space:pre-wrap;word-break:keep-all;}
@@ -214,7 +217,7 @@
           <span class="ec">${r.exam.rank ? `석차 ${r.exam.rank}/${r.exam.n}` : ''}${r.exam.grade ? ` · ${r.exam.grade}등급` : ''} · 문항별 정오답 · 유형 분석</span><span class="eg">자세히 →</span></a>` : ''}
 
         <div class="sec"><div class="sec-t">보완할 유형</div>
-          ${r.weak && r.weak.length ? `<div class="hl">${r.weak.map(t => `<span>${esc(t)}</span>`).join('')}</div>
+          ${r.weak && r.weak.length ? `<div class="hl">${r.weak.map(t => `<div><span>${esc(t)}</span></div>`).join('')}</div>
             <p class="muted" style="margin-top:10px;font-size:12.5px;">점수와 관계없이 부분 실점한 유형입니다. 다음 수업 전까지 다시 풀어 보세요.</p>`
             : '<div class="none">오늘은 따로 보완할 유형이 없습니다. 👏</div>'}
         </div>`}

@@ -25,7 +25,7 @@
   .exam-item:hover{border-color:var(--ink);}
   .exam-item .t{font-weight:800;font-size:15.5px;}
   .exam-item .m{font-size:12.5px;color:var(--dim);}
-  .sec-h{font-size:13px;font-weight:800;color:var(--dim);letter-spacing:.04em;margin:22px 0 8px;}
+  .sec-h{font-size:16px;font-weight:900;color:var(--ink);letter-spacing:-.02em;margin:28px 0 10px;}
   .exam-item .go{margin-left:auto;font-weight:800;color:var(--dim);}
   .pcard{display:block;background:#fff;border-radius:22px;padding:18px 18px 16px;margin:12px 0;box-shadow:0 2px 14px rgba(17,17,20,.05);text-decoration:none;color:inherit;}
   .pcard .ph{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px;}
@@ -39,7 +39,8 @@
   .dsum .info{min-width:0;}
   .dsum .info .m{font-size:13px;color:var(--dim);margin-bottom:5px;}
   .dsum .hl{display:flex;flex-wrap:wrap;gap:4px 8px;}
-  .dsum .hl span{font-weight:800;font-size:14.5px;padding:0 2px;background:linear-gradient(transparent 50%,#FFE45C 50%);}
+  .dsum .hl > div{max-width:100%;line-height:1.6;}
+  .dsum .hl span{font-weight:800;font-size:14.5px;padding:0 2px;background:linear-gradient(transparent 50%,#FFE45C 50%);-webkit-box-decoration-break:clone;box-decoration-break:clone;}
   .dsum .ok{font-size:13.5px;font-weight:700;}
   .wk{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:4px 14px;margin-top:4px;}
   .wk a{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line2);text-decoration:none;font-size:14px;}
@@ -58,10 +59,43 @@
   .trend svg{width:100%;height:auto;display:block;}
   .trend .lg{display:flex;gap:12px;justify-content:flex-end;font-size:11px;color:var(--dim);margin-top:2px;}
   .trend .lg i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:4px;}
-  .quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:4px 0 6px;}
-  @media (min-width:600px){ .quick{grid-template-columns:repeat(6,minmax(0,1fr));} }
-  .quick a{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px 10px;background:#fff;border:1px solid var(--line);
-    border-radius:14px;text-decoration:none;font-size:12.5px;font-weight:800;}
+  /* 개인 페이지 머리 카드 */
+  .me{background:var(--ink);color:#fff;border-radius:22px;padding:18px 16px 14px;margin:0 0 16px;box-shadow:0 10px 30px rgba(17,17,20,.18);}
+  .me-top{display:flex;align-items:center;gap:12px;}
+  .me-av{flex:0 0 auto;width:50px;height:50px;border-radius:16px;display:grid;place-items:center;font-size:21px;font-weight:900;
+    background:linear-gradient(135deg,#F2553F,#D6301F);box-shadow:0 6px 16px rgba(214,48,31,.35);}
+  .me-id{min-width:0;flex:1;}
+  .me-k{font-size:10.5px;font-weight:800;letter-spacing:.16em;color:#ff7a6c;}
+  .me h1{font-size:22px;margin:1px 0 5px;color:#fff;}
+  .me-chips{display:flex;flex-wrap:wrap;gap:5px;}
+  .me-chips span{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:99px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.88);white-space:nowrap;}
+  .me-out{align-self:flex-start;flex:0 0 auto;background:none;border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.85);border-radius:9px;padding:6px 10px;font-size:12px;font-weight:700;}
+  .me-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:16px;}
+  @media (max-width:420px){ .me-stats{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  .me-stats a{display:block;text-decoration:none;color:#fff;background:rgba(255,255,255,.07);border-radius:13px;padding:10px 11px;min-width:0;}
+  .me-stats span{display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,.6);}
+  .me-stats b{display:block;font-size:20px;font-weight:900;letter-spacing:-.03em;margin:2px 0 1px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .me-stats b small{font-size:12px;color:rgba(255,255,255,.55);font-weight:700;letter-spacing:0;}
+  .me-stats a > small{display:block;font-size:11px;color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .me-stats .up{color:#7be0a8;} .me-stats .down{color:#ff8a7a;}
+  .feat{display:grid;gap:10px;margin-bottom:6px;}
+  @media (min-width:640px){ .feat{grid-template-columns:repeat(3,minmax(0,1fr));} .feat .quick{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  .fg-h{font-size:12px;font-weight:800;color:var(--dim);letter-spacing:.04em;margin:0 2px 6px;}
+  .quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;}
+  .quick a{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 2px 10px;background:#fff;border:1px solid var(--line);
+    border-radius:14px;text-decoration:none;font-size:12.5px;font-weight:800;text-align:center;}
+  .quick a b{font-weight:800;letter-spacing:-.02em;white-space:nowrap;}
+  .quick a small{font-size:10.5px;font-weight:600;color:var(--faint);line-height:1.2;margin-top:-3px;white-space:nowrap;}
+  @media (max-width:380px){ .quick a small{display:none;} .quick a{font-size:11.5px;} }
+  .quick .qi{position:relative;}
+  .quick .bdg{position:absolute;top:-6px;right:-8px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--ink);color:#fff;
+    font-size:10.5px;font-style:normal;font-weight:900;display:grid;place-items:center;border:2px solid #fff;}
+  .quick .bdg[hidden]{display:none;}
+  .empty-c{background:#fff;border:1px dashed var(--line);border-radius:var(--radius);padding:16px;font-size:13.5px;color:var(--dim);line-height:1.6;margin-bottom:10px;}
+  .empty-c a{font-weight:800;color:var(--red);text-decoration:none;white-space:nowrap;}
+  .me-foot{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 18px;margin:30px 0 0;padding-top:18px;border-top:1px solid var(--line);font-size:13px;}
+  .me-foot a{color:var(--dim);font-weight:700;text-decoration:none;}
+  .sec-h{scroll-margin-top:14px;}
   .quick a:hover{border-color:var(--ink);}
   .quick .qi svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .quick .qi{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:17px;font-weight:900;
@@ -122,30 +156,40 @@
     </div>
   </section>
 
-  <!-- 2. 시험 목록 -->
+  <!-- 2. 학생 개인 페이지 -->
   <section id="vList" class="hidden">
-    <div class="row between" style="margin-bottom:14px;">
-      <div>
-        <h1 id="helloName"></h1>
-        <p class="muted" id="helloClass"></p>
+    <div class="me">
+      <div class="me-top">
+        <div class="me-av" id="meAv" aria-hidden="true"></div>
+        <div class="me-id">
+          <div class="me-k">MY PAGE</div>
+          <h1 id="helloName"></h1>
+          <div class="me-chips" id="helloClass"></div>
+        </div>
+        <button class="me-out" id="logoutBtn">코드 변경</button>
       </div>
-      <button class="btn sm" id="logoutBtn">코드 변경</button>
+      <div class="me-stats" id="meStats">
+        <a href="#reportSec"><span>최근 시험</span><b>–</b><small>불러오는 중</small></a>
+        <a href="#dailySec"><span>복습 테스트</span><b>–</b><small>&nbsp;</small></a>
+        <a href="#hwSec"><span>남은 과제</span><b>–</b><small>&nbsp;</small></a>
+        <a href="planner.html"><span>오늘 공부</span><b>–</b><small>&nbsp;</small></a>
+      </div>
     </div>
-    <nav class="quick" aria-label="바로가기">
-      <a href="planner.html"><span class="qi"><svg viewBox="0 0 24 24"><path d="M6 3.5h11.5A1.5 1.5 0 0 1 19 5v15a.5.5 0 0 1-.5.5H6A1.5 1.5 0 0 1 4.5 19V5A1.5 1.5 0 0 1 6 3.5z"/><path d="M8 8.5l1.3 1.3L12 7.2M8 13.5l1.3 1.3L12 12.2M14 9h2.5M14 14h2.5"/></svg></span>플래너</a>
-      <a href="book.html"><span class="qi"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span>클리닉 예약</a>
-      <a href="lectures.html"><span class="qi"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.2v5.6l4.8-2.8z" fill="currentColor"/></svg></span>영상 강의</a>
-      <a href="ask.html"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A1.5 1.5 0 0 1 4 14.5z"/><path d="M10.2 8.4a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3"/></svg></span>질문하기</a>
-      <a href="timer.html"><span class="qi"><svg viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.5l2.3 1.6M10 3.5h4M18.5 7l1.2-1.2"/></svg></span>타이머</a>
-      <a href="#dailyList"><span class="qi"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5A.5.5 0 0 1 6.5 20V4a.5.5 0 0 1 .5-.5z"/><path d="M9.5 12h5M9.5 15.5h5"/></svg></span>리포트</a>
-    </nav>
-    <div id="dailyCardBox"></div>
+    <div class="feat"><div class="fg"><div class="fg-h">공부하기</div><nav class="quick"><a href="#examSec" data-k="omr"><span class="qi"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17.5" rx="2"/><path d="M9 3.5h6v2.5H9z"/><path d="M8.5 13l2.3 2.3 4.7-4.8"/></svg><em class="bdg" hidden></em></span><b>시험 OMR</b><small>답안 제출</small></a><a href="#hwSec" data-k="hw"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4.5 19.5h4L19 9l-4-4L4.5 15.5z"/><path d="M13 7l4 4"/></svg><em class="bdg" hidden></em></span><b>과제</b><small>제출 · 확인</small></a><a href="lectures.html" data-k="lec"><span class="qi"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.2v5.6l4.8-2.8z" fill="currentColor"/></svg><em class="bdg" hidden></em></span><b>영상 강의</b><small>복습 영상</small></a><a href="../index.html#materials" data-k="lib"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"/><path d="M6.5 8h2M15.5 8h2M15.5 11h2"/></svg><em class="bdg" hidden></em></span><b>자료실</b><small>학원·학년 자료</small></a></nav></div><div class="fg"><div class="fg-h">관리하기</div><nav class="quick"><a href="planner.html" data-k="planner"><span class="qi"><svg viewBox="0 0 24 24"><path d="M6 3.5h11.5A1.5 1.5 0 0 1 19 5v15a.5.5 0 0 1-.5.5H6A1.5 1.5 0 0 1 4.5 19V5A1.5 1.5 0 0 1 6 3.5z"/><path d="M8 8.5l1.3 1.3L12 7.2M8 13.5l1.3 1.3L12 12.2M14 9h2.5M14 14h2.5"/></svg><em class="bdg" hidden></em></span><b>플래너</b><small>할 일 · 시간표</small></a><a href="timer.html" data-k="timer"><span class="qi"><svg viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.5l2.3 1.6M10 3.5h4M18.5 7l1.2-1.2"/></svg><em class="bdg" hidden></em></span><b>집중 타이머</b><small>순공 기록</small></a><a href="book.html" data-k="book"><span class="qi"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><em class="bdg" hidden></em></span><b>클리닉 예약</b><small>자리 보고 예약</small></a><a href="ask.html" data-k="ask"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A1.5 1.5 0 0 1 4 14.5z"/><path d="M10.2 8.4a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3"/></svg><em class="bdg" hidden></em></span><b>질문하기</b><small>사진으로 질문</small></a></nav></div><div class="fg"><div class="fg-h">돌아보기</div><nav class="quick"><a href="#dailySec" data-k="daily"><span class="qi"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5A.5.5 0 0 1 6.5 20V4a.5.5 0 0 1 .5-.5z"/><path d="M9.5 12h5M9.5 15.5h5"/></svg><em class="bdg" hidden></em></span><b>데일리 리포트</b><small>수업별 리포트</small></a><a href="#reportSec" data-k="report"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 19.5h16"/><path d="M7 16v-5M12 16V7M17 16v-8"/></svg><em class="bdg" hidden></em></span><b>시험 성적표</b><small>등급 · 오답</small></a><a href="review.html" data-k="review"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 19.5h16"/><path d="M6.5 16V12M11 16V8.5M15.5 16v-5M20 5l-4.5 4.5-4-3L6 11"/></svg><em class="bdg" hidden></em></span><b>복습 분석</b><small>단원별 추이</small></a><a href="../index.html#games" data-k="game"><span class="qi"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.3" r=".9" fill="currentColor"/><circle cx="17.8" cy="13.7" r=".9" fill="currentColor"/></svg><em class="bdg" hidden></em></span><b>개념 퀴즈</b><small>게임으로 복습</small></a></nav></div></div>
     <div id="weekBox"></div>
+    <h2 class="sec-h" id="examSec">시험 OMR</h2>
+    <div id="examList"><div class="empty">불러오는 중…</div></div>
+    <h2 class="sec-h" id="hwSec">과제</h2>
+    <div id="todoList"><div class="empty">불러오는 중…</div></div>
+    <h2 class="sec-h" id="reportSec">시험 성적표</h2>
+    <div id="reportList"><div class="empty">불러오는 중…</div></div>
+    <h2 class="sec-h" id="dailySec">데일리 리포트</h2>
+    <div id="dailyCardBox"></div>
     <div id="trendBox"></div>
     <div id="dailyList"></div>
-    <div id="todoList"></div>
-    <h2 class="sec-h">시험 OMR</h2>
-    <div id="examList"><div class="empty">불러오는 중…</div></div>
+    <div class="me-foot">
+      <a href="../index.html#course">수업소개</a><a href="../index.html#channel">소식 · 상담</a><a href="../index.html">메인 홈</a>
+    </div>
   </section>
 
   <!-- 3. OMR 마킹 -->
@@ -235,20 +279,26 @@
   async function loadList(){
     show('vList');
     $('helloName').textContent = `${me.name} 학생`;
-    $('helloClass').textContent = me.className;
+    $('meAv').textContent = (me.name || '?').slice(me.name && me.name.length >= 3 ? 1 : 0, (me.name && me.name.length >= 3 ? 1 : 0) + 1);
+    const acad = (OMR.ACADEMIES.find(a => a[0] === me.academy) || [])[1];
+    $('helloClass').innerHTML = [me.className, acad, me.grade ? (/학년|공통/.test(me.grade) ? me.grade : me.grade + '학년') : null]
+      .filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('');
     loadTodos();
     loadDaily();
-    loadWeek();
+    loadDash();
     const box = $('examList');
     box.innerHTML = '<div class="empty">불러오는 중…</div>';
     const qs = await OMR.examsForStudent(me);
     const exams = qs.docs.map(d => ({ id:d.id, ...d.data() }))
       .filter(e => e.status && e.status !== 'draft')
       .sort((a,b) => (toDate(b.createdAt)||0) - (toDate(a.createdAt)||0));
-    if (!exams.length){ box.innerHTML = '<div class="empty">아직 응시할 시험이 없습니다.</div>'; return; }
+    if (!exams.length){ examCache = []; badge('omr', 0); box.innerHTML = '<div class="empty-c">아직 응시할 시험이 없어요. 시험이 열리면 여기에 나오고, 맨 위 「이번 주 할 일」에도 떠요.</div>'; loadReports([]); return; }
     const wantExam = new URLSearchParams(location.search).get('exam');
     const subs = await Promise.all(exams.map(e =>
       db.collection('omrSubmissions').doc(`${e.id}_${me.code}`).get().then(s => s.exists ? s.data() : null).catch(() => null)));
+    examCache = exams.map((e, i) => ({ e, sub: subs[i] }));
+    badge('omr', exams.filter((e, i) => e.status === 'open' && !(subs[i] && subs[i].status === 'submitted')).length);
+    loadReports(exams);
     box.innerHTML = '';
     exams.forEach((e, i) => {
       const sub = subs[i];
@@ -283,6 +333,27 @@
     }
   }
   let autoOpened = false;
+  let examCache = [];
+  function badge(k, n){ const b = document.querySelector(`.quick a[data-k="${k}"] .bdg`); if (!b) return; b.textContent = n > 9 ? '9+' : n; b.hidden = !n; }
+
+  // ───────── 시험 성적표 (결과 공개된 시험) ─────────
+  async function loadReports(exams){
+    const box = $('reportList');
+    try {
+      const d = await db.collection('omrReportLinks').doc(me.code).get();
+      const st = Object.fromEntries(exams.map(e => [e.id, e.status]));
+      const items = (d.exists ? (d.data().items || []) : []).filter(x => st[x.examId] === 'published')
+        .sort((a,b) => (b.date || '').localeCompare(a.date || '')).slice(0, 6);
+      const x0 = items[0];
+      if (x0) setStat(0, `${x0.score}<small>/${x0.max}</small>`, [x0.grade ? x0.grade + '등급' : '', x0.rank ? `${x0.rank}/${x0.n}등` : ''].filter(Boolean).join(' · ') || esc(x0.title));
+      else setStat(0, '–', '공개된 시험 없음');
+      if (!items.length){ box.innerHTML = '<div class="empty-c">아직 공개된 성적표가 없어요. 선생님이 결과를 공개하면 점수·등급·오답 분석을 볼 수 있어요. <a href="report.html?demo=1">예시 보기 →</a></div>'; return; }
+      box.innerHTML = '';
+      items.forEach((x, i) => box.appendChild(item('report.html?t=' + encodeURIComponent(x.token), x.title,
+        `${x.date ? esc(x.date) + ' · ' : ''}${x.score}/${x.max}점${x.rank ? ` · ${x.rank}/${x.n}등` : ''}${x.avg != null ? ` · 평균 ${x.avg}` : ''}`,
+        x.grade ? `${x.grade}등급` : '보기', i === 0 ? 'published' : 'draft')));
+    } catch(e){ console.warn(e); box.innerHTML = ''; }
+  }
 
   // ───────── 데일리 리포트 (최근 5개) ─────────
   async function loadDaily(){
@@ -291,7 +362,10 @@
     try {
       const d = await db.collection('dailyReportLinks').doc(me.code).get();
       const items = d.exists ? (d.data().items || []).slice().sort((a,b) => (b.date||'').localeCompare(a.date||'')) : [];
-      if (!items.length) return;
+      if (!items.length){
+        $('dailyCardBox').innerHTML = '<div class="empty-c">아직 받은 데일리 리포트가 없어요. 수업이 끝나면 선생님이 복습 테스트 점수·보완할 유형·코멘트를 보내 줘요. <a href="daily-report.html?demo=1">예시 보기 →</a></div>';
+        $('trendBox').innerHTML = ''; return;
+      }
       const scored = items.filter(x => x.score != null && !x.absent).slice(0, 5).reverse();
       $('trendBox').innerHTML = scored.length ? `<div class="pcard"><div class="ph"><h3>복습 테스트 추이</h3><span>최근 ${scored.length}회</span></div>${trendCard(scored)}</div>` : '';
       // 최신 데일리 리포트 요약 카드
@@ -305,11 +379,11 @@
             ${rep0.attendance === 'absent' ? '<div class="sc" style="font-size:26px;">결석</div>' : rep0.score != null ? `<div class="sc">${rep0.score}<small>/${rep0.maxScore}</small></div>` : ''}
             <div class="info">
               <div class="m">${rep0.avg != null && rep0.score != null ? `반 평균 ${rep0.avg}` : ''}${rep0.homework != null ? `${rep0.avg != null && rep0.score != null ? ' · ' : ''}과제 ${rep0.homework}%` : ''}</div>
-              ${weak.length ? `<div class="m" style="margin:2px 0 3px;font-size:12px;">보완할 유형</div><div class="hl">${weak.map(w => `<span>${esc(w)}</span>`).join('')}</div>` : `<div class="ok">${rep0.attendance === 'absent' ? '진도와 과제를 확인해 주세요' : '보완할 유형 없음 👏'}</div>`}
+              ${weak.length ? `<div class="m" style="margin:2px 0 3px;font-size:12px;">보완할 유형</div><div class="hl">${weak.map(w => `<div><span>${esc(w)}</span></div>`).join('')}</div>` : `<div class="ok">${rep0.attendance === 'absent' ? '진도와 과제를 확인해 주세요' : '보완할 유형 없음 👏'}</div>`}
             </div>
           </div></a>`;
       }
-      box.insertAdjacentHTML('beforeend', '<h2 class="sec-h">데일리 리포트</h2>');
+      box.insertAdjacentHTML('beforeend', '<div class="fg-h" style="margin-top:14px;">지난 리포트</div>');
       items.slice(0, 5).forEach((x, i) => {
         const a = document.createElement('a');
         a.className = 'exam-item'; a.href = 'daily-report.html?t=' + encodeURIComponent(x.token);
@@ -349,72 +423,40 @@
       <div class="lg"><span><i style="background:#E4E3DF;height:8px;width:10px;border-radius:2px;"></i>내 점수</span><span><i style="background:repeating-linear-gradient(90deg,#D6301F 0 3px,transparent 3px 6px);"></i>반 평균</span></div></a>`;
   }
 
-  // ───────── 이번 주 할 일 (과제 기한 · 클리닉 예약 · 안 본 영상 · 추가학습 · 열린 시험) ─────────
-  async function loadWeek(){
-    const box = $('weekBox');
-    const now = new Date(), in7 = new Date(now.getTime() + 7 * 864e5), today = OMR.todayStr();
-    const rows = [];
-    const dLabel = d => { const days = Math.ceil((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
-      return days < 0 ? '지남' : days === 0 ? '오늘' : 'D-' + days; };
-    const safe = p => p.catch(e => { console.warn(e); return null; });
-    const [as, slots, lecs, links, exams] = await Promise.all([
-      safe(OMR.studentAssignments(me)),
-      safe(db.collection('clinicSlots').get()),
-      safe(db.collection('lectures').get()),
-      safe(db.collection('dailyReportLinks').doc(me.code).get()),
-      safe(OMR.examsForStudent(me)),
-    ]);
-    // 과제: 열려 있고 아직 안 낸 것(또는 보완 요청) 중 기한이 7일 안이거나 지난 것 (OMR 과제는 OMR 제출로 완료)
-    const hwExamIds = new Set();
-    if (as){
-      as.forEach(x => {
-        if (x.omr) hwExamIds.add(x.a.examId);
-        const due = toDate(x.a.dueAt);
-        if (x.done || x.a.status !== 'open' || (due && due > in7)) return;
-        rows.push({ sort: due ? due.getTime() : in7.getTime(), d: due ? dLabel(due) : '과제', cls: !due || due - now < 2 * 864e5 ? 'red' : '',
-          t: x.a.title, m: x.status === 'revise' ? '보완 필요' : x.omr ? 'OMR 과제' : '과제', href: x.href });
-      });
+  // ───────── 요약 숫자 · 이번 주 할 일 (메인 화면 「나의 학습」과 같은 계산) ─────────
+  function setStat(i, big, small, cls){
+    const a = $('meStats').children[i]; if (!a) return;
+    a.querySelector('b').innerHTML = big; const sm = a.querySelector(':scope > small'); sm.innerHTML = small || '&nbsp;'; sm.className = cls || '';
+  }
+  async function loadDash(){
+    let d;
+    try { d = await OMR.studentDashboard(me, '', { withPlanner: true }); } catch(e){ console.warn(e); return; }
+    // 복습 테스트
+    const tr = d.trend || [], last = tr[tr.length - 1], prev = tr[tr.length - 2];
+    if (last){
+      const pct = x => x.max ? x.score / x.max * 100 : x.score;
+      const df = prev ? Math.round(pct(last) - pct(prev)) : 0;
+      setStat(1, `${last.score}<small>/${last.max}</small>`, df ? `${df > 0 ? '▲' : '▼'} ${Math.abs(df)}%p · 지난번보다` : esc(OMR.fmtKDate(last.date)), df > 0 ? 'up' : df < 0 ? 'down' : '');
+    } else setStat(1, '–', '아직 기록 없음');
+    // 과제
+    const openHw = (d.hw || []).filter(x => !x.done && (x.a.status === 'open' || x.status === 'revise'));
+    badge('hw', openHw.length);
+    const dues = openHw.map(x => toDate(x.a.dueAt)).filter(Boolean).sort((a, b) => a - b);
+    setStat(2, `${openHw.length}<small>개</small>`, openHw.length ? (dues[0] ? '가장 빠른 기한 ' + `${dues[0].getMonth() + 1}/${dues[0].getDate()}` : '기한 없음') : '모두 끝냈어요 👏');
+    // 오늘 공부 (플래너)
+    if (d.plan){
+      const t = d.plan.today, m = t.studyMin || 0;
+      setStat(3, m >= 60 ? `${Math.floor(m / 60)}<small>시간</small> ${m % 60}<small>분</small>` : `${m}<small>분</small>`, t.total ? `할 일 ${t.done}/${t.total} 완료` : '플래너에 할 일 적기');
     }
-    // 클리닉: 앞으로 7일 안에 예약한 시간
-    if (slots){
-      const up = slots.docs.map(d => ({ id:d.id, ...d.data() }))
-        .filter(s => s.date >= today && s.date <= OMR.todayStr(in7) && OMR.slotForClass(s, me.className));
-      const got = await Promise.all(up.map(s => db.collection('clinicBookings').doc(`${s.id}_${me.code}`).get().then(x => x.exists).catch(() => false)));
-      up.forEach((s, i) => { if (!got[i]) return;
-        const t = new Date(`${s.date}T${s.start}:00`);
-        rows.push({ sort: t.getTime(), d: `${t.getMonth()+1}/${t.getDate()}`, cls:'ink', t: `클리닉 ${s.start}–${s.end}`, m: s.place || '클리닉', href: 'book.html' }); });
-    }
-    // 추가학습: 가장 최근 리포트에서 추가학습이 필요하다고 했을 때
-    if (links && links.exists){
-      const last = (links.data().items || []).slice().sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
-      if (last && last.date >= OMR.todayStr(new Date(now.getTime() - 7 * 864e5))){
-        const r = await db.collection('dailyReports').doc(last.token).get().then(x => x.exists ? x.data() : null).catch(() => null);
-        if (r && r.extra && r.extra.needed) rows.push({ sort: now.getTime() - 1, d: '추가학습', cls:'red', t: r.extra.reason || '추가학습이 필요해요', m: r.extra.when || '', href: 'daily-report.html?t=' + encodeURIComponent(last.token) });
-      }
-    }
-    // 열린 시험 OMR
-    if (exams){
-      const open = exams.docs.map(d => ({ id:d.id, ...d.data() })).filter(e => e.status === 'open');
-      const subs = await Promise.all(open.map(e => db.collection('omrSubmissions').doc(`${e.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
-      open.forEach((e, i) => { if ((subs[i] && subs[i].status === 'submitted') || hwExamIds.has(e.id)) return;
-        const due = toDate(e.dueAt);
-        rows.push({ sort: due ? due.getTime() : now.getTime(), d: due ? dLabel(due) : 'OMR', cls:'red', t: e.title, m: '시험 OMR', href: null, exam: e, sub: subs[i] }); });
-    }
-    // 아직 완강하지 않은 영상 (최근 것 3개)
-    if (lecs){
-      const mine = lecs.docs.map(d => ({ id:d.id, ...d.data() })).filter(l => l.kind !== 'link' && OMR.lectureForStudent(l, me))
-        .sort((a,b) => (toDate(b.createdAt)||0) - (toDate(a.createdAt)||0)).slice(0, 6);
-      const vs = await Promise.all(mine.map(l => db.collection('lectureViews').doc(`${l.id}_${me.code}`).get().then(x => x.exists ? x.data() : null).catch(() => null)));
-      mine.filter((l, i) => !(vs[i] && vs[i].completed)).slice(0, 3).forEach(l => {
-        const v = vs[mine.indexOf(l)];
-        rows.push({ sort: in7.getTime() + 1, d: '영상', cls: '', t: l.title, m: v ? Math.round(v.percent) + '% 시청' : '안 봤어요', href: 'watch.html?id=' + encodeURIComponent(l.id) });
-      });
-    }
-    rows.sort((a,b) => a.sort - b.sort);
-    box.innerHTML = `<div class="pcard"><div class="ph"><h3>이번 주 할 일</h3><span>${rows.length}개</span></div>
-      <div class="wk">${rows.length ? rows.map((r, i) => `<a href="${r.href ? esc(r.href) : '#'}" data-i="${i}"><span class="d ${r.cls}">${esc(r.d)}</span>
-        <span class="t">${esc(r.t)}</span><span class="m">${esc(r.m)}</span></a>`).join('') : '<div class="none">이번 주에 남은 할 일이 없어요. 👏</div>'}</div></div>`;
-    box.querySelectorAll('a[data-i]').forEach(a => { const r = rows[+a.dataset.i]; if (r.exam) a.onclick = e => { e.preventDefault(); openExam(r.exam, r.sub); }; });
+    // 이번 주 할 일 = 선생님이 낸 것 + 내가 플래너에 적은 것(최대 4개)
+    const rows = (d.week || []).concat(d.plan ? d.plan.rows.slice(0, 4).map(r => ({ ...r, d: r.d, cls: '', m: r.subj || '플래너' })) : []);
+    $('weekBox').innerHTML = `<div class="pcard"><div class="ph"><h3>이번 주 할 일</h3><span>${rows.length}개</span></div>
+      <div class="wk">${rows.length ? rows.map((r, i) => `<a href="${esc(r.href || '#')}" data-i="${i}"><span class="d ${r.cls}">${esc(r.d)}</span>
+        <span class="t">${esc(r.t)}</span><span class="m">${esc(r.m)}</span></a>`).join('') : '<div class="none">이번 주에 남은 할 일이 없어요. 👏 <a href="planner.html" style="display:inline;padding:0;border:0;color:var(--red);font-weight:800;">플래너에 계획 세우기 →</a></div>'}</div></div>`;
+    $('weekBox').querySelectorAll('a[data-i]').forEach(a => {
+      const m = (a.getAttribute('href') || '').match(/^index\.html\?exam=(.+)$/);
+      if (m) a.onclick = e => { const x = examCache.find(c => c.e.id === decodeURIComponent(m[1])); if (x){ e.preventDefault(); openExam(x.e, x.sub); } };
+    });
   }
 
   // ───────── 과제 · 클리닉 학습지 ─────────
@@ -440,8 +482,9 @@
       const aRows = hwAll.filter(x => x.a.status === 'open' || x.status === 'revise');
       const openIds = new Set(aRows.map(r => r.a.id));
       const doneRows = hwAll.filter(r => !openIds.has(r.a.id)).slice(0, 5);
+      if (!aRows.length && !doneRows.length)
+        box.insertAdjacentHTML('beforeend', '<div class="empty-c">지금 받은 과제가 없어요. 선생님이 과제를 내면 여기와 「이번 주 할 일」에 나와요. <a href="hw.html?demo=1">예시 보기 →</a></div>');
       if (aRows.length || doneRows.length){
-        box.insertAdjacentHTML('beforeend', '<h2 class="sec-h">과제</h2>');
         [...aRows, ...doneRows].forEach(x => {
           const st = x.status, a = x.a;
           const due = toDate(a.dueAt);
