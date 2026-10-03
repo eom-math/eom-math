@@ -21,7 +21,7 @@
 
 ## 처음 한 번 설정
 1. Firebase 콘솔 → Firestore → 규칙: `firestore.rules` 내용을 기존 규칙 블록 안에 추가, `ADMIN_EMAIL` 교체 후 게시
-2. Firebase 콘솔 → Storage → 규칙: `storage.rules` 내용을 기존 규칙 블록 안에 추가, `ADMIN_EMAIL` 교체 후 게시
+2. Firebase 콘솔 → Storage → 규칙: `storage.rules` 전체로 바꾸고 `ADMIN_EMAIL` 한 곳 교체 후 게시
    (Firestore 접근 권한을 묻는 창이 뜨면 허용)
 
 ## 시험 흐름

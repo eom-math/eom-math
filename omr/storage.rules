@@ -1,11 +1,13 @@
+rules_version = '2';
 // ─────────────────────────────────────────────────────────────
-// 모바일 OMR · 과제/클리닉용 Firebase Storage 보안 규칙 (추가분)
+// 엄형국 수학 — Firebase Storage 보안 규칙 (전체)
 //
-// 적용 방법: Firebase 콘솔 → Storage → 규칙 탭에서 기존
-//   `match /b/{bucket}/o { ... }` 블록 "안쪽"에 아래를 붙여 넣고 게시하세요.
+// 적용 방법: Firebase 콘솔 → Storage → 규칙 탭의 내용을 "전부 지우고" 이 파일 전체를 붙여 넣은 뒤 게시하세요.
 //   (게시할 때 "Cloud Firestore 접근 권한"을 묻는 창이 뜨면 허용해야 학생 코드 확인이 됩니다)
-// ⚠ ADMIN_EMAIL 을 관리자 로그인 이메일로 바꾸세요.
+// ⚠ 아래 omrAdmin() 안의 ADMIN_EMAIL 한 곳을 선생님 로그인 이메일로 바꾸세요.
 // ─────────────────────────────────────────────────────────────
+service firebase.storage {
+  match /b/{bucket}/o {
 
     function omrAdmin() {
       return request.auth != null && request.auth.token.email == 'ADMIN_EMAIL';
@@ -66,3 +68,15 @@
         && !firestore.exists(/databases/(default)/documents/boardPosts/$(postId));
       allow delete: if omrAdmin();
     }
+
+    // 메인 홈페이지 자료실: 커리큘럼·진로 자료 — 누구나 보기, 선생님만 올리기·지우기
+    match /curriculum/{rest=**} {
+      allow read: if true;
+      allow write: if omrAdmin();
+    }
+    match /career/{rest=**} {
+      allow read: if true;
+      allow write: if omrAdmin();
+    }
+  }
+}
