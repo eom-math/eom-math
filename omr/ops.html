@@ -293,7 +293,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=22"></script>
+<script src="common.js?v=24"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, round } = OMR;
@@ -323,7 +323,10 @@
     show('vMain');
     await loadRoster();
     const tab = (location.hash || '#clinic').slice(1);
-    selectTab(['clinic','lecture','qna','att','study','notes'].includes(tab) ? tab : 'clinic');
+    selectTab(['clinic','lecture','qna','att','study','plan','notes'].includes(tab) ? tab : 'clinic');
+    // 위쪽 메뉴에서 같은 페이지의 다른 항목(#qna 등)을 누르면 그 탭으로
+    window.addEventListener('hashchange', () => { const t = location.hash.slice(1);
+      if (['clinic','lecture','qna','att','study','plan','notes'].includes(t) && !$('tabs').querySelector(`[data-tab="${t}"].on`)) selectTab(t); });
     refreshQnaBadge();
   });
 
@@ -707,6 +710,7 @@
   async function refreshQnaBadge(){
     try { const n = (await db.collection('questions').where('status','==','open').get()).size;
       $('qnaBadge').textContent = n; $('qnaBadge').classList.toggle('hidden', !n); } catch(e){}
+    OMR.fillNavBadges();
   }
   async function loadQna(){
     const box = $('qnaList');

@@ -411,12 +411,61 @@
   // ───────── 관리자 공통: 로그인·상단 메뉴 ─────────
   /** 출강 학원 (메인 자료실 배너와 같은 키) */
   const ACADEMIES = [['daechi-sangsang', '대치 상상학원'], ['daechi-snt', '대치 SNT학원'], ['megastudy-russel', '메가스터디 러셀']];
-  const ADMIN_PAGES = [['students.html', '학생 관리'], ['admin.html', '시험·OMR'], ['clinic.html', '오답 클리닉'], ['assign.html', '과제'], ['daily.html', '데일리 리포트'], ['ops.html', '운영'], ['study.html', '플래너·순공']];
-  const STAFF_PAGES = [['daily.html', '데일리 리포트'], ['ops.html', '운영'], ['study.html', '플래너·순공']];
-  function adminNav(current) {
-    return ADMIN_PAGES.map(([href, label]) =>
-      `<a class="btn sm ${href === current ? 'primary' : 'ghost'}" href="${href}">${label}</a>`).join('');
+  // ───────── 관리자 메뉴 (종류별로 묶음) ─────────
+  // [주소, 이름, 조교도 쓰는지, 배지 종류]
+  const NAV_GROUPS = [
+    ['학생', [['students.html', '학생 관리'], ['ops.html#att', '등원', 1], ['ops.html#notes', '학생 기록', 1]]],
+    ['수업·시험', [['admin.html', '시험·OMR'], ['daily.html', '데일리 리포트', 1], ['assign.html', '과제'], ['clinic.html', '오답 클리닉']]],
+    ['소통·예약', [['ops.html#qna', '질문 답변', 1, 'qna'], ['ops.html#clinic', '클리닉 예약', 1], ['ops.html#lecture', '영상 강의', 1]]],
+    ['공부 관리', [['study.html', '플래너·순공', 1], ['ops.html#study', '공부 타이머', 1]]],
+  ];
+  const ADMIN_PAGES = NAV_GROUPS.flatMap(g => g[1]).map(x => [x[0], x[1]]);
+  const STAFF_PAGES = NAV_GROUPS.flatMap(g => g[1]).filter(x => x[2]).map(x => [x[0], x[1]]);
+  const NAV_CSS = `.anav{width:100%;display:flex;flex-wrap:wrap;gap:8px 22px;
+      background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 12px;}
+    .anav .g{display:flex;flex-direction:column;gap:5px;min-width:0;}
+    .anav .gl{font-size:10.5px;font-weight:900;letter-spacing:.08em;color:var(--faint);padding-left:2px;}
+    .anav .gi{display:flex;gap:4px;flex-wrap:nowrap;}
+    .anav a{position:relative;display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border-radius:9px;font-size:13px;font-weight:800;
+      text-decoration:none;color:var(--ink);background:var(--bg2);white-space:nowrap;transition:background .15s;}
+    .anav a:hover{background:#e7e5df;}
+    .anav a.on{background:var(--ink);color:#fff;}
+    .anav .nb{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--red);color:#fff;
+      font-size:10.5px;font-weight:900;display:grid;place-items:center;border:2px solid #fff;line-height:1;}
+    .anav .nb[hidden]{display:none;}
+    @media (max-width:820px){ .anav{flex-direction:column;gap:8px;} .anav .g{flex-direction:row;align-items:flex-start;gap:8px;}
+      .anav .gl{flex:0 0 58px;padding-top:8px;} .anav .gi{flex-wrap:wrap;} .anav a{padding:7px 10px;} }`;
+  function navHtml(current, role) {
+    if (typeof document !== 'undefined' && !document.getElementById('anavCss')) {
+      const st = document.createElement('style'); st.id = 'anavCss'; st.textContent = NAV_CSS; document.head.appendChild(st);
+    }
+    const here = current + (current === 'ops.html' && typeof location !== 'undefined' ? (location.hash || '#clinic') : '');
+    const html = '<div class="anav">' + NAV_GROUPS.map(([label, items]) => {
+      const list = items.filter(x => role === 'admin' || x[2]);
+      if (!list.length) return '';
+      return `<div class="g"><span class="gl">${label}</span><div class="gi">${list.map(([href, name, , bd]) =>
+        `<a href="${href}" class="${href === here || href === current ? 'on' : ''}" data-href="${href}">${name}${bd ? `<span class="nb" data-badge="${bd}" hidden></span>` : ''}</a>`).join('')}</div></div>`;
+    }).join('') + '</div>';
+    // 그린 뒤: 질문 개수 배지 · ops 탭이 바뀌면 메뉴 강조도 바꿈
+    setTimeout(() => {
+      fillNavBadges();
+      if (current === 'ops.html' && !navHtml._hashBound) {
+        navHtml._hashBound = true;
+        window.addEventListener('hashchange', () => document.querySelectorAll('.anav a').forEach(a =>
+          a.classList.toggle('on', a.dataset.href === 'ops.html' + (location.hash || '#clinic'))));
+      }
+    }, 0);
+    return html;
   }
+  async function fillNavBadges() {
+    const els = document.querySelectorAll('.anav [data-badge="qna"]');
+    if (!els.length) return;
+    try {
+      const n = (await db.collection('questions').where('status', '==', 'open').get()).size;
+      els.forEach(b => { b.textContent = n > 99 ? '99+' : n; b.hidden = !n; b.parentNode.title = n ? `답변 기다리는 질문 ${n}개` : ''; });
+    } catch (e) { /* 권한 없으면 표시 안 함 */ }
+  }
+  function adminNav(current) { return navHtml(current, 'admin'); }
   /** #vLogin 안의 loginEmail/loginPw/loginBtn/loginMsg, logoutBtn, adminEmail 요소를 연결 */
   function mountAdminLogin(onChange) {
     const auth = firebase.auth(), $ = id => document.getElementById(id);
@@ -447,11 +496,7 @@
     try { await db.collection('omrStudents').limit(1).get(); return { uid: user.uid, name: '엄형국 선생님', role: 'admin', rulesMissing: true }; }
     catch (e) { return null; }
   }
-  function staffNav(current, role) {
-    const pages = role === 'admin' ? ADMIN_PAGES : STAFF_PAGES;
-    return pages.map(([href, label]) =>
-      `<a class="btn sm ${href === current ? 'primary' : 'ghost'}" href="${href}">${label}</a>`).join('');
-  }
+  function staffNav(current, role) { return navHtml(current, role === 'admin' ? 'admin' : 'ta'); }
   /** loginEmail/loginPw/loginBtn/loginMsg/logoutBtn/adminEmail 요소를 연결. onChange(me|null, user) */
   function mountStaffLogin(onChange) {
     const auth = firebase.auth(), $ = id => document.getElementById(id);
@@ -774,7 +819,7 @@
     normalizePhone, fmtPhone, round, toast, copyText, normalizeAnswers, gradeOne, gradeExam,
     QTYPES, examTypes, examSegments, layoutText, shortEq,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
-    adminNav, mountAdminLogin, commitOps, shuffle, UNTAGGED,
+    adminNav, fillNavBadges, mountAdminLogin, commitOps, shuffle, UNTAGGED,
     ACADEMIES, lectureForStudent, EXT_LINKS, slotForClass, slotClassLabel, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, plannerNotes, markPlannerSeen, plannerSeen, noteSig, PLAN_STAMP, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
