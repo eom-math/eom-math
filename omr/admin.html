@@ -1028,20 +1028,46 @@
       if (st === 'open'){
         if (!keyComplete()){ toast('정답을 먼저 모두 입력·저장하세요', 3000); return; }
         if (ex.status === 'draft') return openAudience(true);   // 처음 열 때는 응시 대상부터
-        await setStatus('open'); toast('응시를 다시 열었습니다.');
-      } else if (st === 'closed'){ await setStatus('closed'); }
+        const back = ex.status === 'closed' ? exSubs.filter(x => x.status === 'submitted' && x.autoSubmitted) : [];
+        await setStatus('open');
+        if (back.length) await reopenAuto(back);
+        toast(back.length ? `응시를 다시 열었습니다 · 마감 때 자동 제출된 ${back.length}명은 이어서 풀 수 있어요` : '응시를 다시 열었습니다.', 3200);
+      } else if (st === 'closed'){
+        const dr = draftSubs();
+        if (ex.status === 'open' && dr.length && !confirm(`아직 푸는 중인 학생 ${dr.length}명(${dr.slice(0, 5).map(x => x.name).join(', ')}${dr.length > 5 ? ' 등' : ''})은\n지금까지 마킹한 답으로 제출 처리됩니다. 마감할까요?`)) return;
+        await setStatus('closed');
+        if (dr.length) { await finalizeDrafts(dr); toast(`마감했습니다 · 푸는 중이던 ${dr.length}명은 푼 데까지 제출 처리`, 3200); }
+      }
       else if (st === 'published'){
         await setStatus('published'); toast('결과를 공개했습니다. 성적표 링크가 열립니다.');
       } else if (st === 'grade' || st === 'close-grade'){
         if (st === 'close-grade'){
-          if (!confirm('응시를 마감하고 채점할까요? 마감 후에는 학생이 제출할 수 없습니다.')) return;
+          const dr = draftSubs();
+          if (!confirm('응시를 마감하고 채점할까요? 마감 후에는 학생이 제출할 수 없습니다.' +
+            (dr.length ? `\n\n아직 푸는 중인 학생 ${dr.length}명(${dr.slice(0, 5).map(x => x.name).join(', ')}${dr.length > 5 ? ' 등' : ''})은 지금까지 마킹한 답(푼 데까지)으로 제출 처리해 함께 채점합니다.` : ''))) return;
           await setStatus('closed');
+          if (dr.length) await finalizeDrafts(dr);
         }
         await gradeAll();
       }
     } catch(err){ handleErr(err); }
   });
 
+  // 마감할 때 '푸는 중'(자동 저장된 답안)을 푼 데까지 제출로 바꿈
+  function draftSubs(){ return exSubs.filter(x => x.status === 'draft'); }
+  async function finalizeDrafts(list){
+    // 마감 직전 학생 기기의 자동 저장이 도착할 시간을 잠깐 줌
+    await new Promise(r => setTimeout(r, 1200));
+    list = draftSubs().filter(x => list.some(y => y.id === x.id));
+    await OMR.commitOps(list.map(x => ['update', db.collection('omrSubmissions').doc(x.id),
+      { status: 'submitted', submittedAt: FV.serverTimestamp(), autoSubmitted: true }]));
+    list.forEach(x => { x.status = 'submitted'; x.autoSubmitted = true; x.submittedAt = x.savedAt; });
+    renderSubs();
+  }
+  async function reopenAuto(list){
+    await OMR.commitOps(list.map(x => ['update', db.collection('omrSubmissions').doc(x.id),
+      { status: 'draft', submittedAt: null, autoSubmitted: false }]));
+  }
   async function setStatus(status){
     await db.collection('omrExams').doc(ex.id).update({ status });
     ex.status = status; renderHeader(); renderSend();
@@ -1486,7 +1512,7 @@
         const s = byCode[r.code];
         const marked = s ? Object.entries(s.answers || {}).filter(([n, a]) => exTypes[n] !== 'essay' && a && a.length).length : 0;
         const status = !s ? '<span class="sub-status none">미응시</span>'
-          : s.status === 'submitted' ? '<span class="sub-status submitted">제출</span>' : '<span class="sub-status draft">푸는 중</span>';
+          : s.status === 'submitted' ? `<span class="sub-status submitted">제출</span>${s.autoSubmitted ? ' <span class="pill" title="마감 때 푼 데까지 자동 제출">마감 제출</span>' : ''}` : '<span class="sub-status draft">푸는 중</span>';
         return `<tr><td><b>${esc(r.name)}</b>${r._gone ? ' <span class="pill">명단 외</span>' : ''}</td><td>${status}</td>
           <td class="num">${s ? `${marked}/${exTypes.filter(t => t && t !== 'essay').length}` : ''}</td>
           <td class="muted">${s ? fmtDateTime(s.submittedAt || s.savedAt) : ''}</td>

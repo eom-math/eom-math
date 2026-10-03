@@ -490,7 +490,7 @@
     $('submitBar').classList.toggle('hidden', !canEdit);
     const lb = $('lockedBanner');
     if (locked){
-      lb.innerHTML = `<b>제출 완료</b><span>${fmtDateTime(cur.submittedAt)} 제출 · 답안은 수정할 수 없습니다. 성적은 선생님이 공개하면 확인할 수 있어요.</span>`;
+      lb.innerHTML = `<b>제출 완료</b><span>${sub.autoSubmitted ? '응시 마감 때 푼 데까지 자동 제출 · ' : fmtDateTime(cur.submittedAt) + ' 제출 · '}답안은 수정할 수 없습니다. 성적은 선생님이 공개하면 확인할 수 있어요.</span>`;
       lb.classList.remove('hidden');
     } else if (exam.status !== 'open'){
       lb.innerHTML = `<b>응시가 마감된 시험입니다</b><span>답안을 제출할 수 없습니다.</span>`;
