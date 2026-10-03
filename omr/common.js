@@ -416,7 +416,7 @@
   const NAV_GROUPS = [
     ['학생', [['students.html', '학생 관리'], ['ops.html#att', '등원', 1], ['ops.html#notes', '학생 기록', 1]]],
     ['수업·시험', [['admin.html', '시험·OMR'], ['daily.html', '데일리 리포트', 1], ['assign.html', '과제'], ['clinic.html', '오답 클리닉'], ['classcal.html', '수업 달력']]],
-    ['소통·예약', [['ops.html#qna', '질문 답변', 1, 'qna'], ['notice.html', '칭찬 공지'], ['ops.html#clinic', '클리닉 예약', 1], ['ops.html#lecture', '영상 강의', 1]]],
+    ['소통·예약', [['ops.html#qna', '질문 답변', 1, 'qna'], ['board.html', '게시판', 0, 'board'], ['notice.html', '칭찬 공지'], ['ops.html#clinic', '클리닉 예약', 1], ['ops.html#lecture', '영상 강의', 1]]],
     ['공부 관리', [['study.html', '플래너·순공', 1], ['ops.html#study', '공부 타이머', 1]]],
   ];
   const ADMIN_PAGES = NAV_GROUPS.flatMap(g => g[1]).map(x => [x[0], x[1]]);
@@ -455,8 +455,8 @@
     const groups = NAV_GROUPS.map(([label, items]) => [label, items.filter(x => role === 'admin' || x[2])]).filter(g => g[1].length);
     const isCur = items => items.some(([href]) => href === here || href === current);
     const bar = '<div class="gbar">' + groups.map(([label, list], i) => {
-      const bd = list.find(x => x[3]);
-      return `<button type="button" data-g="${i}" class="${isCur(list) ? 'cur' : ''}">${label}<i>▾</i>${bd ? `<span class="nb" data-badge="${bd[3]}" hidden></span>` : ''}</button>`;
+      const bd = list.filter(x => x[3]).map(x => x[3]).join(',');
+      return `<button type="button" data-g="${i}" class="${isCur(list) ? 'cur' : ''}">${label}<i>▾</i>${bd ? `<span class="nb" data-gbadge="${bd}" hidden></span>` : ''}</button>`;
     }).join('') + '</div>';
     const html = '<div class="anav">' + bar + groups.map(([label, list], i) => {
       return `<div class="g" data-g="${i}"><span class="gl">${label}</span><div class="gi">${list.map(([href, name, , bd]) =>
@@ -490,12 +490,21 @@
     return html;
   }
   async function fillNavBadges() {
-    const els = document.querySelectorAll('.anav [data-badge="qna"]');
-    if (!els.length) return;
-    try {
-      const n = (await db.collection('questions').where('status', '==', 'open').get()).size;
-      els.forEach(b => { b.textContent = n > 99 ? '99+' : n; b.hidden = !n; b.parentNode.title = n ? `답변 기다리는 질문 ${n}개` : ''; });
-    } catch (e) { /* 권한 없으면 표시 안 함 */ }
+    const cnt = {};
+    const put = (key, n, tip) => (cnt[key] = n, document.querySelectorAll(`.anav [data-badge="${key}"]`).forEach(b => {
+      b.textContent = n > 99 ? '99+' : n; b.hidden = !n; b.parentNode.title = n ? tip : ''; }));
+    if (document.querySelector('.anav [data-badge="qna"]')) {
+      try { const n = (await db.collection('questions').where('status', '==', 'open').get()).size; put('qna', n, `답변 기다리는 질문 ${n}개`); }
+      catch (e) { /* 권한 없으면 표시 안 함 */ }
+    }
+    if (document.querySelector('.anav [data-badge="board"]')) {
+      try { const n = (await db.collection('boardPosts').where('kind', '==', 'post').get()).docs.map(d => d.data()).filter(p => !(p.reply && p.reply.text) && p.visibility !== 'hidden').length;
+        put('board', n, `답변 안 한 게시글 ${n}개`); }
+      catch (e) { /* 권한 없으면 표시 안 함 */ }
+    }
+    document.querySelectorAll('.anav [data-gbadge]').forEach(b => {
+      const n = b.dataset.gbadge.split(',').reduce((t, k) => t + (cnt[k] || 0), 0);
+      b.textContent = n > 99 ? '99+' : n; b.hidden = !n; });
   }
   function adminNav(current) { return navHtml(current, 'admin'); }
   /** #vLogin 안의 loginEmail/loginPw/loginBtn/loginMsg, logoutBtn, adminEmail 요소를 연결 */

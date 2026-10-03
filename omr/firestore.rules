@@ -48,6 +48,34 @@
       allow write: if omrAdmin();
     }
 
+    // 메인 게시판: 공지(관리자) + 학생 글(공개/비공개). 비공개 글은 목록 조회 불가, 글 id(추측 불가)로만 열림. 관리자는 전부 봄
+    match /boardPosts/{id} {
+      function postOk() {
+        let d = request.resource.data;
+        return d.kind == 'post'
+          && d.keys().hasOnly(['kind','title','body','visibility','sid','nick','className','createdAt'])
+          && d.visibility in ['public','private']
+          && d.title is string && d.title.size() >= 1 && d.title.size() <= 60
+          && d.body is string && d.body.size() <= 3000
+          && d.nick is string && d.nick.size() <= 12
+          && d.className is string && d.className.size() <= 40
+          && d.sid is string && exists(/databases/$(database)/documents/omrStudents/$(d.sid))
+          && d.createdAt == request.time;
+      }
+      allow get: if true;
+      allow list: if omrAdmin() || resource.data.visibility == 'public';
+      allow create: if omrAdmin() || postOk();
+      allow update, delete: if omrAdmin();
+    }
+    // 학생별 내가 쓴 글 id 목록 (학생 코드로만 접근)
+    match /boardLinks/{code} {
+      allow get: if true;
+      allow list: if omrAdmin();
+      allow write: if omrAdmin() || (exists(/databases/$(database)/documents/omrCodes/$(code))
+        && request.resource.data.keys().hasOnly(['items'])
+        && request.resource.data.items is list && request.resource.data.items.size() <= 200);
+    }
+
     // 학생 코드 → 이름/반. 코드를 아는 사람만 단건 조회 가능 (목록 조회 불가)
     match /omrCodes/{code} {
       allow get: if true;

@@ -498,6 +498,43 @@
   .dash{ padding:56px 0 8px; }
   /* 메인 달력 */
   .mcal{ padding:48px 0 8px; }
+  /* 게시판 */
+  .bd-write{ border:0; background:var(--ink); color:#fff; font:inherit; font-size:13px; font-weight:800; padding:10px 14px; cursor:pointer; white-space:nowrap; }
+  .bd-write:hover{ background:var(--red); }
+  .bd-sub{ font-size:12.5px; color:var(--dim); margin:-6px 0 12px; }
+  .bd-list{ background:#fff; border:1px solid var(--line); }
+  .bd-i{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:10px; width:100%; text-align:left; border:0; border-bottom:1px solid var(--line); background:none; padding:13px 14px; font:inherit; color:var(--ink); cursor:pointer; }
+  .bd-i:last-child{ border-bottom:0; }
+  .bd-i:hover{ background:var(--bg2); }
+  .bd-i.nt{ background:#FFF8F6; }
+  .bd-i .tg, .bd-m-h .tg{ font-size:11px; font-weight:900; padding:3px 8px; background:var(--bg2); color:var(--dim); white-space:nowrap; }
+  .bd-i .tg.nt, .bd-m-h .tg.nt{ background:var(--red); color:#fff; } .bd-i .tg.pv, .bd-m-h .tg.pv{ background:var(--ink); color:#fff; }
+  .bd-i .tt{ font-size:14.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bd-i .rp{ font-style:normal; font-size:10.5px; font-weight:900; color:#1F7A4D; background:rgba(31,122,77,.12); padding:2px 6px; margin-left:4px; vertical-align:1px; }
+  .bd-i .mt{ font-size:12px; color:var(--dim); white-space:nowrap; }
+  @media (max-width:520px){ .bd-i{ grid-template-columns:auto minmax(0,1fr); } .bd-i .mt{ grid-column:2; margin-top:-6px; } }
+  .bd-none{ padding:22px; text-align:center; font-size:13.5px; color:var(--dim); }
+  .bd-more{ display:block; width:100%; margin-top:8px; border:1px solid var(--line); background:#fff; font:inherit; font-size:13px; font-weight:800; padding:11px; cursor:pointer; color:var(--ink); }
+  .bd-more[hidden]{ display:none; }
+  .bd-bg{ position:fixed; inset:0; z-index:200; background:rgba(17,17,20,.5); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .bd-bg[hidden]{ display:none; }
+  .bd-m{ width:100%; max-width:520px; max-height:calc(100vh - 32px); overflow-y:auto; background:var(--bg); padding:18px; }
+  .bd-m-h{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+  .bd-m-h b{ font-size:17px; font-weight:900; }
+  .bd-x{ border:0; background:var(--bg2); width:34px; height:34px; border-radius:50%; font-size:15px; cursor:pointer; color:var(--ink); }
+  .bd-m h3{ font-size:19px; font-weight:900; letter-spacing:-.02em; margin:0 0 4px; }
+  .bd-m-meta{ font-size:12.5px; color:var(--dim); margin-bottom:12px; }
+  .bd-m-body{ font-size:15px; line-height:1.75; white-space:pre-wrap; word-break:keep-all; background:#fff; border:1px solid var(--line); padding:14px; }
+  .bd-m-rp{ margin-top:10px; background:var(--ink); color:#fff; padding:14px; font-size:14.5px; line-height:1.7; white-space:pre-wrap; }
+  .bd-m-rp span{ display:block; font-size:11px; font-weight:900; color:#ff7a6c; margin-bottom:4px; }
+  .bd-m-wait{ margin-top:10px; font-size:12.5px; color:var(--dim); text-align:center; }
+  .bd-in{ display:block; width:100%; border:1px solid var(--line); background:#fff; font:inherit; font-size:15px; padding:12px; margin-bottom:8px; color:var(--ink); }
+  textarea.bd-in{ resize:vertical; min-height:130px; }
+  .bd-vis{ display:grid; gap:6px; margin:4px 0 8px; }
+  .bd-vis label{ display:flex; align-items:baseline; gap:8px; font-size:14px; font-weight:800; background:#fff; border:1px solid var(--line); padding:10px 12px; cursor:pointer; }
+  .bd-vis small{ font-size:12px; color:var(--dim); font-weight:600; }
+  .bd-msg{ font-size:12.5px; color:var(--red); min-height:16px; margin:0 0 6px; }
+  .bd-send{ width:100%; border:0; background:var(--red); color:#fff; font:inherit; font-size:15px; font-weight:900; padding:13px; cursor:pointer; }
   .mc-card{ background:#fff; border:1px solid var(--line); padding:14px; }
   .mc-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
   .mc-seg{ display:flex; gap:3px; background:var(--bg2); padding:3px; }
@@ -1076,6 +1113,16 @@
     </a>
   </section>
 
+  <section class="mcal" id="board" aria-label="게시판">
+    <div class="dash-head">
+      <div><p class="hub-kicker">Board</p><h2 class="hub-title">게시판</h2></div>
+      <button type="button" class="bd-write" id="bdWrite">✏️ 글쓰기</button>
+    </div>
+    <p class="bd-sub">공지사항과 학생들의 이야기 · 🔒 비공개 글은 쓴 학생과 선생님만 볼 수 있어요</p>
+    <div class="bd-list" id="bdList"><div class="bd-none">불러오는 중…</div></div>
+    <button type="button" class="bd-more" id="bdMore" hidden></button>
+  </section>
+
   <section class="mcal" id="calendar" aria-label="달력">
     <div class="dash-head">
       <div><p class="hub-kicker">Calendar</p><h2 class="hub-title" id="mcTitle">수업 달력</h2></div>
@@ -1144,7 +1191,8 @@
     <a class="sub" href="tower.html?mode=penguin">수학 펭귄</a>
     <a href="#quick" data-spy="quick"><span class="n">06</span>학생 바로가기 (OMR · 클리닉 · 영상 · 질문)</a>
     <a href="#channel" data-spy="channel"><span class="n">07</span>채널</a>
-    <a href="#calendar" data-spy="calendar"><span class="n">08</span>달력 (수업 시간표 · 플래너)</a>
+    <a href="#board" data-spy="board"><span class="n">08</span>게시판 (공지 · 자유)</a>
+    <a href="#calendar" data-spy="calendar"><span class="n">09</span>달력 (수업 시간표 · 플래너)</a>
   </nav>
   <div class="toc-foot"><a href="https://open.kakao.com/o/gvaZ3mHi" target="_blank" rel="noopener">카카오톡 상담 신청 →</a></div>
 </aside>
@@ -1374,9 +1422,11 @@
     acadState.admin = !!user; applyAcad();
   });
 </script>
-<script src="omr/common.js?v=28"></script>
+<script src="omr/common.js?v=29"></script>
 <script src="notice.js?v=1"></script>
 <script src="omr/calendar.js?v=3"></script>
+<script src="board.js?v=2"></script>
+<script>try { BOARD.mount(document.getElementById('board')); } catch(e){ console.warn(e); }</script>
 <script>
 // 메인 화면 맨 아래 달력: 학생은 내 반 수업 시간표·내 플래너, 방문자는 공휴일·전체 일정 + 플래너 예시
 (function(){
