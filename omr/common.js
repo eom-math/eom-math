@@ -433,26 +433,58 @@
     .anav .nb{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--red);color:#fff;
       font-size:10.5px;font-weight:900;display:grid;place-items:center;border:2px solid #fff;line-height:1;}
     .anav .nb[hidden]{display:none;}
-    @media (max-width:820px){ .anav{flex-direction:column;gap:8px;} .anav .g{flex-direction:row;align-items:flex-start;gap:8px;}
-      .anav .gl{flex:0 0 58px;padding-top:8px;} .anav .gi{flex-wrap:wrap;} .anav a{padding:7px 10px;} }`;
+    .anav .gbar{display:none;}
+    /* 폰: 묶음 이름만 한 줄로, 누르면 그 묶음 메뉴가 펼쳐짐 */
+    @media (max-width:820px){
+      .anav{flex-direction:column;gap:0;padding:6px;border-radius:12px;}
+      .anav .gbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;}
+      .anav .gbar button{position:relative;border:0;background:none;border-radius:8px;padding:9px 2px;font:inherit;font-size:12.5px;font-weight:800;color:var(--dim);white-space:nowrap;}
+      .anav .gbar button.cur{color:var(--ink);background:var(--bg2);}
+      .anav .gbar button.open{background:var(--ink);color:#fff;}
+      .anav .gbar button i{font-style:normal;font-size:9px;margin-left:2px;opacity:.7;}
+      .anav .gbar .nb{top:-7px;right:-4px;}
+      .anav .gbar{padding-top:2px;}
+      .anav .g{display:none;} .anav .g.open{display:flex;padding:8px 4px 4px;border-top:1px solid var(--line2);margin-top:6px;}
+      .anav .gl{display:none;} .anav .gi{flex-wrap:wrap;} .anav a{padding:8px 11px;}
+    }`;
   function navHtml(current, role) {
     if (typeof document !== 'undefined' && !document.getElementById('anavCss')) {
       const st = document.createElement('style'); st.id = 'anavCss'; st.textContent = NAV_CSS; document.head.appendChild(st);
     }
     const here = current + (current === 'ops.html' && typeof location !== 'undefined' ? (location.hash || '#clinic') : '');
-    const html = '<div class="anav">' + NAV_GROUPS.map(([label, items]) => {
-      const list = items.filter(x => role === 'admin' || x[2]);
-      if (!list.length) return '';
-      return `<div class="g"><span class="gl">${label}</span><div class="gi">${list.map(([href, name, , bd]) =>
+    const groups = NAV_GROUPS.map(([label, items]) => [label, items.filter(x => role === 'admin' || x[2])]).filter(g => g[1].length);
+    const isCur = items => items.some(([href]) => href === here || href === current);
+    const bar = '<div class="gbar">' + groups.map(([label, list], i) => {
+      const bd = list.find(x => x[3]);
+      return `<button type="button" data-g="${i}" class="${isCur(list) ? 'cur' : ''}">${label}<i>▾</i>${bd ? `<span class="nb" data-badge="${bd[3]}" hidden></span>` : ''}</button>`;
+    }).join('') + '</div>';
+    const html = '<div class="anav">' + bar + groups.map(([label, list], i) => {
+      return `<div class="g" data-g="${i}"><span class="gl">${label}</span><div class="gi">${list.map(([href, name, , bd]) =>
         `<a href="${href}" class="${href === here || href === current ? 'on' : ''}" data-href="${href}">${name}${bd ? `<span class="nb" data-badge="${bd}" hidden></span>` : ''}</a>`).join('')}</div></div>`;
     }).join('') + '</div>';
+    // 폰: 묶음 버튼을 누르면 하위 메뉴 펼치기 (한 번만 연결)
+    if (!navHtml._clickBound && typeof document !== 'undefined') {
+      navHtml._clickBound = true;
+      document.addEventListener('click', e => {
+        const b = e.target.closest('.anav .gbar button'); if (!b) return;
+        const nav = b.closest('.anav'), open = !b.classList.contains('open');
+        nav.querySelectorAll('.gbar button').forEach(x => x.classList.toggle('open', open && x === b));
+        nav.querySelectorAll('.g').forEach(g => g.classList.toggle('open', open && g.dataset.g === b.dataset.g));
+      });
+    }
     // 그린 뒤: 질문 개수 배지 · ops 탭이 바뀌면 메뉴 강조도 바꿈
     setTimeout(() => {
       fillNavBadges();
       if (current === 'ops.html' && !navHtml._hashBound) {
         navHtml._hashBound = true;
-        window.addEventListener('hashchange', () => document.querySelectorAll('.anav a').forEach(a =>
-          a.classList.toggle('on', a.dataset.href === 'ops.html' + (location.hash || '#clinic'))));
+        window.addEventListener('hashchange', () => {
+          document.querySelectorAll('.anav a').forEach(a => a.classList.toggle('on', a.dataset.href === 'ops.html' + (location.hash || '#clinic')));
+          document.querySelectorAll('.anav').forEach(nav => {
+            nav.querySelectorAll('.gbar button').forEach(b => { const g = nav.querySelector(`.g[data-g="${b.dataset.g}"]`);
+              b.classList.toggle('cur', !!(g && g.querySelector('a.on'))); b.classList.remove('open'); });
+            nav.querySelectorAll('.g').forEach(g => g.classList.remove('open'));
+          });
+        });
       }
     }, 0);
     return html;
