@@ -20,8 +20,8 @@
   .kinds button{border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12.5px;font-weight:800;}
   .kinds button .e{font-size:22px;}
   .kinds button.on{border-color:var(--ink);background:var(--ink);color:#fff;}
-  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0;}
-  .bar .input{width:auto;}
+  .optbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0;}
+  .optbar .input{width:auto;max-width:100%;}
   .cands{display:grid;gap:6px;}
   .cand{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1.5px solid var(--line);border-radius:12px;text-align:left;width:100%;}
   .cand:hover{border-color:var(--ink);}
@@ -70,7 +70,7 @@
     <div class="card">
       <h2>1. 무엇을 칭찬할까요?</h2>
       <div class="kinds" id="kinds"></div>
-      <div class="bar" id="optBar">
+      <div class="optbar" id="optBar">
         <select class="input" id="week"></select>
         <select class="input" id="cls"></select>
         <select class="input hidden" id="examSel"></select>
