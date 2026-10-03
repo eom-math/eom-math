@@ -25,8 +25,8 @@
     trip:    { label: '수련회',     color: '#B86A00', bg: '#FFF4E0' },
     pubhol:  { label: '공휴일',     color: '#D6301F', bg: '#FFF5F5' },
   };
-  // 이 일정이 있으면 그날 정규 수업은 쉬어요
-  var OFF = { cancel: 1, holiday: 1, trip: 1 };
+  // 정규 수업이 쉬는 건 선생님이 '휴강'을 넣은 날뿐 (방학·수련회도 영상 보강 등으로 수업할 수 있어 자동 휴강 안 함)
+  var OFF = { cancel: 1 };
   var DOW = '일월화수목금토';
   function pad(n) { return String(n).padStart(2, '0'); }
   function ds(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -82,7 +82,7 @@
   // 그날 수업 목록: 정규 수업(요일) − 휴강 + 직보·보강·시간 변경
   function dayLessons(d, dow, schedules, events, cls, school, grade) {
     var evs = events.filter(function (e) { return inRange(e, d) && forClass(e, cls, school, grade); });
-    // 휴강 일정이나 방학·수련회가 있으면 그날 정규 수업은 휴강 (법정 공휴일은 수업하는 경우가 많아 따로 '휴강'을 넣어야 빠짐)
+    // 휴강 일정이 있으면 그날 정규 수업은 휴강 (방학·수련회·법정 공휴일은 수업하는 경우가 많아 따로 '휴강'을 넣어야 빠짐)
     var off = evs.some(function (e) { return OFF[e.kind]; });
     var reg = [];
     schedules.forEach(function (s) { (s.slots || []).forEach(function (t) { if (+t.dow === dow) reg.push({ cls: s.className, start: t.start, end: t.end, place: t.place || '' }); }); });
