@@ -85,6 +85,16 @@
   .toggle{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;cursor:pointer;}
   .toggle input{width:18px;height:18px;accent-color:var(--red);}
 
+  .lmode{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 14px;}
+  .lmode button{display:flex;align-items:center;gap:10px;text-align:left;padding:12px 14px;border:1.5px solid var(--line);border-radius:14px;background:#fff;}
+  .lmode button:hover{border-color:var(--ink);}
+  .lmode button.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .lmode .ic{font-size:20px;line-height:1;}
+  .lmode b{display:block;font-size:15px;font-weight:900;letter-spacing:-.02em;}
+  .lmode small{display:block;font-size:12px;color:var(--dim);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lmode button.on small{color:rgba(255,255,255,.7);}
+  .lmode button > span:last-child{min-width:0;}
+  .empty-send{background:#fff;border:1px dashed var(--line);border-radius:12px;padding:22px 18px;text-align:center;font-size:14px;color:var(--dim);line-height:1.7;}
   .pub-bar{position:sticky;bottom:0;z-index:20;background:linear-gradient(transparent,var(--bg) 28%);
     padding:22px 0 calc(12px + env(safe-area-inset-bottom));}
   .pub-bar .inner{background:var(--ink);color:#fff;border-radius:12px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:10px;}
@@ -176,8 +186,14 @@
       </div>
     </div>
 
+    <div class="lmode" id="lMode" role="tablist">
+      <button type="button" data-mode="edit" class="on"><span class="ic">✏️</span><span><b>입력 · 수정</b><small id="modeEditS">학생별 점수·코멘트</small></span></button>
+      <button type="button" data-mode="send"><span class="ic">📨</span><span><b>발송 링크</b><small id="modeSendS">발행 후 사용</small></span></button>
+    </div>
+
+    <div id="paneEdit">
     <div class="pub-note hidden" id="pubNote">📝 <b>이미 발행된 리포트예요.</b> 아래 내용을 고친 뒤 맨 아래 <b>「수정 내용 다시 발행」</b>을 누르면 학생·학부모가 받은 <b>같은 링크</b>에 바로 반영돼요.
-      한 학생만 빼려면 아래 <b>발송용 링크</b>에서 「발행 취소」, 수업 전체를 지우려면 위의 「수업 삭제」를 누르세요.</div>
+      한 학생만 빼려면 위의 <b>발송 링크</b>에서 「발행 취소」, 수업 전체를 지우려면 위의 「수업 삭제」를 누르세요.</div>
 
     <div class="card">
       <div class="kicker" id="lessonKicker">수업 정보</div>
@@ -213,6 +229,16 @@
     </div>
     <div id="stuList"></div>
 
+    <div class="pub-bar">
+      <div class="inner">
+        <div class="s">입력 <b id="barFilled">0</b>/<span id="barTotal">0</span> · 반 평균 <b id="barAvg">–</b></div>
+        <button class="btn red" id="publishBtn">리포트 발행</button>
+      </div>
+    </div>
+    </div>
+
+    <div id="paneSend" class="hidden">
+    <div class="empty-send hidden" id="sendEmpty">아직 발행한 리포트가 없어요.<br><b>입력 · 수정</b>에서 학생별로 입력하고 <b>리포트 발행</b>을 누르면 여기에 학생별 링크가 생겨요.</div>
     <div class="card hidden" id="pubResult">
       <h2>발송용 링크</h2>
       <p class="muted" style="margin-bottom:8px;">링크를 복사해 카톡으로 보내거나, CSV를 받아 알리고 대량 발송에 올리세요.</p>
@@ -223,12 +249,6 @@
       </div>
       <div id="pubList"></div>
     </div>
-
-    <div class="pub-bar">
-      <div class="inner">
-        <div class="s">입력 <b id="barFilled">0</b>/<span id="barTotal">0</span> · 반 평균 <b id="barAvg">–</b></div>
-        <button class="btn red" id="publishBtn">리포트 발행</button>
-      </div>
     </div>
   </section>
 </div>
@@ -405,6 +425,14 @@
   // ───────── 수업 편집 ─────────
   $('backBtn').onclick = () => { history.replaceState(null, '', 'daily.html'); show('vMain'); loadLessons(); };
 
+  // 수업 화면: 「입력·수정」과 「발송 링크」를 나눠서 보여 줌
+  function setMode(m){
+    $('lMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+    $('paneEdit').classList.toggle('hidden', m !== 'edit');
+    $('paneSend').classList.toggle('hidden', m !== 'send');
+    window.scrollTo(0, 0);
+  }
+  $('lMode').addEventListener('click', e => { const b = e.target.closest('button[data-mode]'); if (b) setMode(b.dataset.mode); });
   async function openLesson(id){
     try {
       const s = await db.collection('dailyLessons').doc(id).get();
@@ -419,6 +447,7 @@
     renderLessonForm();
     renderStudents();
     renderPublished();
+    setMode(publishedRows().length ? 'send' : 'edit');
   }
 
   let unitCache = null;
@@ -677,7 +706,7 @@
     const filled = list.filter(s => isFilled(entries[s.code])).length;
     $('barFilled').textContent = filled; $('barTotal').textContent = list.length;
     $('barAvg').textContent = st.avg != null ? st.avg + '점' : '–';
-    $('entryCount').textContent = `${filled}/${list.length}명 입력`;
+    $('entryCount').textContent = `${filled}/${list.length}명 입력`; $('modeEditS').textContent = `${filled}/${list.length}명 입력${lesson && lesson.status === 'published' ? ' · 발행됨' : ''}`;
   }
 
   // ───────── 발행 ─────────
@@ -731,7 +760,7 @@
       lesson.status = 'published';
       renderLessonForm(); renderPublished();
       toast(`${list.length}명 리포트를 발행했습니다`);
-      $('pubResult').scrollIntoView({ behavior:'smooth', block:'start' });
+      setMode('send');
     } catch(e){ handleErr(e); }
     $('publishBtn').disabled = false;
     $('publishBtn').textContent = lesson.status === 'published' ? '수정 내용 다시 발행' : '리포트 발행';
@@ -746,6 +775,8 @@
   function renderPublished(){
     const rows = publishedRows();
     $('pubResult').classList.toggle('hidden', !rows.length);
+    $('sendEmpty').classList.toggle('hidden', !!rows.length);
+    $('modeSendS').textContent = rows.length ? `${rows.length}명 발행됨 · 링크 복사` : '발행 후 사용';
     $('pubList').innerHTML = rows.map((r, i) => `
       <div class="res-row"><span class="nm">${esc(r.s.name)}</span>
         <a class="btn sm" href="${esc(r.url)}" target="_blank" rel="noopener">열기</a>
