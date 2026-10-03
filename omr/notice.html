@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#FAFAF8">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../icons/favicon-64.png">
+<script src="../pwa.js" defer></script>
+<title>칭찬 공지 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=6">
+<style>
+  .kinds{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;}
+  @media (max-width:760px){ .kinds{grid-template-columns:repeat(4,minmax(0,1fr));} }
+  .kinds button{border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12.5px;font-weight:800;}
+  .kinds button .e{font-size:22px;}
+  .kinds button.on{border-color:var(--ink);background:var(--ink);color:#fff;}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0;}
+  .bar .input{width:auto;}
+  .cands{display:grid;gap:6px;}
+  .cand{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1.5px solid var(--line);border-radius:12px;text-align:left;width:100%;}
+  .cand:hover{border-color:var(--ink);}
+  .cand.on{border-color:var(--red);background:#FFF5F1;}
+  .cand .r{width:26px;font-weight:900;font-size:15px;text-align:center;}
+  .cand .n{font-weight:800;} .cand .c{font-size:12px;color:var(--dim);}
+  .cand .v{margin-left:auto;font-weight:900;font-variant-numeric:tabular-nums;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (max-width:640px){ .grid2{grid-template-columns:1fr;} }
+  .chk{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;}
+  .chk input{width:17px;height:17px;}
+  .nl{display:grid;gap:8px;}
+  .ni{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;}
+  .ni.off{opacity:.5;}
+  .ni .e{font-size:26px;}
+  .ni .t{font-weight:900;} .ni .m{font-size:12.5px;color:var(--dim);}
+  .ni .ops{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;}
+  .prev-wrap{background:var(--bg2);border-radius:16px;padding:16px;display:flex;justify-content:center;}
+</style>
+<link rel="stylesheet" href="../notice.css?v=1">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="../index.html">엄형국 <span>수학</span> · 관리</a>
+    <div class="row"><span class="sub" id="adminEmail"></span><button class="btn sm hidden" id="logoutBtn">로그아웃</button></div>
+  </div>
+  <nav class="row" id="adminNav" style="gap:4px;margin:-8px 0 16px;"></nav>
+
+  <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
+    <h1>관리자 로그인</h1>
+    <div class="card stack">
+      <input class="input" type="email" id="loginEmail" placeholder="이메일" autocomplete="username">
+      <input class="input" type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
+      <button class="btn primary block" id="loginBtn">로그인</button>
+      <p class="muted" id="loginMsg"></p>
+    </div>
+  </section>
+
+  <section id="vMain" class="hidden">
+    <div class="kicker">PRAISE BOARD</div>
+    <h1>칭찬 공지</h1>
+    <p class="muted" style="margin-bottom:14px;">메인 화면 슬라이드 아래 <b>📣 칭찬 게시판</b>에 올라가요. 학생들이 누르면 기록 카드가 팝업으로 열려요.</p>
+    <div id="permWarn" class="note hidden" style="margin-bottom:14px;border:1px solid var(--red);"><b>Firestore 권한 오류</b> — <code>notices</code> 규칙을 게시했는지 확인하세요.</div>
+
+    <div class="card">
+      <h2>1. 무엇을 칭찬할까요?</h2>
+      <div class="kinds" id="kinds"></div>
+      <div class="bar" id="optBar">
+        <select class="input" id="week"></select>
+        <select class="input" id="cls"></select>
+        <select class="input hidden" id="examSel"></select>
+        <select class="input hidden" id="gameMode"><option value="tower">개념의 탑</option><option value="monster">수학몬스터</option><option value="penguin">수학 펭귄</option></select>
+        <button class="btn primary" id="findBtn">후보 찾기</button>
+        <span class="muted" id="findMsg"></span>
+      </div>
+      <div class="cands" id="cands"></div>
+    </div>
+
+    <div class="card hidden" id="formCard">
+      <h2 id="formTitle">2. 공지 내용</h2>
+      <div class="grid2">
+        <div class="stack">
+          <div><label class="f">제목</label><input class="input" id="fTitle" maxlength="30"></div>
+          <div class="grid2">
+            <div><label class="f">학생 이름</label><input class="input" id="fName" maxlength="12"></div>
+            <div><label class="f">반 (선택)</label><input class="input" id="fClass" maxlength="30"></div>
+          </div>
+          <label class="chk"><input type="checkbox" id="fMask" checked> 이름 가리기 (김*준) — 메인 화면은 누구나 볼 수 있어요</label>
+          <div class="grid2">
+            <div><label class="f">대표 기록</label><input class="input" id="fStat" maxlength="20" placeholder="예: 14시간 20분"></div>
+            <div><label class="f">기록 설명</label><input class="input" id="fStatL" maxlength="24" placeholder="예: 이번 주 순공 시간"></div>
+          </div>
+          <div><label class="f">선생님 한마디</label><textarea class="input" id="fMsg" rows="3" maxlength="200" placeholder="예: 매일 빠짐없이 타이머를 켠 성실함이 최고예요! 다음 주도 화이팅 🔥"></textarea></div>
+          <div class="row"><button class="btn red" id="saveBtn">공지 올리기</button><button class="btn ghost" id="cancelBtn">취소</button><span class="muted" id="saveMsg"></span></div>
+        </div>
+        <div><label class="f">미리보기 (학생이 누르면 보이는 팝업)</label><div class="prev-wrap"><div id="preview" style="width:100%;max-width:380px;"></div></div></div>
+      </div>
+    </div>
+
+    <div class="row between" style="margin:22px 0 10px;"><h2 style="margin:0;">올린 공지</h2><span class="muted" id="nCount"></span></div>
+    <div class="nl" id="nList"><div class="muted">불러오는 중…</div></div>
+  </section>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=26"></script>
+<script src="../notice.js?v=1"></script>
+<script>
+(function(){
+  const { db, FV, esc, toast, toDate } = OMR;
+  const $ = id => document.getElementById(id);
+  const K = window.NOTICE.KINDS;
+  const SUBJ = { '1': '수학', '2': '국어', '3': '영어', '4': '탐구', '5': '기타' };
+  const pad = n => String(n).padStart(2, '0');
+  const ds = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = s => new Date(s + 'T00:00:00');
+  const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return ds(d); };
+  const monday = s => { const d = parse(s); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return ds(d); };
+  const hmK = sec => { const m = Math.round(sec / 60); return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`; };
+  const today = OMR.todayStr();
+  let kind = 'focus', roster = [], cands = [], pick = null, editId = null, notices = [];
+
+  $('adminNav').innerHTML = OMR.adminNav('notice.html');
+  OMR.mountAdminLogin(async user => {
+    if (!user){ ['vLogin','vMain'].forEach(x => $(x).classList.toggle('hidden', x !== 'vLogin')); return; }
+    ['vLogin','vMain'].forEach(x => $(x).classList.toggle('hidden', x !== 'vMain'));
+    try { roster = (await db.collection('omrCodes').get()).docs.map(d => ({ code: d.id, ...d.data() })); } catch(e){ roster = []; }
+    const classes = [...new Set(roster.map(s => s.className).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'));
+    $('cls').innerHTML = '<option value="*">전체 반</option>' + classes.map(c => `<option>${esc(c)}</option>`).join('');
+    const m0 = monday(today);
+    $('week').innerHTML = [0, -7, -14].map((o, i) => { const a = addDays(m0, o), b = addDays(a, 6);
+      return `<option value="${a}">${['이번 주', '지난주', '2주 전'][i]} (${a.slice(5).replace('-', '/')}~${b.slice(5).replace('-', '/')})</option>`; }).join('');
+    renderKinds(); loadNotices();
+  });
+  function handleErr(e){ console.error(e); if (e && e.code === 'permission-denied') $('permWarn').classList.remove('hidden'); toast('오류: ' + (e.message || e), 3500); }
+
+  function renderKinds(){
+    $('kinds').innerHTML = Object.entries(K).map(([k, v]) => `<button type="button" data-k="${k}" class="${k === kind ? 'on' : ''}"><span class="e">${v.emoji}</span>${v.label}</button>`).join('');
+    $('examSel').classList.toggle('hidden', kind !== 'exam');
+    $('gameMode').classList.toggle('hidden', kind !== 'game');
+    $('week').classList.toggle('hidden', kind === 'exam' || kind === 'custom');
+    $('cls').classList.toggle('hidden', kind === 'game' || kind === 'custom');
+    $('findBtn').textContent = kind === 'custom' ? '직접 쓰기' : '후보 찾기';
+    if (kind === 'exam') loadExams();
+  }
+  $('kinds').onclick = e => { const b = e.target.closest('button'); if (!b) return; kind = b.dataset.k; cands = []; $('cands').innerHTML = ''; $('findMsg').textContent = ''; renderKinds(); if (kind === 'custom') $('findBtn').click(); };
+  async function loadExams(){
+    if ($('examSel').options.length) return;
+    try {
+      const ex = (await db.collection('omrExams').get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(e => e.gradedAt || e.status === 'published')
+        .sort((a, b) => (b.examDate || '').localeCompare(a.examDate || '') || (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0));
+      $('examSel').innerHTML = ex.length ? ex.map(e => `<option value="${e.id}">${esc(e.title)}${e.examDate ? ' · ' + esc(e.examDate) : ''}${e.status === 'published' ? '' : ' (공개 전)'}</option>`).join('') : '<option value="">채점된 시험 없음</option>';
+    } catch(e){ handleErr(e); }
+  }
+  const inCls = s => $('cls').value === '*' || s.className === $('cls').value;
+  const nameOf = code => (roster.find(r => r.code === code) || {}).name;
+
+  // ═════ 후보 찾기 ═════
+  $('findBtn').onclick = async () => {
+    const a = $('week').value, b = addDays(a, 6);
+    $('findMsg').textContent = '찾는 중…'; cands = [];
+    try {
+      if (kind === 'focus') {
+        const ss = (await db.collection('studySessions').where('date', '>=', a).where('date', '<=', b).get()).docs.map(d => d.data());
+        const g = {}; ss.filter(inCls).forEach(s => { const x = g[s.code] = g[s.code] || { code: s.code, name: s.name, className: s.className, sec: 0, n: 0, days: new Set() }; x.sec += s.focusSec || 0; x.n++; x.days.add(s.date); });
+        const list = Object.values(g).sort((p, q) => q.sec - p.sec);
+        cands = list.slice(0, 8).map((x, i) => ({ ...x, v: hmK(x.sec), detail: { sec: x.sec, sessions: x.n, days: x.days.size, top: list.slice(0, 3).map(y => ({ nick: OMR.maskName(y.name), sec: y.sec })) },
+          stat: hmK(x.sec), statL: '이번 주 순공 시간' }));
+      } else if (kind === 'planner') {
+        const ps = (await db.collection('planners').where('date', '>=', a).where('date', '<=', b).get()).docs.map(d => d.data()).filter(inCls);
+        const g = {}; ps.forEach(p => { const sm = OMR.plannerTodos(p); const x = g[p.code] = g[p.code] || { code: p.code, name: p.name, className: p.className, min: 0, done: 0, total: 0, days: [] };
+          x.min += p.studyMin || 0; x.done += sm.done; x.total += sm.total; if (sm.total || p.studyMin) x.days.push(p); });
+        const list = Object.values(g).filter(x => x.days.length).sort((p, q) => (q.min + q.done * 20) - (p.min + p.done * 20));
+        cands = list.slice(0, 8).map(x => {
+          const best = x.days.slice().sort((p, q) => (q.studyMin || 0) - (p.studyMin || 0) || OMR.plannerTodos(q).done - OMR.plannerTodos(p).done)[0];
+          const sm = OMR.plannerTodos(best), bySubj = {};
+          [...(best.grid || '')].forEach(c => { if (c !== '0') bySubj[c] = (bySubj[c] || 0) + 10; });
+          const week = [...Array(7)].map((_, i) => { const d = addDays(a, i), p = x.days.find(z => z.date === d); const s2 = p ? OMR.plannerTodos(p) : { done: 0, total: 0 }; return { d, min: p ? p.studyMin || 0 : 0, done: s2.done, total: s2.total }; });
+          return { ...x, v: `${hmK(x.min * 60)} · 할 일 ${x.done}/${x.total}`, stat: hmK(x.min * 60), statL: '이번 주 플래너 공부 시간',
+            detail: { date: best.date, pledge: best.pledge || '', sticker: best.sticker || '', stamp: best.tstamp || '', studyMin: best.studyMin || 0,
+              todos: sm.all.slice(0, 8).map(t => ({ text: String(t.text).slice(0, 40), done: !!t.done, subj: t.subj || '5' })), done: sm.done, total: sm.total,
+              bySubj: Object.entries(bySubj).map(([k, m]) => ({ k, name: SUBJ[k] || '기타', min: m })), week, weekMin: x.min, weekDone: x.done, weekTotal: x.total } };
+        });
+      } else if (kind === 'exam') {
+        const id = $('examSel').value; if (!id) throw new Error('시험을 고르세요');
+        const ex = (await db.collection('omrExams').doc(id).get()).data();
+        const subs = (await db.collection('omrSubmissions').where('examId', '==', id).get()).docs.map(d => d.data()).filter(s => s.score != null && inCls(s)).sort((p, q) => q.score - p.score);
+        const st = ex.stats || {};
+        cands = subs.slice(0, 8).map(s => ({ code: s.code, name: s.name, className: s.className, v: `${s.score}/${st.maxScore || 100}점`, stat: `${s.score}점`, statL: ex.title,
+          detail: { exam: ex.title, subject: ex.subject || '', score: s.score, max: st.maxScore || 100, rank: s.rank, n: st.n, grade: s.grade || null, avg: st.avg, high: st.high, date: ex.examDate || '' } }));
+      } else if (kind === 'qna') {
+        const qs = (await db.collection('questions').get()).docs.map(d => d.data()).filter(q => { const t = toDate(q.createdAt); const d = t ? ds(t) : ''; return d >= a && d <= b && inCls(q); });
+        const g = {}; qs.forEach(q => { const x = g[q.code] = g[q.code] || { code: q.code, name: q.name, className: q.className, n: 0, subj: {} }; x.n++; if (q.subject) x.subj[q.subject] = (x.subj[q.subject] || 0) + 1; });
+        cands = Object.values(g).sort((p, q) => q.n - p.n).slice(0, 8).map(x => ({ ...x, v: `질문 ${x.n}개`, stat: `${x.n}개`, statL: '이번 주 질문 수', detail: { n: x.n, subjects: Object.entries(x.subj).map(([k, n]) => ({ k, n })) } }));
+      } else if (kind === 'review') {
+        const ls = (await db.collection('dailyLessons').where('date', '>=', a).where('date', '<=', b).get()).docs.map(d => ({ id: d.id, ...d.data() }));
+        const ens = (await Promise.all(ls.map(l => db.collection('dailyEntries').where('lessonId', '==', l.id).get().then(q => q.docs.map(d => ({ ...d.data(), _l: l }))).catch(() => [])))).flat();
+        const g = {}; ens.filter(e => e.score != null && e.score !== '' && e.attendance !== 'absent').forEach(e => { const c = e.code; const x = g[c] = g[c] || { code: c, name: e.name || nameOf(c), className: e._l.className, list: [] };
+          x.list.push({ date: e._l.date, title: e._l.title || '', score: Number(e.score), max: Number(e._l.maxScore) || 100 }); });
+        const list = Object.values(g).filter(inCls).map(x => ({ ...x, pct: x.list.reduce((s, y) => s + y.score / y.max * 100, 0) / x.list.length })).sort((p, q) => q.pct - p.pct || q.list.length - p.list.length);
+        cands = list.slice(0, 8).map(x => ({ ...x, v: `평균 ${Math.round(x.pct)}% · ${x.list.length}회`, stat: `${Math.round(x.pct)}%`, statL: '이번 주 복습 테스트 평균',
+          detail: { pct: Math.round(x.pct), tests: x.list.sort((p, q) => p.date.localeCompare(q.date)).slice(-6) } }));
+      } else if (kind === 'game') {
+        const mode = $('gameMode').value;
+        const rows = (await db.collection('towerScores').get()).docs.map(d => d.data()).filter(r => (r.mode || 'tower') === mode && (() => { const t = toDate(r.createdAt); const d = t ? ds(t) : ''; return d >= a && d <= b; })());
+        const g = {}; rows.forEach(r => { const k = String(r.name || '').trim(); if (!k) return; const x = g[k]; if (!x || r.floor > x.floor || (r.floor === x.floor && r.timeMs < x.timeMs)) g[k] = { name: k, floor: r.floor, timeMs: r.timeMs, n: (x ? x.n : 0) + 1 }; else x.n++; });
+        const gm = { tower: '개념의 탑', monster: '수학몬스터', penguin: '수학 펭귄' }[mode];
+        cands = Object.values(g).sort((p, q) => q.floor - p.floor || p.timeMs - q.timeMs).slice(0, 8).map(x => ({ ...x, className: '', v: `${x.floor}층`, stat: `${x.floor}층`, statL: gm + ' 최고 기록',
+          detail: { mode, game: gm, floor: x.floor, timeMs: x.timeMs, tries: x.n } }));
+      } else {
+        cands = []; choose({ name: '', className: '', stat: '', statL: '', detail: {} }); $('findMsg').textContent = ''; return;
+      }
+      $('findMsg').textContent = cands.length ? `${cands.length}명 찾았어요 — 눌러서 고르세요` : '이 기간에 기록이 없어요';
+      $('cands').innerHTML = cands.map((c, i) => `<button class="cand" data-i="${i}"><span class="r">${['🥇','🥈','🥉'][i] || i + 1}</span><span><div class="n">${esc(c.name)}</div><div class="c">${esc(c.className || '')}</div></span><span class="v">${esc(c.v)}</span></button>`).join('');
+    } catch(e){ $('findMsg').textContent = ''; handleErr(e); }
+  };
+  $('cands').onclick = e => { const b = e.target.closest('.cand'); if (!b) return; $('cands').querySelectorAll('.cand').forEach(x => x.classList.toggle('on', x === b)); choose(cands[+b.dataset.i]); };
+
+  function choose(c){
+    pick = { kind, detail: c.detail || {} }; editId = null;
+    $('formCard').classList.remove('hidden');
+    $('formTitle').textContent = '2. 공지 내용';
+    const wk = $('week').selectedIndex === 1 ? '지난주' : '이번 주';
+    $('fTitle').value = kind === 'custom' ? '' : `${kind === 'exam' ? (c.detail.exam || '시험') : wk} ${K[kind].title}`;
+    $('fName').value = c.name || ''; $('fClass').value = c.className || ''; $('fStat').value = c.stat || ''; $('fStatL').value = (c.statL || '').replace('이번 주', wk);
+    $('fMsg').value = ''; $('fMask').checked = kind !== 'game';   // 게임은 학생이 직접 쓴 닉네임이라 기본으로 안 가림
+    renderPreview(); $('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function current(){
+    const name = $('fName').value.trim();
+    return { kind: pick.kind, title: $('fTitle').value.trim() || K[pick.kind].title, name: $('fMask').checked ? OMR.maskName(name) : name,
+      className: $('fClass').value.trim(), stat: $('fStat').value.trim(), statLabel: $('fStatL').value.trim(), message: $('fMsg').value.trim(), detail: pick.detail };
+  }
+  function renderPreview(){ if (pick) $('preview').innerHTML = window.NOTICE.popupHtml(current(), true); }
+  ['fTitle','fName','fClass','fStat','fStatL','fMsg'].forEach(id => $(id).addEventListener('input', renderPreview)); $('fMask').onchange = renderPreview;
+  $('cancelBtn').onclick = () => { $('formCard').classList.add('hidden'); pick = null; editId = null; };
+  $('saveBtn').onclick = async () => {
+    if (!pick) return;
+    const n = current();
+    if (!n.name && n.kind !== 'custom') return toast('학생 이름을 확인하세요');
+    $('saveBtn').disabled = true;
+    try {
+      if (editId) await db.collection('notices').doc(editId).update({ ...n, updatedAt: FV.serverTimestamp() });
+      else await db.collection('notices').add({ ...n, active: true, createdAt: FV.serverTimestamp() });
+      toast(editId ? '공지를 고쳤어요' : '메인 화면에 공지를 올렸어요 📣'); $('formCard').classList.add('hidden'); pick = null; editId = null; loadNotices();
+    } catch(e){ handleErr(e); }
+    $('saveBtn').disabled = false;
+  };
+
+  // ═════ 올린 공지 ═════
+  async function loadNotices(){
+    try {
+      notices = (await db.collection('notices').get()).docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0));
+    } catch(e){ notices = []; handleErr(e); }
+    $('nCount').textContent = `${notices.filter(n => n.active).length}개 게시 중 · 전체 ${notices.length}개`;
+    $('nList').innerHTML = notices.length ? notices.map((n, i) => { const t = toDate(n.createdAt);
+      return `<div class="ni ${n.active ? '' : 'off'}"><span class="e">${(K[n.kind] || K.custom).emoji}</span><div><div class="t">${esc(n.title)}</div>
+        <div class="m">${esc(n.name || '')}${n.stat ? ' · ' + esc(n.stat) : ''}${t ? ' · ' + (t.getMonth() + 1) + '/' + t.getDate() + ' 올림' : ''}</div></div>
+        <div class="ops"><button class="btn sm" data-tg="${i}">${n.active ? '숨기기' : '다시 게시'}</button><button class="btn sm ghost" data-ed="${i}">수정</button><button class="btn sm ghost" data-dl="${i}" style="color:var(--red);">삭제</button></div></div>`; }).join('')
+      : '<div class="empty">아직 올린 공지가 없어요. 위에서 칭찬할 학생을 골라 보세요.</div>';
+  }
+  $('nList').onclick = async e => {
+    const tg = e.target.closest('[data-tg]'), ed = e.target.closest('[data-ed]'), dl = e.target.closest('[data-dl]');
+    try {
+      if (tg){ const n = notices[+tg.dataset.tg]; await db.collection('notices').doc(n.id).update({ active: !n.active }); toast(n.active ? '메인 화면에서 숨겼어요' : '다시 게시했어요'); loadNotices(); }
+      if (dl){ const n = notices[+dl.dataset.dl]; if (!confirm(`'${n.title}' 공지를 삭제할까요?`)) return; await db.collection('notices').doc(n.id).delete(); toast('삭제했어요'); loadNotices(); }
+      if (ed){ const n = notices[+ed.dataset.ed]; pick = { kind: n.kind, detail: n.detail || {} }; editId = n.id;
+        $('formCard').classList.remove('hidden'); $('formTitle').textContent = '공지 수정';
+        $('fTitle').value = n.title || ''; $('fName').value = n.name || ''; $('fMask').checked = false; $('fClass').value = n.className || '';
+        $('fStat').value = n.stat || ''; $('fStatL').value = n.statLabel || ''; $('fMsg').value = n.message || '';
+        renderPreview(); $('formCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    } catch(err){ handleErr(err); }
+  };
+})();
+</script>
+</body>
+</html>

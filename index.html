@@ -367,6 +367,7 @@
 
   /* ---------- hub (category buttons) ---------- */
   .hub{ padding:64px 0 8px; }
+  .nb-wrap:not([hidden]) + .hub{ padding-top:22px; }
   .hub-head{ margin-bottom:18px; }
   .hub-kicker{ display:flex; align-items:center; gap:10px; font-size:12px; font-weight:700;
     letter-spacing:.16em; color:var(--red); text-transform:uppercase; margin-bottom:10px; }
@@ -652,6 +653,7 @@
   [id]{ scroll-margin-top:76px; }
   body.toc-lock{ overflow:hidden; }
 </style>
+<link rel="stylesheet" href="notice.css?v=1">
 </head>
 <body data-pwa-prompt>
 
@@ -759,6 +761,7 @@
     </div>
   </section>
 
+  <section class="nb-wrap" id="noticeBoard" aria-label="칭찬 게시판" hidden></section>
   <section class="hub" id="hub" aria-label="바로가기">
     <div class="hub-grid" role="tablist" aria-label="메뉴">
       <button class="hub-card" id="tab-course" type="button" role="tab" aria-selected="false" aria-controls="course" data-hub="course">
@@ -1336,7 +1339,9 @@
     acadState.admin = !!user; applyAcad();
   });
 </script>
-<script src="omr/common.js?v=25"></script>
+<script src="omr/common.js?v=26"></script>
+<script src="notice.js?v=1"></script>
+<script>try { NOTICE.mount(document.getElementById('noticeBoard')); } catch(e){ console.warn(e); }</script>
 <script>
 (function(){
   var btn=document.getElementById('tocBtn'), toc=document.getElementById('toc'),
