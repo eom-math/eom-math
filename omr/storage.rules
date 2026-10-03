@@ -56,3 +56,13 @@
       allow create, delete: if omrAdmin() || (request.auth != null
         && firestore.exists(/databases/(default)/documents/omrStaff/$(request.auth.uid)));
     }
+
+    // 게시판 사진: board/{글ID}/{파일} — 글을 올리기 직전에만(그 글이 아직 없을 때) 8MB 이하 사진 업로드
+    // 경로에 학생 코드를 넣지 않아 익명 글도 안전해요
+    match /board/{postId}/{file} {
+      allow read: if true;
+      allow create: if request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*')
+        && !firestore.exists(/databases/(default)/documents/boardPosts/$(postId));
+      allow delete: if omrAdmin();
+    }

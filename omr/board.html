@@ -28,6 +28,7 @@
   .pi .b{margin-top:8px;font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);}
   .tg{display:inline-block;font-size:11px;font-weight:900;padding:3px 8px;border-radius:99px;background:var(--bg2);color:var(--dim);white-space:nowrap;}
   .tg.nt{background:#FFF0EA;color:var(--red);} .tg.pv{background:#EEF1FF;color:#3B4CCA;} .tg.hd{background:#eee;color:#888;} .tg.wt{background:#FFF7D6;color:#8A6A00;}
+  .pics{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;} .pics img{width:96px;height:96px;object-fit:cover;border-radius:10px;display:block;}
   .rp{margin-top:10px;background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere;}
   .rp span{display:block;font-size:11.5px;font-weight:900;color:var(--dim);margin-bottom:3px;}
   .ops{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px;}
@@ -88,6 +89,7 @@
   const $ = id => document.getElementById(id);
   const pad = n => String(n).padStart(2, '0');
   const fmt = t => { const d = toDate(t); return d && !isNaN(d) ? `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${pad(d.getMinutes())}` : ''; };
+  const HEADN = { study: '열공인증', goal: '목표선언', exam: '시험후기', ask: '질문', brag: '자랑', cheer: '응원', worry: '고민', chat: '잡담', idea: '건의' };
   const VL = { public: ['공개', ''], anon: ['익명', 'an'], teacher: ['🔒 선생님께', 'pv'], private: ['🔒 선생님께', 'pv'], staff: ['🔒 조교쌤께', 'st'] };
   let posts = [], authors = {}, flt = 'all', editId = null, replyId = null, me = null;
   const isAdmin = () => !!(me && me.role === 'admin');
@@ -140,9 +142,10 @@
       const who = notice ? '선생님' : base === 'anon' ? '익명' + (au ? `<span class="who">실제: ${esc(au.name)}${au.className ? ' · ' + esc(au.className) : ''}</span>` : '') : (au ? esc(au.name) : esc(p.nick || '')) + (p.className ? ' · ' + esc(p.className) : '');
       const canReply = !notice && (isAdmin() || ['staff', 'public', 'anon'].includes(p.visibility));
       return `<div class="pi ${hid ? 'hid' : ''}" data-id="${esc(p.id)}">
-        <div class="h">${tag}${isWait(p) ? '<span class="tg wt">답변 대기</span>' : ''}<span class="t">${esc(p.title)}</span>
+        <div class="h">${tag}${isWait(p) ? '<span class="tg wt">답변 대기</span>' : ''}<span class="t">${HEADN[p.head] ? `<span class="tg">${HEADN[p.head]}</span> ` : ''}${esc(p.title)}</span>
           <span class="m">${who} · ${fmt(p.createdAt)}</span></div>
         ${p.body ? `<div class="b">${esc(p.body)}</div>` : ''}
+        ${p.files && p.files.length ? `<div class="pics">${p.files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><img src="${esc(f.url)}" alt="" loading="lazy"></a>`).join('')}</div>` : ''}
         ${p.reply && p.reply.text ? `<div class="rp"><span>${p.reply.by === 'ta' ? '조교 선생님' : '선생님'} 답변 · ${fmt(p.reply.at)}</span>${esc(p.reply.text)}</div>` : ''}
         ${replyId === p.id ? `<div class="rpf"><textarea class="input" id="rpText" rows="3" maxlength="2000" placeholder="답변 (학생 화면에 보여요)">${esc((p.reply && p.reply.text) || '')}</textarea>
           <div class="row"><button class="btn primary sm" data-a="rpSave">답변 저장</button><button class="btn ghost sm" data-a="rpCancel">취소</button></div></div>` : ''}
