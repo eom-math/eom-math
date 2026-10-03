@@ -43,10 +43,13 @@
     var out = [];
     (events || []).forEach(function (e) {
       if (e.kind !== 'schoolExam') { out.push(e); return; }
-      var G = e.grades || {};
+      var G = e.grades || {}, sch = e.school ? [e.school] : (e.schools || []);
+      // 시험기간: 학교 전체 학생 공통
+      if (e.start) out.push({ id: e.id + '_p', src: e.id, kind: 'exam', date: e.start, endDate: e.end && e.end !== e.start ? e.end : null, title: e.title || '시험기간', classNames: ['*'], schools: sch });
+      // 시험일: 학년별
       Object.keys(G).sort().forEach(function (g) {
-        var x = G[g] || {}, base = { classNames: ['*'], schools: e.school ? [e.school] : (e.schools || []), grades: [+g], src: e.id, gradeLabel: g + '학년' };
-        if (x.start) out.push(Object.assign({}, base, { id: e.id + '_' + g + 'p', kind: 'exam', date: x.start, endDate: x.end && x.end !== x.start ? x.end : null, title: e.title || '시험기간' }));
+        var x = G[g] || {}, base = { classNames: ['*'], schools: sch, grades: [+g], src: e.id, gradeLabel: g + '학년' };
+        if (!e.start && x.start) out.push(Object.assign({}, base, { id: e.id + '_' + g + 'p', kind: 'exam', date: x.start, endDate: x.end && x.end !== x.start ? x.end : null, title: e.title || '시험기간' }));
         (x.days || []).forEach(function (d, i) { if (d && d.date) out.push(Object.assign({}, base, { id: e.id + '_' + g + 'd' + i, kind: 'examday', date: d.date, endDate: null,
           subject: d.subject || '수학', title: (d.subject || '수학') + ' 시험', time: d.time || '', note: d.note || '' })); });
       });

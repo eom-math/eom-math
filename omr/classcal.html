@@ -85,12 +85,16 @@
       <div>
         <div class="card" id="seCard">
           <h2 id="seTitle">🏫 학교 시험 일정</h2>
-          <p class="muted" style="font-size:12.5px;margin-bottom:10px;">학교와 학년별 시험기간·시험일을 넣으면 <b>그 학교 · 그 학년 학생</b> 달력에만 들어가요. (반 상관없이) 비워 둔 학년은 저장되지 않아요.</p>
+          <p class="muted" style="font-size:12.5px;margin-bottom:10px;">① 학교를 고르고 시험기간을 넣으면 <b>그 학교 모든 학생</b> 달력에 같은 날짜로 들어가요. ② 시험일은 학년별로 넣으면 <b>그 학교 · 그 학년 학생</b> 달력에만 추가돼요. (반 상관없이)</p>
           <div class="stack">
             <div class="grid2">
-              <div><label class="f">학교</label><input class="input" id="seSchool" list="seSchools" maxlength="20" placeholder="예: 휘문고"><datalist id="seSchools"></datalist></div>
+              <div><label class="f">학교</label><select class="input" id="seSel"></select>
+                <input class="input hidden" id="seSchool" maxlength="20" placeholder="학교 이름 직접 입력" style="margin-top:6px;"></div>
               <div><label class="f">시험 이름</label><input class="input" id="seName" maxlength="20" placeholder="예: 2학기 중간고사"></div>
             </div>
+            <div><label class="f">시험기간 <span class="muted" style="font-weight:600;">(이 학교 모든 학생 공통)</span></label>
+              <div class="se-p"><input class="input" type="date" id="seStart" aria-label="시험 시작"><input class="input" type="date" id="seEnd" aria-label="시험 끝"></div></div>
+            <label class="f" style="margin-bottom:-4px;">학년별 시험일 <span class="muted" style="font-weight:600;">(그 학년 학생에게만 · 비워 둔 학년은 시험기간만 보여요)</span></label>
             <div id="seGrades"></div>
             <div class="row"><button class="btn red" id="seSave">학교 시험 저장</button><button class="btn ghost hidden" id="seCancel">새로 쓰기</button><button class="btn ghost hidden" id="seDel" style="color:var(--red);">삭제</button><span class="muted" id="seMsg"></span></div>
           </div>
@@ -129,14 +133,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="common.js?v=29"></script>
-<script src="calendar.js?v=4"></script>
+<script src="calendar.js?v=5"></script>
 <script>
 (function(){
   const { db, FV, esc, toast } = OMR;
   const $ = id => document.getElementById(id);
   const DOW = ['일','월','화','수','목','금','토'];
   const today = OMR.todayStr();
-  let classSchools = {}, curSchool = '', evSch = new Set(), allSchools = [], seId = null, seG = {};
+  let classSchools = {}, curSchool = '', evSch = new Set(), allSchools = [], studentsBySchool = {}, seId = null, seG = {};
   let classes = [], schedules = [], events = [], ym = today.slice(0, 7), kind = 'makeup', evCls = new Set(['*']), editId = null, slots = [];
   CAL.injectCss();
   $('adminNav').innerHTML = OMR.adminNav('classcal.html');
@@ -149,10 +153,11 @@
       const codes = (await db.collection('omrCodes').get()).docs.map(d => d.data());
       classes = [...new Set(codes.map(d => d.className).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'));
       codes.forEach(d => { if (d.className && d.school) (classSchools[d.className] = classSchools[d.className] || new Set()).add(d.school); });
+      codes.forEach(d => { if (d.school) studentsBySchool[d.school] = (studentsBySchool[d.school] || 0) + 1; });
       allSchools = [...new Set(codes.map(d => d.school).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'));
     } catch(e){ classes = []; }
     $('cls').innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('') || '<option value="">반 없음</option>';
-    $('seSchools').innerHTML = allSchools.map(v => `<option value="${esc(v)}">`).join(''); resetSE();
+    resetSE();
     $('evKind').innerHTML = Object.entries(CAL.KINDS).filter(([k]) => k !== 'examday').map(([k, v]) => `<button type="button" data-k="${k}" class="${k === kind ? 'on' : ''}">${v.label}</button>`).join('');
     $('evDate').value = today;
     await load();
@@ -181,7 +186,7 @@
     $('evSchWrap').classList.toggle('hidden', !list.length);
     $('evSch').innerHTML = list.map(v => `<button type="button" data-s="${esc(v)}" class="${evSch.has(v) ? 'on' : ''}">${esc(v)}</button>`).join('');
   }
-  $('sch').onclick = e => { const b = e.target.closest('button'); if (!b) return; curSchool = b.dataset.s; evSch = new Set(curSchool ? [curSchool] : []); if (!seId) $('seSchool').value = curSchool; renderSch(); renderSlots(); render(); };
+  $('sch').onclick = e => { const b = e.target.closest('button'); if (!b) return; curSchool = b.dataset.s; evSch = new Set(curSchool ? [curSchool] : []); if (!seId) setSchool(curSchool); renderSch(); renderSlots(); render(); };
   $('evSch').onclick = e => { const b = e.target.closest('button'); if (!b) return; const v = b.dataset.s; evSch.has(v) ? evSch.delete(v) : evSch.add(v); renderSch(); };
   const curCls = () => $('cls').value;
   function render(){
@@ -241,29 +246,35 @@
 
 
   // ═════ 학교 시험 일정 (학교 · 학년별) ═════
-  const blankG = () => ({ start: '', end: '', days: [{ date: '', subject: '수학', time: '' }] });
-  function resetSE(){ seId = null; seG = { 1: blankG(), 2: blankG(), 3: blankG() }; $('seSchool').value = curSchool || ''; $('seName').value = '';
+  const blankG = () => ({ days: [{ date: '', subject: '수학', time: '' }] });
+  // 학교 고르기 (학생 관리에 입력된 학교 목록 + 직접 입력)
+  function setSchool(v){
+    const list = [...new Set([...allSchools, ...(v ? [v] : [])])].sort((a, b) => a.localeCompare(b, 'ko'));
+    $('seSel').innerHTML = '<option value="">학교 선택</option>' + list.map(x => {
+      const n = studentsBySchool[x] || 0; return `<option value="${esc(x)}">${esc(x)}${n ? ` (학생 ${n}명)` : ''}</option>`; }).join('') + '<option value="__new">+ 직접 입력</option>';
+    $('seSel').value = v || ''; $('seSchool').value = v || ''; $('seSchool').classList.add('hidden');
+  }
+  $('seSel').onchange = () => { const v = $('seSel').value; $('seSchool').classList.toggle('hidden', v !== '__new'); $('seSchool').value = v === '__new' ? '' : v; if (v === '__new') $('seSchool').focus(); };
+  $('seStart').onchange = () => { if (!$('seEnd').value || $('seEnd').value < $('seStart').value) $('seEnd').value = $('seStart').value; };
+  function resetSE(){ seId = null; seG = { 1: blankG(), 2: blankG(), 3: blankG() }; setSchool(curSchool || ''); $('seName').value = ''; $('seStart').value = ''; $('seEnd').value = '';
     $('seTitle').textContent = '🏫 학교 시험 일정'; $('seCancel').classList.add('hidden'); $('seDel').classList.add('hidden'); drawSE(); }
   function fillSE(ev){
     seId = ev.id; seG = {};
-    [1, 2, 3].forEach(g => { const x = (ev.grades || {})[g]; seG[g] = x ? { start: x.start || '', end: x.end || '', days: (x.days && x.days.length ? x.days : blankG().days).map(d => ({ ...d })) } : blankG(); });
-    $('seSchool').value = ev.school || ''; $('seName').value = ev.title || '';
+    [1, 2, 3].forEach(g => { const x = (ev.grades || {})[g]; seG[g] = x && x.days && x.days.length ? { days: x.days.map(d => ({ ...d })) } : blankG(); });
+    const og = Object.values(ev.grades || {}).find(x => x && x.start) || {};
+    setSchool(ev.school || ''); $('seName').value = ev.title || ''; $('seStart').value = ev.start || og.start || ''; $('seEnd').value = ev.end || og.end || '';
     $('seTitle').textContent = '🏫 학교 시험 수정'; $('seCancel').classList.remove('hidden'); $('seDel').classList.remove('hidden'); drawSE();
     $('seCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   function drawSE(){
     $('seGrades').innerHTML = [1, 2, 3].map(g => { const x = seG[g];
-      return `<div class="se-g" data-g="${g}"><div class="gh">${g}학년 <small>${x.start || x.days.some(d => d.date) ? '' : '비워 두면 저장 안 해요'}</small></div>
-        <div class="se-l">시험기간</div>
-        <div class="se-p"><input class="input" type="date" data-f="start" value="${esc(x.start)}" aria-label="${g}학년 시험 시작"><input class="input" type="date" data-f="end" value="${esc(x.end)}" aria-label="${g}학년 시험 끝"></div>
-        <div class="se-l">시험일 (과목 · 교시/시간)</div>
+      return `<div class="se-g" data-g="${g}"><div class="gh">${g}학년 시험일 <small>날짜 · 과목 · 교시</small></div>
         ${x.days.map((d, i) => `<div class="se-d" data-i="${i}"><input class="input" type="date" data-f="date" value="${esc(d.date)}"><input class="input" data-f="subject" maxlength="12" value="${esc(d.subject)}" placeholder="수학">
           <input class="input" data-f="time" maxlength="16" value="${esc(d.time)}" placeholder="예: 2교시"><button type="button" data-rm="${i}" aria-label="삭제">✕</button></div>`).join('')}
         <button type="button" class="se-add" data-add="1">+ 시험일 추가</button></div>`; }).join('');
   }
   const seInput = e => { const gEl = e.target.closest('.se-g'), f = e.target.dataset.f; if (!gEl || !f) return; const x = seG[gEl.dataset.g], r = e.target.closest('.se-d');
-    if (r) x.days[+r.dataset.i][f] = e.target.value; else x[f] = e.target.value;
-    if (f === 'start' && (!x.end || x.end < x.start)) { x.end = x.start; gEl.querySelector('[data-f=end]').value = x.start; } };
+    if (r) x.days[+r.dataset.i][f] = e.target.value; };
   $('seGrades').addEventListener('input', seInput); $('seGrades').addEventListener('change', seInput);
   $('seGrades').onclick = e => { const gEl = e.target.closest('.se-g'); if (!gEl) return; const x = seG[gEl.dataset.g];
     const rm = e.target.closest('[data-rm]'); if (rm) { x.days.splice(+rm.dataset.rm, 1); if (!x.days.length) x.days = blankG().days; drawSE(); }
@@ -273,21 +284,22 @@
     try { await db.collection('classEvents').doc(seId).delete(); toast('지웠어요'); resetSE(); await load(); } catch(e){ handleErr(e); } };
   $('seSave').onclick = async () => {
     const school = $('seSchool').value.trim(), title = $('seName').value.trim() || '시험기간';
-    if (!school) return toast('학교를 적어 주세요');
-    const grades = {}, all = [];
-    for (const g of [1, 2, 3]) { const x = seG[g], days = x.days.filter(d => d.date).map(d => ({ date: d.date, subject: (d.subject || '수학').trim().slice(0, 12), time: (d.time || '').trim().slice(0, 16) })).sort((a, b) => a.date.localeCompare(b.date));
-      if (!x.start && !days.length) continue;
-      if (x.start && x.end && x.end < x.start) return toast(`${g}학년 시험 끝나는 날이 시작보다 빨라요`);
-      grades[g] = { start: x.start || '', end: x.start ? (x.end || x.start) : '', days };
-      all.push(...[x.start, x.end].filter(Boolean), ...days.map(d => d.date)); }
-    if (!all.length) return toast('적어도 한 학년의 시험기간이나 시험일을 넣어 주세요');
+    const start = $('seStart').value, end = $('seEnd').value || start;
+    if (!school) return toast('학교를 골라 주세요');
+    if (!start) return toast('시험기간 시작일을 넣어 주세요');
+    if (end < start) return toast('시험기간 끝나는 날이 시작보다 빨라요');
+    const grades = {}, all = [start, end];
+    for (const g of [1, 2, 3]) { const days = seG[g].days.filter(d => d.date).map(d => ({ date: d.date, subject: (d.subject || '수학').trim().slice(0, 12), time: (d.time || '').trim().slice(0, 16) })).sort((a, b) => a.date.localeCompare(b.date));
+      if (!days.length) continue;
+      grades[g] = { days }; all.push(...days.map(d => d.date)); }
     all.sort();
-    const data = { kind: 'schoolExam', school, title, grades, date: all[0], endDate: all[all.length - 1], classNames: ['*'], schools: [school], updatedAt: FV.serverTimestamp() };
+    const data = { kind: 'schoolExam', school, title, start, end, grades, date: all[0], endDate: all[all.length - 1], classNames: ['*'], schools: [school], updatedAt: FV.serverTimestamp() };
     $('seSave').disabled = true;
     try {
       if (seId) await db.collection('classEvents').doc(seId).set({ ...data, createdAt: (events.find(x => x.id === seId) || {}).createdAt || FV.serverTimestamp() });
       else await db.collection('classEvents').add({ ...data, createdAt: FV.serverTimestamp() });
-      toast(`${school} ${title} 일정을 넣었어요 (${Object.keys(grades).map(g => g + '학년').join('·')})`);
+      const gl = Object.keys(grades).map(g => g + '학년').join('·');
+      toast(`${school} 전체 학생에게 시험기간을 넣었어요${gl ? ` · 시험일: ${gl}` : ''}`);
       ym = all[0].slice(0, 7); resetSE(); await load();
     } catch(e){ handleErr(e); }
     $('seSave').disabled = false;
