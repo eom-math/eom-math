@@ -343,19 +343,14 @@
     // 문서 ID는 무작위라 링크(ID)를 아는 학생만 읽음. 답변은 선생님·조교만
     match /questions/{qid} {
       allow get: if true;
-      // 질문은 선생님 + '질문 답변' 권한(qna)을 받은 조교만. 조교는 답변 대기 질문(맡은 반이 있으면 그 반)과
-      // 자기가 단 답변만 볼 수 있고, 답변(status·answer)만 바꿀 수 있어요. 다른 조교의 답변은 못 봐요
-      function qnaTa() {
-        return request.auth != null && exists(/databases/$(database)/documents/omrStaff/$(request.auth.uid))
-          && get(/databases/$(database)/documents/omrStaff/$(request.auth.uid)).data.get('qna', false) == true;
-      }
-      function taCls() { return get(/databases/$(database)/documents/omrStaff/$(request.auth.uid)).data.get('classes', []); }
+      // 질문은 기본적으로 선생님만. 선생님이 질문마다 고른 조교(viewers, 여러 명)만 그 질문을 볼 수 있어요.
+      // 조교는 답변 대기 질문과 자기가 단 답변만 보고, 답변(status·answer)만 바꿀 수 있어요. 다른 조교의 답변은 못 봐요
       function taSees(d) {
-        return (d.status == 'open' && (taCls().size() == 0 || d.className in taCls()))
-          || d.get('answer', {}).get('uid', '') == request.auth.uid;
+        return omrStaffOrAdmin() && request.auth.uid in d.get('viewers', [])
+          && (d.status == 'open' || d.get('answer', {}).get('uid', '') == request.auth.uid);
       }
-      allow list: if omrAdmin() || (qnaTa() && taSees(resource.data));
-      allow update: if omrAdmin() || (qnaTa() && taSees(resource.data)
+      allow list: if omrAdmin() || taSees(resource.data);
+      allow update: if omrAdmin() || (taSees(resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'answer'])
         && request.resource.data.answer.uid == request.auth.uid);
       allow delete: if omrAdmin();

@@ -110,6 +110,10 @@
   .pl-fb{margin-top:4px;color:var(--dim);font-style:italic;}
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0;}
   @media (max-width:560px){ .kpis{grid-template-columns:repeat(2,1fr);} }
+  .share{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:10px;padding:8px 10px;background:var(--bg2);border-radius:10px;}
+  .share .sl{font-size:12px;font-weight:900;color:var(--dim);margin-right:2px;}
+  .share button{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:5px 11px;font-size:12.5px;font-weight:800;cursor:pointer;}
+  .share button.on{background:#3B4CCA;border-color:#3B4CCA;color:#fff;}
 </style>
 </head>
 <body>
@@ -293,7 +297,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=33"></script>
+<script src="common.js?v=34"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, round } = OMR;
@@ -709,14 +713,19 @@
   $('qnaTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return;
     [...$('qnaTabs').children].forEach(x => x.classList.toggle('on', x === b)); qnaState = b.dataset.s; loadQna(); };
   const isTA = () => me && me.role === 'ta';
-  // 조교는 선생님이 '질문 답변' 권한을 준 경우에만: 답변 대기 질문(맡은 반) + 자기가 답한 질문만. 다른 조교의 답변은 안 보여요
+  // 질문은 기본적으로 선생님만. 선생님이 질문마다 '볼 수 있는 조교'(여러 명)를 고르면 그 조교에게도 평소 질문처럼 보여요.
+  // 조교의 '답변 완료'에는 자기가 단 답변만 보여요
   async function fetchQna(){
-    if (isTA()) {
-      if (!me.qna) return [];
-      if (qnaState === 'open') return OMR.taOpenQuestions(me);
-      return (await db.collection('questions').where('answer.uid', '==', me.uid).get()).docs.map(d => ({ id:d.id, ...d.data() }));
-    }
+    if (isTA()) return OMR.taQuestions(me, qnaState);
     return (await db.collection('questions').where('status', '==', qnaState).get()).docs.map(d => ({ id:d.id, ...d.data() }));
+  }
+  let staffList = null;
+  async function loadStaffList(){
+    if (isTA()) return [];
+    if (staffList) return staffList;
+    try { staffList = (await db.collection('omrStaff').get()).docs.map(d => ({ uid:d.id, ...d.data() })).sort((a,b) => (a.name||'').localeCompare(b.name||'', 'ko')); }
+    catch(e){ staffList = []; }
+    return staffList;
   }
   async function refreshQnaBadge(){
     try { const n = isTA() ? (await OMR.taOpenQuestions(me)).length : (await db.collection('questions').where('status','==','open').get()).size;
@@ -727,7 +736,7 @@
     const box = $('qnaList');
     box.innerHTML = '<div class="empty">불러오는 중…</div>';
     try {
-      if (isTA() && !me.qna) { box.innerHTML = '<div class="empty">질문 답변 권한이 없어요.</div>'; return; }
+      await loadStaffList();
       const qs = (await fetchQna()).filter(q => q.status === qnaState)
         .sort((a,b) => qnaState === 'open' ? (toDate(a.createdAt)||0) - (toDate(b.createdAt)||0) : (toDate(b.answer && b.answer.at)||0) - (toDate(a.answer && a.answer.at)||0))
         .slice(0, 80);
@@ -743,6 +752,10 @@
     el.innerHTML = `
       <div class="h"><b>${esc(q.name)}</b><span>${esc(q.className)}</span>${q.subject ? `<span class="pill">${esc(q.subject)}</span>` : ''}<span style="margin-left:auto;">${OMR.fmtDateTime(q.createdAt)}</span></div>
       <div class="txt">${esc(q.text)}</div>${thumbs(q.files)}
+      ${!isTA() ? `<div class="share"><span class="sl">👀 같이 볼 조교</span>${staffList && staffList.length
+          ? staffList.map(t => `<button type="button" data-v="${esc(t.uid)}" class="${(q.viewers || []).includes(t.uid) ? 'on' : ''}">${esc(t.name || '조교')}</button>`).join('')
+          : '<span class="muted" style="font-size:12px;">조교 계정이 없어요</span>'}
+        <span class="muted" style="font-size:12px;" data-vs>${(q.viewers || []).length ? '' : '선생님만 봐요'}</span></div>` : ''}
       ${q.answer ? `<div class="ans"><div class="by">${esc(q.answer.by)} · ${OMR.fmtDateTime(q.answer.at)}</div><div class="txt">${esc(q.answer.text)}</div>${thumbs(q.answer.files)}</div>` : ''}
       <div class="stack" style="margin-top:10px;">
         <textarea class="input" data-a placeholder="답변을 입력하세요" style="min-height:90px;">${q.answer ? esc(q.answer.text) : ''}</textarea>
@@ -750,6 +763,15 @@
           <button class="btn primary sm" data-send style="margin-left:auto;">${q.answer ? '답변 수정' : '답변 등록'}</button></div>
       </div>`;
     let files = [];
+    const sh = el.querySelector('.share');
+    if (sh) sh.onclick = async e => {
+      const b = e.target.closest('[data-v]'); if (!b) return;
+      const v = new Set(q.viewers || []), uid = b.dataset.v; v.has(uid) ? v.delete(uid) : v.add(uid);
+      try { await db.collection('questions').doc(q.id).update({ viewers: [...v] }); q.viewers = [...v];
+        b.classList.toggle('on', v.has(uid)); el.querySelector('[data-vs]').textContent = v.size ? '' : '선생님만 봐요';
+        const t = staffList.find(x => x.uid === uid); toast(v.has(uid) ? `${t ? t.name : '조교'}도 이 질문을 볼 수 있어요` : `${t ? t.name : '조교'}에게서 숨겼어요`);
+      } catch(err){ handleErr(err); }
+    };
     el.querySelector('[data-f]').onchange = e => { files = [...e.target.files].slice(0, 4); el.querySelector('[data-fn]').textContent = files.length ? `${files.length}장 선택` : ''; };
     el.querySelector('[data-send]').onclick = async () => {
       const text = el.querySelector('[data-a]').value.trim();

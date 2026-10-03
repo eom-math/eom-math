@@ -454,8 +454,8 @@
       const st = document.createElement('style'); st.id = 'anavCss'; st.textContent = NAV_CSS; document.head.appendChild(st);
     }
     const here = current + (current === 'ops.html' && typeof location !== 'undefined' ? (location.hash || '#clinic') : '');
-    // 조교: 조교용 메뉴만, 질문 답변은 선생님이 '질문 답변' 권한을 준 조교만
-    const groups = NAV_GROUPS.map(([label, items]) => [label, items.filter(x => role === 'admin' || (x[2] && (x[3] !== 'qna' || (lastStaff && lastStaff.qna))))]).filter(g => g[1].length);
+    // 조교: 조교용 메뉴만
+    const groups = NAV_GROUPS.map(([label, items]) => [label, items.filter(x => role === 'admin' || x[2])]).filter(g => g[1].length);
     const isCur = items => items.some(([href]) => href === here || href === current);
     const bar = '<div class="gbar">' + groups.map(([label, list], i) => {
       const bd = list.filter(x => x[3]).map(x => x[3]).join(',');
@@ -574,14 +574,14 @@
     catch (e) { return null; }
   }
   /** 조교에게 맡긴 반이 정해져 있으면 그 반 학생만 (선생님·반 미지정 조교는 전체) */
-  /** 질문 권한이 있는 조교가 볼 수 있는 답변 대기 질문 (맡은 반이 있으면 그 반만) */
-  async function taOpenQuestions(me) {
-    if (!me || !me.qna) return [];
-    const c = staffClasses(me);
-    let q = db.collection('questions').where('status', '==', 'open');
-    if (c) q = q.where('className', 'in', c.slice(0, 30));
+  /** 조교가 볼 수 있는 질문: 선생님이 그 질문을 볼 조교로 고른 것만 (viewers). state: 'open' 답변 대기 / 'answered' 내가 단 답변 */
+  async function taQuestions(me, state) {
+    if (!me) return [];
+    let q = db.collection('questions').where('viewers', 'array-contains', me.uid);
+    q = state === 'answered' ? q.where('answer.uid', '==', me.uid) : q.where('status', '==', 'open');
     return (await q.get()).docs.map(d => ({ id: d.id, ...d.data() }));
   }
+  const taOpenQuestions = me => taQuestions(me, 'open');
   function staffClasses(me) { return me && me.role === 'ta' && me.classes && me.classes.length ? me.classes : null; }
   function scopeRoster(list, me) { const c = staffClasses(me); return c ? list.filter(s => c.includes(s.className)) : list; }
   function staffNav(current, role) { return navHtml(current, role === 'admin' ? 'admin' : 'ta'); }
@@ -908,7 +908,7 @@
     QTYPES, examTypes, examSegments, layoutText, shortEq,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, fillNavBadges, mountAdminLogin, commitOps, shuffle, UNTAGGED,
-    ACADEMIES, lectureForStudent, EXT_LINKS, slotForClass, slotClassLabel, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, plannerNotes, markPlannerSeen, plannerSeen, noteSig, PLAN_STAMP, studentDashboard, detectStaff, isAdminUser, denyAdmin, taOpenQuestions, staffClasses, scopeRoster, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
+    ACADEMIES, lectureForStudent, EXT_LINKS, slotForClass, slotClassLabel, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, plannerNotes, markPlannerSeen, plannerSeen, noteSig, PLAN_STAMP, studentDashboard, detectStaff, isAdminUser, denyAdmin, taQuestions, taOpenQuestions, staffClasses, scopeRoster, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
