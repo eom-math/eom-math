@@ -18,6 +18,7 @@
     makeup:  { label: '직보·보강',  color: '#3B6FE0', bg: '#EEF3FF' },
     exam:    { label: '시험기간',   color: '#D6301F', bg: '#FFF1EC' },
     examday: { label: '시험일',     color: '#fff',    bg: '#D6301F' },
+    change:  { label: '시간 변경',  color: '#7B3FD0', bg: '#F3ECFF' },
     event:   { label: '일정',       color: '#1F7A4D', bg: '#EAF6EF' },
     holiday: { label: '공휴일·방학', color: '#D6301F', bg: '#FFF5F5' },
   };
@@ -80,7 +81,14 @@
     var off = evs.some(function (e) { return e.kind === 'cancel' || e.kind === 'holiday'; });
     var reg = [];
     schedules.forEach(function (s) { (s.slots || []).forEach(function (t) { if (+t.dow === dow) reg.push({ cls: s.className, start: t.start, end: t.end, place: t.place || '' }); }); });
-    return { regular: reg, cancelled: off && reg.length > 0, events: evs };
+    // 그날만 정규 수업 시간 변경 (kind 'change', time '16:00~19:00')
+    var chg = evs.filter(function (e) { return e.kind === 'change'; })[0];
+    if (chg && !off) {
+      var p = String(chg.time || '').split('~'), a = (p[0] || '').trim(), b = (p[1] || '').trim();
+      if (a) reg = reg.length ? reg.slice(0, 1).map(function (r) { return { cls: r.cls, start: a, end: b, place: r.place, changed: true, from: r.start + (r.end ? '~' + r.end : '') }; })
+        : [{ cls: cls, start: a, end: b, place: '', changed: true, from: '' }];
+    }
+    return { regular: reg, cancelled: off && reg.length > 0, changed: !!(chg && !off), events: evs };
   }
 
   // 수업 시간표 달력
@@ -92,7 +100,7 @@
       L.events.filter(function (e) { return e.kind === 'examday'; }).forEach(function (e) { marks += '<span class="cm exd">📝' + esc((e.gradeLabel && !grade ? e.gradeLabel.charAt(0) + '·' : '') + (e.subject || e.title)) + '</span>'; });
       var exs = L.events.filter(function (e) { return e.kind === 'exam'; });
       if (exs.length) marks += '<span class="cm exam">' + (exs.some(function (e) { return e.date === c.d; }) ? esc(exs.filter(function (e) { return e.date === c.d; })[0].title || '시험기간') : '시험기간') + '</span>';
-      if (L.regular.length) marks += L.regular.map(function (r) { return '<span class="cm ' + (L.cancelled ? 'off' : 'cls') + '">' + (L.cancelled ? '휴강' : esc(r.start)) + '</span>'; }).join('');
+      if (L.regular.length) marks += L.regular.map(function (r) { return '<span class="cm ' + (L.cancelled ? 'off' : r.changed ? 'chg' : 'cls') + '">' + (L.cancelled ? '휴강' : (r.changed ? '⇄' : '') + esc(r.start)) + '</span>'; }).join('');
       else L.events.filter(function (e) { return e.kind === 'cancel'; }).forEach(function () { marks += '<span class="cm off">휴강</span>'; });
       L.events.filter(function (e) { return e.kind === 'makeup'; }).forEach(function (e) { marks += '<span class="cm mk">' + esc(e.title || '직보') + (e.time ? ' ' + esc(e.time) : '') + '</span>'; });
       L.events.filter(function (e) { return e.kind === 'event' || e.kind === 'holiday'; }).forEach(function (e) { marks += '<span class="cm ' + (e.kind === 'holiday' ? 'hol' : 'ev') + '">' + esc(e.title || KINDS[e.kind].label) + '</span>'; });
@@ -138,7 +146,7 @@
     + '.cc .hn{font-size:9.5px;font-weight:800;color:#D6301F;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
     + '.cc .ms{display:flex;flex-direction:column;gap:2px;}'
     + '.cm{display:block;font-size:9.5px;font-weight:800;line-height:1.25;padding:1px 4px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
-    + '.cm.cls{background:#111114;color:#fff;} .cm.off{background:#F1F0EC;color:#9A9AA2;text-decoration:line-through;} .cm.mk{background:#3B6FE0;color:#fff;}'
+    + '.cm.cls{background:#111114;color:#fff;} .cm.off{background:#F1F0EC;color:#9A9AA2;text-decoration:line-through;} .cm.mk{background:#3B6FE0;color:#fff;} .cm.chg{background:#7B3FD0;color:#fff;}'
     + '.cm.exam{background:#FFE3DA;color:#B4261A;} .cm.exd{background:#D6301F;color:#fff;} .cm.ev{background:#EAF6EF;color:#1F7A4D;} .cm.hol{background:#FFF5F5;color:#D6301F;}'
     + '.cc.pl{align-items:center;justify-content:flex-start;gap:1px;} .cc.pl .dn{align-self:flex-start;}'
     + '.cc.pl.lv1{background:#FFF1EC;} .cc.pl.lv2{background:#FFD9CC;} .cc.pl.lv3{background:#FFB39C;} .cc.pl.lv4{background:#FF8466;}'
@@ -155,5 +163,5 @@
     + '@media (max-width:420px){ .cc{min-height:58px;padding:3px 2px 4px;border-radius:8px;} .cm{font-size:8.5px;padding:1px 2px;} .cc .hn{font-size:8.5px;} }';
   function injectCss() { if (typeof document === 'undefined' || document.getElementById('calCss')) return; var s = document.createElement('style'); s.id = 'calCss'; s.textContent = CSS; document.head.appendChild(s); }
 
-  global.CAL = { HOLIDAYS: HOLIDAYS, KINDS: KINDS, monthDays: monthDays, shiftMonth: shiftMonth, classHtml: classHtml, listHtml: listHtml, plannerHtml: plannerHtml, injectCss: injectCss, forClass: forClass, expand: expand, prepare: prepare, pickSchedules: pickSchedules, inRange: inRange };
+  global.CAL = { HOLIDAYS: HOLIDAYS, KINDS: KINDS, monthDays: monthDays, shiftMonth: shiftMonth, classHtml: classHtml, listHtml: listHtml, plannerHtml: plannerHtml, injectCss: injectCss, forClass: forClass, dayLessons: dayLessons, expand: expand, prepare: prepare, pickSchedules: pickSchedules, inRange: inRange };
 })(typeof window !== 'undefined' ? window : globalThis);

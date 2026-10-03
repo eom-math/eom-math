@@ -99,7 +99,7 @@
         <div class="card">
           <div class="mnav"><button id="mPrev" aria-label="이전 달">‹</button><b id="mLabel"></b><button id="mNext" aria-label="다음 달">›</button><button class="btn sm" id="mToday" style="width:auto;border-radius:8px;">이번 달</button></div>
           <div id="calBox"></div>
-          <div class="lg"><span><i style="background:#111114"></i>정규 수업</span><span><i style="background:#3B6FE0"></i>직보·보강</span><span><i style="background:#FFE3DA"></i>시험기간</span><span><i style="background:#D6301F"></i>시험일</span><span><i style="background:#F1F0EC"></i>휴강</span><span style="color:#D6301F;">빨간 날짜 = 공휴일</span></div>
+          <div class="lg"><span><i style="background:#111114"></i>정규 수업</span><span><i style="background:#3B6FE0"></i>직보·보강</span><span><i style="background:#FFE3DA"></i>시험기간</span><span><i style="background:#D6301F"></i>시험일</span><span><i style="background:#F1F0EC"></i>휴강</span><span><i style="background:#7B3FD0"></i>시간 변경</span><span style="color:#D6301F;">빨간 날짜 = 공휴일</span></div>
           <p class="muted" style="font-size:12px;margin-top:4px;">📌 날짜를 누르면 그날 일정을 보고 <b>바로 추가·수정·삭제</b>할 수 있어요.</p>
           <div id="listBox"></div>
         </div>
@@ -159,6 +159,13 @@
   <div class="muted" id="dmFor" style="font-size:12px;margin-top:-6px;"></div>
   <div class="dm-s">이날 일정</div>
   <div class="dl" id="dmList"></div>
+  <div class="box hidden" id="dmChg" style="margin-top:8px;border-color:#7B3FD0;">
+    <b style="font-size:14px;">⇄ 정규 수업 시간 바꾸기</b>
+    <div id="dmChgTR"></div>
+    <div class="grid2"><button class="btn primary" id="dmChgDay">이날만 바꾸기</button><button class="btn" id="dmChgWeek">매주 바꾸기</button></div>
+    <p class="muted" id="dmChgHint" style="font-size:12px;margin:0;"></p>
+    <button class="btn ghost sm" id="dmChgX" style="justify-self:start;">취소</button>
+  </div>
   <div class="dm-s">＋ 이날 일정 추가</div>
   <div class="box">
     <div class="chips" id="dmKind"></div>
@@ -171,7 +178,7 @@
   </div>
 </div></div>
 <script src="timerange.js?v=1"></script>
-<script src="calendar.js?v=5"></script>
+<script src="calendar.js?v=6"></script>
 <script>
 (function(){
   const { db, FV, esc, toast } = OMR;
@@ -196,7 +203,7 @@
     } catch(e){ classes = []; }
     $('cls').innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('') || '<option value="">반 없음</option>';
     resetSE();
-    $('evKind').innerHTML = Object.entries(CAL.KINDS).filter(([k]) => k !== 'examday').map(([k, v]) => `<button type="button" data-k="${k}" class="${k === kind ? 'on' : ''}">${v.label}</button>`).join('');
+    $('evKind').innerHTML = Object.entries(CAL.KINDS).filter(([k]) => k !== 'examday' && k !== 'change').map(([k, v]) => `<button type="button" data-k="${k}" class="${k === kind ? 'on' : ''}">${v.label}</button>`).join('');
     $('evDate').value = today;
     await load();
   });
@@ -325,7 +332,7 @@
     // 정규 수업 시간이 있으면 그 시간으로 맞춰 둬요
     const reg = CAL.pickSchedules(schedules, curCls(), curSchool).flatMap(x => x.slots || []).filter(x => +x.dow === t.getDay());
     if (reg[0]) dmTR.set(reg[0].start, reg[0].end); else dmTR.set('14:00', '17:00');
-    drawDay(); $('dayM').hidden = false; document.body.style.overflow = 'hidden';
+    $('dmChg').classList.add('hidden'); drawDay(); $('dayM').hidden = false; document.body.style.overflow = 'hidden';
   }
   function closeDay(){ $('dayM').hidden = true; document.body.style.overflow = ''; }
   $('dmX').onclick = closeDay;
@@ -335,18 +342,18 @@
     const d = dmDay, dow = new Date(d + 'T00:00:00').getDay(), grade = $('gr').value || null;
     const list = CAL.expand(viewEvents()).filter(e => CAL.inRange(e, d) && CAL.forClass(e, curCls(), curSchool || '*', grade));
     const off = list.some(e => e.kind === 'cancel' || e.kind === 'holiday');
-    const reg = CAL.pickSchedules(schedules, curCls(), curSchool).flatMap(x => x.slots || []).filter(x => +x.dow === dow);
+    const L = CAL.dayLessons(d, dow, CAL.pickSchedules(schedules, curCls(), curSchool), list, curCls(), curSchool || '*', grade);
     const scope = e => [(e.classNames || ['*']).includes('*') ? '전체 반' : (e.classNames || []).join('·'), (e.schools || []).join('·'), e.gradeLabel || ''].filter(Boolean).join(' · ');
-    const rows = reg.map(r => `<div class="di ${off ? 'off' : ''}"><span class="k" style="background:#111114;color:#fff">정규</span>
-        <span class="t">${esc(r.start)}${r.end ? ' ~ ' + esc(r.end) : ''}<small>${esc(curCls())} 정규 수업${r.place ? ' · ' + esc(r.place) : ''}${off ? ' · 이날 휴강' : ''}</small></span>
-        ${off ? '' : '<span class="ops"><button type="button" data-cancel="1">이날 휴강</button></span>'}</div>`)
-      .concat(list.map(e => { const K = CAL.KINDS[e.kind] || CAL.KINDS.event, id = e.src || e.id;
+    const rows = L.regular.map(r => `<div class="di ${off ? 'off' : ''}"><span class="k" style="${r.changed ? 'background:#7B3FD0' : 'background:#111114'};color:#fff">${r.changed ? '변경' : '정규'}</span>
+        <span class="t">${esc(r.start)}${r.end ? ' ~ ' + esc(r.end) : ''}<small>${esc(curCls())} 정규 수업${r.place ? ' · ' + esc(r.place) : ''}${off ? ' · 이날 휴강' : ''}${r.changed && r.from ? ' · 원래 ' + esc(r.from) : r.changed ? ' · 이날만 수업' : ''}</small></span>
+        ${off ? '' : `<span class="ops"><button type="button" data-chg="1">시간 변경</button>${r.changed ? '<button type="button" class="del" data-unchg="1">되돌리기</button>' : '<button type="button" data-cancel="1">이날 휴강</button>'}</span>`}</div>`)
+      .concat(list.filter(e => e.kind !== 'change').map(e => { const K = CAL.KINDS[e.kind] || CAL.KINDS.event, id = e.src || e.id;
         const multi = e.endDate && e.endDate !== e.date;
         return `<div class="di"><span class="k" style="color:${K.color};background:${K.bg}">${K.label}</span>
           <span class="t">${esc(e.title || K.label)}${e.time ? ' · ' + esc(e.time) : ''}<small>${multi ? `${e.date.slice(5).replace('-', '/')} ~ ${e.endDate.slice(5).replace('-', '/')} · ` : ''}${esc(scope(e))}${e.note ? ' · ' + esc(e.note) : ''}</small></span>
           <span class="ops"><button type="button" data-de="${esc(id)}">수정</button><button type="button" class="del" data-dd="${esc(id)}" data-vid="${esc(e.id)}">삭제</button></span></div>`; }));
     $('dmList').innerHTML = rows.join('') || '<div class="muted" style="font-size:13px;">이날은 일정이 없어요.</div>';
-    $('dmKind').innerHTML = Object.entries(CAL.KINDS).filter(([k]) => k !== 'examday').map(([k, v]) => `<button type="button" data-k="${k}" class="${k === dmKind ? 'on' : ''}">${v.label}</button>`).join('');
+    $('dmKind').innerHTML = Object.entries(CAL.KINDS).filter(([k]) => k !== 'examday' && k !== 'change').map(([k, v]) => `<button type="button" data-k="${k}" class="${k === dmKind ? 'on' : ''}">${v.label}</button>`).join('');
     $('dmScope').innerHTML = (curCls() ? [['cls', `${curCls()}만`], ['all', '전체 반']] : [['all', '전체 반']]).map(([k, l]) => `<button type="button" data-s="${k}" class="${k === dmScope ? 'on' : ''}">${esc(l)}</button>`).join('')
       + (curSchool ? `<span class="muted" style="font-size:12px;align-self:center;">· ${esc(curSchool)} 학생만</span>` : '');
   }
@@ -360,7 +367,53 @@
     const de = e.target.closest('[data-de]'), dd = e.target.closest('[data-dd]'), cc = e.target.closest('[data-cancel]');
     if (de) return editEvent(de.dataset.de);
     if (dd) { const v = CAL.expand(viewEvents()).find(x => x.id === dd.dataset.vid); if (await deleteEvent(dd.dataset.dd, v)) drawDay(); return; }
+    if (e.target.closest('[data-chg]')) return openChg();
+    if (e.target.closest('[data-unchg]')) { const c = dayChange(); if (c) { try { await db.collection('classEvents').doc(c.id).delete(); toast('원래 시간으로 되돌렸어요'); await load(); } catch(err){ handleErr(err); } } drawDay(); return; }
     if (cc) { await addEvent({ kind: 'cancel', date: dmDay, endDate: null, title: '휴강', time: '', note: '', classNames: [curCls()], schools: curSchool ? [curSchool] : [] }); drawDay(); }
+  };
+  // ── 정규 수업 시간 변경 (이날만 / 매주) ──
+  let chgTR = null;
+  const dayChange = () => events.find(e => e.kind === 'change' && e.date === dmDay && (e.classNames || []).includes(curCls()) && ((e.schools || [])[0] || '') === curSchool);
+  function weekTarget(){ // 지금 보는 반·학교가 쓰는 시간표 문서
+    return schedules.find(x => x.className === curCls() && (x.school || '') === curSchool) || schedules.find(x => x.className === curCls() && !x.school) || null; }
+  function openChg(){
+    const dow = new Date(dmDay + 'T00:00:00').getDay();
+    const L = CAL.dayLessons(dmDay, dow, CAL.pickSchedules(schedules, curCls(), curSchool), CAL.expand(viewEvents()), curCls(), curSchool || '*', null);
+    const r = L.regular[0] || { start: '18:00', end: '21:00' };
+    $('dmChg').classList.remove('hidden');
+    if (!chgTR) chgTR = TR.mount($('dmChgTR'), { start: r.start, end: r.end || '' }); else chgTR.set(r.start, r.end || '');
+    const t = weekTarget(), has = t && (t.slots || []).some(x => +x.dow === dow);
+    $('dmChgWeek').textContent = `매주 ${DOWK[dow]}요일 바꾸기`;
+    $('dmChgHint').innerText = `• 이날만: ${dmDay.slice(5).replace('-', '/')} 하루만 바뀌어요.\n• 매주: ${curCls()}${t && t.school ? ' · ' + t.school : ' (공통)'} 시간표의 ${DOWK[dow]}요일 수업이 ${has ? '바뀌어요' : '새로 생겨요'} (지난 날짜 포함 전부).`;
+    $('dmChg').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  $('dmChgX').onclick = () => $('dmChg').classList.add('hidden');
+  $('dmChgDay').onclick = async () => {
+    if (!curCls()) return toast('반을 먼저 고르세요');
+    const time = chgTR.str(), c = dayChange();
+    try {
+      if (c) await db.collection('classEvents').doc(c.id).update({ time, updatedAt: FV.serverTimestamp() });
+      else await db.collection('classEvents').add({ kind: 'change', date: dmDay, endDate: null, title: '수업 시간 변경', time, note: '', classNames: [curCls()], schools: curSchool ? [curSchool] : [], createdAt: FV.serverTimestamp(), updatedAt: FV.serverTimestamp() });
+      toast(`${dmDay.slice(5).replace('-', '/')} 수업을 ${time.replace('~', ' ~ ')}로 바꿨어요`); await load();
+    } catch(err){ handleErr(err); }
+    $('dmChg').classList.add('hidden'); drawDay();
+  };
+  $('dmChgWeek').onclick = async () => {
+    const c = curCls(); if (!c) return toast('반을 먼저 고르세요');
+    const dow = new Date(dmDay + 'T00:00:00').getDay(), [a, b] = chgTR.get(), t = weekTarget();
+    if (!confirm(`${c}${t && t.school ? ' · ' + t.school : ''} 매주 ${DOWK[dow]}요일 정규 수업을 ${a} ~ ${b}로 바꿀까요?`)) return;
+    try {
+      const sl = t ? (t.slots || []).map(x => ({ ...x })) : [];
+      const i = sl.findIndex(x => +x.dow === dow);
+      if (i >= 0) { sl[i].start = a; sl[i].end = b; } else sl.push({ dow, start: a, end: b, place: '' });
+      sl.sort((p, q) => p.dow - q.dow || p.start.localeCompare(q.start));
+      const doc = { className: c, school: t ? (t.school || null) : (curSchool || null), slots: sl, updatedAt: FV.serverTimestamp() };
+      if (t) await db.collection('classSchedules').doc(t.id).set(doc); else await db.collection('classSchedules').add(doc);
+      // 이날 따로 바꿔 둔 시간이 있으면 정리
+      const ch = dayChange(); if (ch) await db.collection('classEvents').doc(ch.id).delete();
+      toast(`매주 ${DOWK[dow]}요일 수업을 ${a} ~ ${b}로 바꿨어요`); await load();
+    } catch(err){ handleErr(err); }
+    $('dmChg').classList.add('hidden'); drawDay();
   };
   async function addEvent(data){
     try { await db.collection('classEvents').add({ ...data, createdAt: FV.serverTimestamp(), updatedAt: FV.serverTimestamp() }); toast('달력에 넣었어요'); await load(); return true; }
