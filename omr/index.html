@@ -99,6 +99,8 @@
   /* 시험 OMR만 보기 (index.html?mode=omr) */
   .oo-head{display:none;}
   #vList.omr-only > :not(.oo-keep){display:none !important;}
+  #vList.daily-only > :not(.oo-head):not(.dd-keep){display:none !important;}
+  #vList.daily-only .oo-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 0 16px;}
   #vList.omr-only .oo-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 0 16px;}
   .quick a:hover{border-color:var(--ink);}
   .quick .qi svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
@@ -163,7 +165,7 @@
   <!-- 2. 학생 개인 페이지 -->
   <section id="vList" class="hidden">
     <div class="oo-head oo-keep">
-      <div><div class="kicker" style="margin-bottom:4px;">MOBILE OMR</div><h1 style="margin:0;">시험 OMR</h1><p class="muted" id="ooWho"></p></div>
+      <div><div class="kicker" style="margin-bottom:4px;" id="ooK">MOBILE OMR</div><h1 style="margin:0;" id="ooTitle">시험 OMR</h1><p class="muted" id="ooWho"></p></div>
       <a class="btn sm" href="index.html">내 페이지 →</a>
     </div>
     <div class="me">
@@ -183,7 +185,7 @@
         <a href="planner.html"><span>오늘 공부</span><b>–</b><small>&nbsp;</small></a>
       </div>
     </div>
-    <div class="feat"><div class="fg"><div class="fg-h">공부하기</div><nav class="quick"><a href="index.html?mode=omr" data-k="omr"><span class="qi"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17.5" rx="2"/><path d="M9 3.5h6v2.5H9z"/><path d="M8.5 13l2.3 2.3 4.7-4.8"/></svg><em class="bdg" hidden></em></span><b>시험 OMR</b><small>답안 제출</small></a><a href="#hwSec" data-k="hw"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4.5 19.5h4L19 9l-4-4L4.5 15.5z"/><path d="M13 7l4 4"/></svg><em class="bdg" hidden></em></span><b>과제</b><small>제출 · 확인</small></a><a href="lectures.html" data-k="lec"><span class="qi"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.2v5.6l4.8-2.8z" fill="currentColor"/></svg><em class="bdg" hidden></em></span><b>영상 강의</b><small>복습 영상</small></a><a href="../index.html#materials" data-k="lib"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"/><path d="M6.5 8h2M15.5 8h2M15.5 11h2"/></svg><em class="bdg" hidden></em></span><b>자료실</b><small>학원·학년 자료</small></a></nav></div><div class="fg"><div class="fg-h">관리하기</div><nav class="quick"><a href="planner.html" data-k="planner"><span class="qi"><svg viewBox="0 0 24 24"><path d="M6 3.5h11.5A1.5 1.5 0 0 1 19 5v15a.5.5 0 0 1-.5.5H6A1.5 1.5 0 0 1 4.5 19V5A1.5 1.5 0 0 1 6 3.5z"/><path d="M8 8.5l1.3 1.3L12 7.2M8 13.5l1.3 1.3L12 12.2M14 9h2.5M14 14h2.5"/></svg><em class="bdg" hidden></em></span><b>플래너</b><small>할 일 · 시간표</small></a><a href="timer.html" data-k="timer"><span class="qi"><svg viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.5l2.3 1.6M10 3.5h4M18.5 7l1.2-1.2"/></svg><em class="bdg" hidden></em></span><b>집중 타이머</b><small>순공 기록</small></a><a href="book.html" data-k="book"><span class="qi"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><em class="bdg" hidden></em></span><b>클리닉 예약</b><small>자리 보고 예약</small></a><a href="ask.html" data-k="ask"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A1.5 1.5 0 0 1 4 14.5z"/><path d="M10.2 8.4a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3"/></svg><em class="bdg" hidden></em></span><b>질문하기</b><small>사진으로 질문</small></a></nav></div><div class="fg"><div class="fg-h">돌아보기</div><nav class="quick"><a href="#dailySec" data-k="daily"><span class="qi"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5A.5.5 0 0 1 6.5 20V4a.5.5 0 0 1 .5-.5z"/><path d="M9.5 12h5M9.5 15.5h5"/></svg><em class="bdg" hidden></em></span><b>데일리 리포트</b><small>수업별 리포트</small></a><a href="#reportSec" data-k="report"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 19.5h16"/><path d="M7 16v-5M12 16V7M17 16v-8"/></svg><em class="bdg" hidden></em></span><b>시험 성적표</b><small>등급 · 오답</small></a><a href="review.html" data-k="review"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 19.5h16"/><path d="M6.5 16V12M11 16V8.5M15.5 16v-5M20 5l-4.5 4.5-4-3L6 11"/></svg><em class="bdg" hidden></em></span><b>복습 분석</b><small>단원별 추이</small></a><a href="../index.html#games" data-k="game"><span class="qi"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.3" r=".9" fill="currentColor"/><circle cx="17.8" cy="13.7" r=".9" fill="currentColor"/></svg><em class="bdg" hidden></em></span><b>개념 퀴즈</b><small>게임으로 복습</small></a></nav></div></div>
+    <div class="feat"><div class="fg"><div class="fg-h">공부하기</div><nav class="quick"><a href="index.html?mode=omr" data-k="omr"><span class="qi"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17.5" rx="2"/><path d="M9 3.5h6v2.5H9z"/><path d="M8.5 13l2.3 2.3 4.7-4.8"/></svg><em class="bdg" hidden></em></span><b>시험 OMR</b><small>답안 제출</small></a><a href="#hwSec" data-k="hw"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4.5 19.5h4L19 9l-4-4L4.5 15.5z"/><path d="M13 7l4 4"/></svg><em class="bdg" hidden></em></span><b>과제</b><small>제출 · 확인</small></a><a href="lectures.html" data-k="lec"><span class="qi"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.2v5.6l4.8-2.8z" fill="currentColor"/></svg><em class="bdg" hidden></em></span><b>영상 강의</b><small>복습 영상</small></a><a href="../index.html#materials" data-k="lib"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"/><path d="M6.5 8h2M15.5 8h2M15.5 11h2"/></svg><em class="bdg" hidden></em></span><b>자료실</b><small>학원·학년 자료</small></a></nav></div><div class="fg"><div class="fg-h">관리하기</div><nav class="quick"><a href="planner.html" data-k="planner"><span class="qi"><svg viewBox="0 0 24 24"><path d="M6 3.5h11.5A1.5 1.5 0 0 1 19 5v15a.5.5 0 0 1-.5.5H6A1.5 1.5 0 0 1 4.5 19V5A1.5 1.5 0 0 1 6 3.5z"/><path d="M8 8.5l1.3 1.3L12 7.2M8 13.5l1.3 1.3L12 12.2M14 9h2.5M14 14h2.5"/></svg><em class="bdg" hidden></em></span><b>플래너</b><small>할 일 · 시간표</small></a><a href="timer.html" data-k="timer"><span class="qi"><svg viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.5l2.3 1.6M10 3.5h4M18.5 7l1.2-1.2"/></svg><em class="bdg" hidden></em></span><b>집중 타이머</b><small>순공 기록</small></a><a href="book.html" data-k="book"><span class="qi"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><em class="bdg" hidden></em></span><b>클리닉 예약</b><small>자리 보고 예약</small></a><a href="ask.html" data-k="ask"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A1.5 1.5 0 0 1 4 14.5z"/><path d="M10.2 8.4a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3"/></svg><em class="bdg" hidden></em></span><b>질문하기</b><small>사진으로 질문</small></a></nav></div><div class="fg"><div class="fg-h">돌아보기</div><nav class="quick"><a href="index.html?mode=daily" data-k="daily"><span class="qi"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10.5A.5.5 0 0 1 6.5 20V4a.5.5 0 0 1 .5-.5z"/><path d="M9.5 12h5M9.5 15.5h5"/></svg><em class="bdg" hidden></em></span><b>데일리 리포트</b><small>수업별 리포트</small></a><a href="#reportSec" data-k="report"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 19.5h16"/><path d="M7 16v-5M12 16V7M17 16v-8"/></svg><em class="bdg" hidden></em></span><b>시험 성적표</b><small>등급 · 오답</small></a><a href="review.html" data-k="review"><span class="qi"><svg viewBox="0 0 24 24"><path d="M4 19.5h16"/><path d="M6.5 16V12M11 16V8.5M15.5 16v-5M20 5l-4.5 4.5-4-3L6 11"/></svg><em class="bdg" hidden></em></span><b>복습 분석</b><small>단원별 추이</small></a><a href="../index.html#games" data-k="game"><span class="qi"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.3" r=".9" fill="currentColor"/><circle cx="17.8" cy="13.7" r=".9" fill="currentColor"/></svg><em class="bdg" hidden></em></span><b>개념 퀴즈</b><small>게임으로 복습</small></a></nav></div></div>
     <div id="weekBox"></div>
     <h2 class="sec-h" id="examSec">시험 OMR</h2>
     <div id="examList" class="oo-keep"><div class="empty">불러오는 중…</div></div>
@@ -192,9 +194,9 @@
     <h2 class="sec-h" id="reportSec">시험 성적표</h2>
     <div id="reportList"><div class="empty">불러오는 중…</div></div>
     <h2 class="sec-h" id="dailySec">데일리 리포트</h2>
-    <div id="dailyCardBox"></div>
-    <div id="trendBox"></div>
-    <div id="dailyList"></div>
+    <div id="dailyCardBox" class="dd-keep"></div>
+    <div id="trendBox" class="dd-keep"></div>
+    <div id="dailyList" class="dd-keep"></div>
     <div class="me-foot">
       <a href="../index.html#course">수업소개</a><a href="../index.html#channel">소식 · 상담</a><a href="../index.html">메인 홈</a>
     </div>
@@ -248,8 +250,10 @@
     del(k){ try { localStorage.removeItem(k); } catch(e){} },
   };
 
-  const MODE_OMR = new URLSearchParams(location.search).get('mode') === 'omr';
+  const MODE = new URLSearchParams(location.search).get('mode');
+  const MODE_OMR = MODE === 'omr', MODE_DAILY = MODE === 'daily';
   if (MODE_OMR) document.title = '시험 OMR — 엄형국 수학';
+  if (MODE_DAILY) document.title = '데일리 리포트 — 엄형국 수학';
   let me = null;          // {code, name, className}
   let cur = null;         // {exam, examId, answers, status, submittedAt}
   let saveTimer = null;
@@ -267,7 +271,7 @@
       const next = new URLSearchParams(location.search).get('next');
       if (next && /^[a-z-]+\.html(\?[\w=&%-]*)?$/.test(next)){ location.href = next; return true; }
       // 코드를 직접 입력해 입장하면 메인 화면(내 학습)으로 이동
-      if (manual && !MODE_OMR){ try { sessionStorage.setItem('gateChoice', 'student'); } catch(e){} location.href = '../#quick'; return true; }
+      if (manual && !MODE){ try { sessionStorage.setItem('gateChoice', 'student'); } catch(e){} location.href = '../#quick'; return true; }
       $('whoami').textContent = me.name;
       $('loginMsg').textContent = '';
       await loadList();
@@ -295,6 +299,8 @@
       .filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('');
     $('vList').classList.toggle('omr-only', MODE_OMR);
     $('ooWho').textContent = `${me.name} 학생 · ${me.className}`;
+    $('vList').classList.toggle('daily-only', MODE_DAILY);
+    if (MODE_DAILY){ $('ooK').textContent = 'DAILY REPORT'; $('ooTitle').textContent = '데일리 리포트'; loadDaily(); return; }
     if (!MODE_OMR){ loadTodos(); loadDaily(); loadDash(); }
     const box = $('examList');
     box.innerHTML = '<div class="empty">불러오는 중…</div>';
@@ -387,7 +393,7 @@
       if (rep0){
         const weak = rep0.weak || [];
         $('dailyCardBox').innerHTML = `<a class="pcard" href="daily-report.html?t=${encodeURIComponent(latest.token)}">
-          <div class="ph"><h3>데일리 리포트</h3><span>${esc(OMR.fmtKDate(rep0.date))}${rep0.title ? ' · ' + esc(rep0.title) : ''}</span></div>
+          <div class="ph"><h3>최근 리포트</h3><span>${esc(OMR.fmtKDate(rep0.date))}${rep0.title ? ' · ' + esc(rep0.title) : ''}</span></div>
           <div class="dsum">
             ${rep0.attendance === 'absent' ? '<div class="sc" style="font-size:26px;">결석</div>' : rep0.score != null ? `<div class="sc">${rep0.score}<small>/${rep0.maxScore}</small></div>` : ''}
             <div class="info">
@@ -396,8 +402,8 @@
             </div>
           </div></a>`;
       }
-      box.insertAdjacentHTML('beforeend', '<div class="fg-h" style="margin-top:14px;">지난 리포트</div>');
-      items.slice(0, 5).forEach((x, i) => {
+      box.insertAdjacentHTML('beforeend', `<div class="fg-h" style="margin-top:14px;">${MODE_DAILY ? `전체 리포트 ${items.length}개` : '지난 리포트'}</div>`);
+      items.slice(0, MODE_DAILY ? 60 : 5).forEach((x, i) => {
         const a = document.createElement('a');
         a.className = 'exam-item'; a.href = 'daily-report.html?t=' + encodeURIComponent(x.token);
         a.innerHTML = `<div><div class="t">${esc(OMR.fmtKDate(x.date))}${x.title ? ' · ' + esc(x.title) : ''}</div>
