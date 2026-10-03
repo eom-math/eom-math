@@ -401,9 +401,9 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=27"></script>
+<script src="common.js?v=28"></script>
 <script src="demo.js?v=3"></script>
-<script src="calendar.js?v=2"></script>
+<script src="calendar.js?v=3"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast } = OMR;
@@ -472,7 +472,7 @@
     $('helloName').textContent = `${me.name} 학생`;
     $('meAv').textContent = (me.name || '?').slice(me.name && me.name.length >= 3 ? 1 : 0, (me.name && me.name.length >= 3 ? 1 : 0) + 1);
     const acad = (OMR.ACADEMIES.find(a => a[0] === me.academy) || [])[1];
-    $('helloClass').innerHTML = [me.className, acad, me.grade ? (/학년|공통/.test(me.grade) ? me.grade : me.grade + '학년') : null]
+    $('helloClass').innerHTML = [me.className, me.school, acad, me.grade ? (/학년|공통/.test(me.grade) ? me.grade : me.grade + '학년') : null]
       .filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('');
     applyMode();
     $('ooWho').textContent = `${me.name} 학생 · ${me.className}`;
@@ -643,7 +643,7 @@
         db.collection('classSchedules').where('className', '==', me.className).get().then(q => q.docs.map(d => d.data())).catch(() => []),
         db.collection('classEvents').get().then(q => q.docs.map(d => ({ id: d.id, ...d.data() }))).catch(() => []),
       ]);
-      cal.schedules = s; cal.events = e.filter(x => CAL.forClass(x, me.className));
+      cal.schedules = CAL.pickSchedules(s, me.className, me.school || ''); cal.events = e.filter(x => CAL.forClass(x, me.className, me.school || ''));
     } catch(err){ console.warn(err); }
     renderCal();
   }
@@ -660,7 +660,7 @@
     $('calTabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === cal.tab));
     const today = OMR.todayStr();
     if (cal.tab === 'class'){
-      const opt = { schedules: cal.schedules, events: cal.events, className: me.className, today };
+      const opt = { schedules: cal.schedules, events: cal.events, className: me.className, school: me.school || '', today };
       $('calBox').innerHTML = CAL.classHtml(cal.ym, opt);
       const DW = '일월화수목금토';
       const reg = cal.schedules.flatMap(s => s.slots || []).sort((a, b) => a.dow - b.dow);

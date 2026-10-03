@@ -1374,9 +1374,9 @@
     acadState.admin = !!user; applyAcad();
   });
 </script>
-<script src="omr/common.js?v=27"></script>
+<script src="omr/common.js?v=28"></script>
 <script src="notice.js?v=1"></script>
-<script src="omr/calendar.js?v=2"></script>
+<script src="omr/calendar.js?v=3"></script>
 <script>
 // 메인 화면 맨 아래 달력: 학생은 내 반 수업 시간표·내 플래너, 방문자는 공휴일·전체 일정 + 플래너 예시
 (function(){
@@ -1399,7 +1399,7 @@
     var cls = st.me ? st.me.className : null;
     var note = $('mcNote');
     if (st.tab === 'class'){
-      var opt = { schedules: st.schedules, events: st.events, className: cls, today: today };
+      var opt = { schedules: st.schedules, events: st.events, className: cls, school: st.me ? (st.me.school || '') : '*', today: today };
       $('mcBox').innerHTML = CAL.classHtml(st.ym, opt);
       var DW = '일월화수목금토', reg = [];
       st.schedules.forEach(function(s){ (s.slots || []).forEach(function(t){ reg.push(t); }); });
@@ -1437,12 +1437,12 @@
     st.me = me; st.sample = !me;
     if (me){ $('mcTitle').textContent = me.name + ' 학생의 달력'; $('mcWho').textContent = me.className; }
     return Promise.all([
-      me ? db.collection('classSchedules').where('className', '==', me.className).get().then(function(q){ return q.docs.map(function(d){ return d.data(); }); }).catch(function(){ return []; }) : [],
+      me ? db.collection('classSchedules').where('className', '==', me.className).get().then(function(q){ return CAL.pickSchedules(q.docs.map(function(d){ return d.data(); }), me.className, me.school || ''); }).catch(function(){ return []; }) : [],
       db.collection('classEvents').get().then(function(q){ return q.docs.map(function(d){ var x = d.data(); x.id = d.id; return x; }); }).catch(function(){ return []; }),
     ]);
   }).then(function(r){
     st.schedules = r[0];
-    st.events = r[1].filter(function(e){ return st.me ? CAL.forClass(e, st.me.className) : (e.classNames || ['*']).indexOf('*') >= 0; });
+    st.events = r[1].filter(function(e){ return st.me ? CAL.forClass(e, st.me.className, st.me.school || '') : (e.classNames || ['*']).indexOf('*') >= 0 && !(e.schools || []).length; });
     render();
   });
 })();

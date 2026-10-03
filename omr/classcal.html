@@ -58,7 +58,9 @@
     <h1>수업 달력</h1>
     <p class="muted" style="margin-bottom:14px;">반별 정규 수업 시간과 휴강·직보(직전보강)·시험기간을 넣으면 학생 개인 페이지 맨 아래 <b>📅 달력</b>에 보여요. 공휴일은 자동으로 표시돼요.</p>
     <div id="permWarn" class="note hidden" style="margin-bottom:14px;border:1px solid var(--red);"><b>Firestore 권한 오류</b> — <code>classSchedules</code>, <code>classEvents</code> 규칙을 게시했는지 확인하세요.</div>
-    <div class="row" style="margin-bottom:12px;"><label class="f" style="margin:0;">반</label><select class="input" id="cls" style="width:auto;min-width:160px;"></select></div>
+    <div class="row" style="margin-bottom:8px;"><label class="f" style="margin:0;">반</label><select class="input" id="cls" style="width:auto;min-width:160px;"></select></div>
+    <div class="row" id="schRow" style="margin-bottom:14px;gap:8px;align-items:center;"><label class="f" style="margin:0;">학교</label><div class="chips" id="sch"></div>
+      <span class="muted" style="font-size:12px;">같은 반이라도 학교별로 시간표·시험기간을 따로 넣을 수 있어요</span></div>
 
     <div class="lay">
       <div>
@@ -85,14 +87,16 @@
             </div>
             <div><label class="f">메모 <span class="muted" style="font-weight:600;">(선택 · 학생에게 보여요)</span></label><input class="input" id="evNote" maxlength="80" placeholder="예: 3층 자습실 · 교재 지참"></div>
             <div><label class="f">대상 반</label><div class="chips" id="evCls"></div></div>
+            <div id="evSchWrap"><label class="f">대상 학교 <span class="muted" style="font-weight:600;">(안 고르면 모든 학교)</span></label><div class="chips" id="evSch"></div></div>
             <div class="row"><button class="btn primary" id="evSave">저장</button><button class="btn ghost hidden" id="evCancel">새로 쓰기</button><span class="muted" id="evMsg"></span></div>
           </div>
         </div>
         <div class="card">
           <h2>정규 수업 시간 <span class="muted" id="slotFor" style="font-size:13px;font-weight:700;"></span></h2>
           <p class="muted" style="font-size:12.5px;margin-bottom:10px;">매주 같은 요일에 달력에 표시돼요. 휴강을 넣은 날은 줄이 그어져요.</p>
+          <p class="muted" id="slotHint" style="font-size:12.5px;margin:-4px 0 10px;color:var(--red);"></p>
           <div id="slots"></div>
-          <div class="row"><button class="btn sm" id="slotAdd">+ 요일 추가</button><button class="btn primary sm" id="slotSave">시간표 저장</button><span class="muted" id="slotMsg"></span></div>
+          <div class="row"><button class="btn sm" id="slotAdd">+ 요일 추가</button><button class="btn primary sm" id="slotSave">시간표 저장</button><button class="btn sm ghost hidden" id="slotDel" style="color:var(--red);">공통 시간표로 되돌리기</button><span class="muted" id="slotMsg"></span></div>
         </div>
       </div>
     </div>
@@ -102,14 +106,15 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=27"></script>
-<script src="calendar.js?v=2"></script>
+<script src="common.js?v=28"></script>
+<script src="calendar.js?v=3"></script>
 <script>
 (function(){
   const { db, FV, esc, toast } = OMR;
   const $ = id => document.getElementById(id);
   const DOW = ['일','월','화','수','목','금','토'];
   const today = OMR.todayStr();
+  let classSchools = {}, curSchool = '', evSch = new Set();
   let classes = [], schedules = [], events = [], ym = today.slice(0, 7), kind = 'makeup', evCls = new Set(['*']), editId = null, slots = [];
   CAL.injectCss();
   $('adminNav').innerHTML = OMR.adminNav('classcal.html');
@@ -118,7 +123,11 @@
   OMR.mountAdminLogin(async user => {
     ['vLogin','vMain'].forEach(x => $(x).classList.toggle('hidden', x !== (user ? 'vMain' : 'vLogin')));
     if (!user) return;
-    try { classes = [...new Set((await db.collection('omrCodes').get()).docs.map(d => d.data().className).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')); } catch(e){ classes = []; }
+    try {
+      const codes = (await db.collection('omrCodes').get()).docs.map(d => d.data());
+      classes = [...new Set(codes.map(d => d.className).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'));
+      codes.forEach(d => { if (d.className && d.school) (classSchools[d.className] = classSchools[d.className] || new Set()).add(d.school); });
+    } catch(e){ classes = []; }
     $('cls').innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('') || '<option value="">반 없음</option>';
     $('evKind').innerHTML = Object.entries(CAL.KINDS).map(([k, v]) => `<button type="button" data-k="${k}" class="${k === kind ? 'on' : ''}">${v.label}</button>`).join('');
     $('evDate').value = today;
@@ -130,17 +139,35 @@
       schedules = s.docs.map(d => ({ id: d.id, ...d.data() }));
       events = e.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch(err){ handleErr(err); }
-    renderSlots(); renderEvCls(); render();
+    renderSch(); renderSlots(); renderEvCls(); render();
   }
+  // 반에 다니는 학생들의 학교 목록 (학생 관리에서 입력한 학교) + 시간표·일정에 이미 쓴 학교
+  function schoolsOf(c){
+    const set = new Set(classSchools[c] || []);
+    schedules.forEach(x => { if (x.className === c && x.school) set.add(x.school); });
+    events.forEach(x => { if ((x.classNames || []).includes(c)) (x.schools || []).forEach(v => set.add(v)); });
+    return [...set].sort((a, b) => a.localeCompare(b, 'ko'));
+  }
+  function renderSch(){
+    const list = schoolsOf(curCls());
+    if (curSchool && !list.includes(curSchool)) curSchool = '';
+    $('schRow').classList.toggle('hidden', !list.length);
+    $('sch').innerHTML = ['', ...list].map(v => `<button type="button" data-s="${esc(v)}" class="${v === curSchool ? 'on' : ''}">${v ? esc(v) : '공통 (모든 학교)'}</button>`).join('');
+    // 일정 대상 학교 칩
+    $('evSchWrap').classList.toggle('hidden', !list.length);
+    $('evSch').innerHTML = list.map(v => `<button type="button" data-s="${esc(v)}" class="${evSch.has(v) ? 'on' : ''}">${esc(v)}</button>`).join('');
+  }
+  $('sch').onclick = e => { const b = e.target.closest('button'); if (!b) return; curSchool = b.dataset.s; evSch = new Set(curSchool ? [curSchool] : []); renderSch(); renderSlots(); render(); };
+  $('evSch').onclick = e => { const b = e.target.closest('button'); if (!b) return; const v = b.dataset.s; evSch.has(v) ? evSch.delete(v) : evSch.add(v); renderSch(); };
   const curCls = () => $('cls').value;
   function render(){
     const [y, m] = ym.split('-');
     $('mLabel').textContent = `${y}년 ${+m}월`;
-    const opt = { schedules: schedules.filter(s => s.className === curCls()), events, className: curCls(), today, editable: true };
+    const opt = { schedules: CAL.pickSchedules(schedules, curCls(), curSchool), events, className: curCls(), school: curSchool || '*', today, editable: true };
     $('calBox').innerHTML = CAL.classHtml(ym, opt);
     $('listBox').innerHTML = CAL.listHtml(ym, opt);
   }
-  $('cls').onchange = () => { renderSlots(); evCls = new Set([curCls()]); renderEvCls(); render(); };
+  $('cls').onchange = () => { curSchool = ''; evSch = new Set(); renderSch(); renderSlots(); evCls = new Set([curCls()]); renderEvCls(); render(); };
   $('mPrev').onclick = () => { ym = CAL.shiftMonth(ym, -1); render(); };
   $('mNext').onclick = () => { ym = CAL.shiftMonth(ym, 1); render(); };
   $('mToday').onclick = () => { ym = today.slice(0, 7); render(); };
@@ -163,7 +190,7 @@
     if (!date) return toast('날짜를 고르세요');
     if (end && end < date) return toast('끝나는 날이 시작보다 빨라요');
     const data = { kind, date, endDate: end && end !== date ? end : null, title: $('evName').value.trim() || DEF[kind] || CAL.KINDS[kind].label,
-      time: $('evTime').value.trim(), note: $('evNote').value.trim(), classNames: [...evCls], updatedAt: FV.serverTimestamp() };
+      time: $('evTime').value.trim(), note: $('evNote').value.trim(), classNames: [...evCls], schools: [...evSch], updatedAt: FV.serverTimestamp() };
     $('evSave').disabled = true;
     try {
       if (editId) await db.collection('classEvents').doc(editId).update(data);
@@ -179,14 +206,16 @@
     if (ed){ const ev = events.find(x => x.id === ed.dataset.ee); if (!ev) return; editId = ev.id; kind = ev.kind;
       $('evKind').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.k === kind));
       $('evDate').value = ev.date; $('evEnd').value = ev.endDate || ''; $('evName').value = ev.title || ''; $('evTime').value = ev.time || ''; $('evNote').value = ev.note || '';
-      evCls = new Set(ev.classNames || ['*']); renderEvCls(); $('evTitle').textContent = '일정 수정'; $('evCancel').classList.remove('hidden'); $('evTitle').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      evCls = new Set(ev.classNames || ['*']); evSch = new Set(ev.schools || []); renderEvCls(); renderSch(); $('evTitle').textContent = '일정 수정'; $('evCancel').classList.remove('hidden'); $('evTitle').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
   };
 
   // ═════ 정규 수업 시간 ═════
   function renderSlots(){
-    const s = schedules.find(x => x.className === curCls());
+    const s = schedules.find(x => x.className === curCls() && (x.school || '') === curSchool);
     slots = s ? (s.slots || []).map(x => ({ ...x })) : [];
-    $('slotFor').textContent = curCls() ? '· ' + curCls() : '';
+    $('slotFor').textContent = curCls() ? '· ' + curCls() + ' · ' + (curSchool || '공통') : '';
+    $('slotDel').classList.toggle('hidden', !(curSchool && s));
+    $('slotHint').textContent = curSchool ? (s ? `${curSchool} 학생은 이 시간표를 봐요.` : `${curSchool} 전용 시간표가 없어서 지금은 공통 시간표를 봐요. 여기서 저장하면 ${curSchool} 학생만 이 시간표로 바뀌어요.`) : '학교별 시간표가 없는 학생은 모두 이 공통 시간표를 봐요.';
     drawSlots();
   }
   function drawSlots(){
@@ -200,14 +229,20 @@
   $('slots').addEventListener('change', e => { const r = e.target.closest('.slot'), f = e.target.dataset.f; if (!r || !f) return; slots[+r.dataset.i][f] = f === 'dow' ? +e.target.value : e.target.value; });
   $('slots').onclick = e => { const b = e.target.closest('[data-rm]'); if (!b) return; slots.splice(+b.dataset.rm, 1); drawSlots(); };
   $('slotAdd').onclick = () => { const last = slots[slots.length - 1]; slots.push({ dow: last ? (last.dow + 2) % 7 : 2, start: last ? last.start : '18:00', end: last ? last.end : '21:00', place: last ? last.place : '' }); drawSlots(); };
+  $('slotDel').onclick = async () => {
+    const s = schedules.find(x => x.className === curCls() && (x.school || '') === curSchool); if (!s) return;
+    if (!confirm(`${curSchool} 전용 시간표를 지우고 공통 시간표를 쓰게 할까요?`)) return;
+    try { await db.collection('classSchedules').doc(s.id).delete(); toast('공통 시간표로 되돌렸어요'); await load(); } catch(e){ handleErr(e); }
+  };
   $('slotSave').onclick = async () => {
     const c = curCls(); if (!c) return toast('반을 먼저 만드세요');
     const clean = slots.filter(t => t.start).map(t => ({ dow: +t.dow, start: t.start, end: t.end || '', place: (t.place || '').slice(0, 30) })).sort((a, b) => a.dow - b.dow || a.start.localeCompare(b.start));
     try {
-      const s = schedules.find(x => x.className === c);
-      if (s) await db.collection('classSchedules').doc(s.id).set({ className: c, slots: clean, updatedAt: FV.serverTimestamp() });
-      else await db.collection('classSchedules').add({ className: c, slots: clean, updatedAt: FV.serverTimestamp() });
-      toast(`${c} 시간표를 저장했어요`); await load();
+      const s = schedules.find(x => x.className === c && (x.school || '') === curSchool);
+      const doc = { className: c, school: curSchool || null, slots: clean, updatedAt: FV.serverTimestamp() };
+      if (s) await db.collection('classSchedules').doc(s.id).set(doc);
+      else await db.collection('classSchedules').add(doc);
+      toast(`${c}${curSchool ? ' · ' + curSchool : ''} 시간표를 저장했어요`); await load();
     } catch(e){ handleErr(e); }
   };
 })();

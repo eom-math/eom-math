@@ -91,7 +91,7 @@
       <select class="input" id="fAcad"></select>
       <select class="input" id="fGrade"><option value="">전체 학년</option><option value="1">1학년</option><option value="2">2학년</option><option value="3">3학년</option><option value="none">학년 미지정</option></select>
       <select class="input" id="fClass"></select>
-      <input class="input q" id="fQ" placeholder="이름·코드 검색">
+      <input class="input q" id="fQ" placeholder="이름·코드·학교 검색">
     </div>
     <div class="bulkbar hidden" id="bulkBar">
       <b id="selCount"></b>
@@ -106,6 +106,7 @@
 </div>
 
 <datalist id="classList"></datalist>
+<datalist id="schoolList"></datalist>
 
 <div class="modal-bg hidden" id="stuModal">
   <div class="modal stack">
@@ -118,6 +119,7 @@
       <div><label class="f">학원</label><select class="input" id="sAcad"></select></div>
       <div><label class="f">학년</label><select class="input" id="sGrade"><option value="">미지정</option><option value="1">1학년</option><option value="2">2학년</option><option value="3">3학년</option></select></div>
     </div>
+    <div><label class="f">학교 <span style="font-weight:600;">(같은 반이라도 학교별 시간표·시험기간을 따로 쓸 수 있어요)</span></label><input class="input" id="sSchool" list="schoolList" maxlength="20" placeholder="예: 휘문고"></div>
     <div class="grid2">
       <div><label class="f">학생 연락처</label><input class="input" id="sPhone" inputmode="tel" placeholder="010-0000-0000"></div>
       <div><label class="f">학부모 연락처</label><input class="input" id="sParent" inputmode="tel" placeholder="010-0000-0000"></div>
@@ -130,8 +132,8 @@
 <div class="modal-bg hidden" id="bulkModal">
   <div class="modal stack">
     <h2>여러 명 붙여넣기</h2>
-    <p class="muted">한 줄에 한 명: <b>이름, 학원, 학년, 반, 학생 연락처, 학부모 연락처</b><br>엑셀에서 복사해 붙여넣어도 됩니다. 학원은 <b>상상 · SNT · 러셀</b>처럼 줄여 써도 되고, 학년은 <b>1 · 고1 · 1학년</b> 모두 됩니다.</p>
-    <textarea class="input" id="bulkText" placeholder="김민수, 상상, 2, 고2 미적분 A반, 010-1111-2222, 010-3333-4444&#10;이서연, SNT, 고1, 고1 공통수학 B반"></textarea>
+    <p class="muted">한 줄에 한 명: <b>이름, 학원, 학년, 반, 학생 연락처, 학부모 연락처, 학교</b> (학교는 맨 끝, 없어도 돼요)<br>엑셀에서 복사해 붙여넣어도 됩니다. 학원은 <b>상상 · SNT · 러셀</b>처럼 줄여 써도 되고, 학년은 <b>1 · 고1 · 1학년</b> 모두 됩니다.</p>
+    <textarea class="input" id="bulkText" placeholder="김민수, 상상, 2, 고2 미적분 A반, 010-1111-2222, 010-3333-4444, 휘문고&#10;이서연, SNT, 고1, 고1 공통수학 B반"></textarea>
     <p class="muted" id="bulkMsg"></p>
     <div class="row"><button class="btn grow" data-close>취소</button><button class="btn primary grow" id="bulkSave">등록</button></div>
   </div>
@@ -140,7 +142,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=27"></script>
+<script src="common.js?v=28"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, fmtPhone, normalizePhone } = OMR;
@@ -177,6 +179,7 @@
     sel = new Set([...sel].filter(id => students.some(s => s.id === id)));
     const classes = [...new Set(students.map(s => s.className).filter(Boolean))].sort((a,b) => a.localeCompare(b,'ko'));
     $('classList').innerHTML = classes.map(c => `<option value="${esc(c)}">`).join('');
+    $('schoolList').innerHTML = [...new Set(students.map(s => s.school).filter(Boolean))].sort((a,b) => a.localeCompare(b,'ko')).map(c => `<option value="${esc(c)}">`).join('');
     const prev = $('fClass').value;
     $('fClass').innerHTML = '<option value="">전체 반</option>' + classes.map(c => `<option>${esc(c)}</option>`).join('');
     if (classes.includes(prev)) $('fClass').value = prev;
@@ -192,7 +195,7 @@
       (!fa || (fa === 'none' ? !acadOf(s) : s.academy === fa)) &&
       (!fg || (fg === 'none' ? !gradeOf(s) : gradeOf(s) === Number(fg))) &&
       (!fc || s.className === fc) &&
-      (!q || (s.name||'').toLowerCase().includes(q) || (s.code||'').toLowerCase().includes(q)));
+      (!q || (s.name||'').toLowerCase().includes(q) || (s.code||'').toLowerCase().includes(q) || (s.school||'').toLowerCase().includes(q)));
   }
 
   function renderCards(){
@@ -221,13 +224,14 @@
     $('countLine').textContent = `${list.length}명 표시 · 전체 ${students.length}명`;
     if (!list.length){ t.innerHTML = '<tr><td class="empty">조건에 맞는 학생이 없습니다.</td></tr>'; renderBulk(); return; }
     const allOn = list.every(s => sel.has(s.id));
-    t.innerHTML = `<tr><th class="ck"><input type="checkbox" id="ckAll" ${allOn ? 'checked' : ''} aria-label="모두 선택"></th><th>이름</th><th>학원</th><th>학년</th><th>반</th><th>코드</th><th>학생 연락처</th><th>학부모 연락처</th><th></th></tr>` +
+    t.innerHTML = `<tr><th class="ck"><input type="checkbox" id="ckAll" ${allOn ? 'checked' : ''} aria-label="모두 선택"></th><th>이름</th><th>학원</th><th>학년</th><th>반</th><th>학교</th><th>코드</th><th>학생 연락처</th><th>학부모 연락처</th><th></th></tr>` +
       list.map(s => { const a = acadOf(s), g = gradeOf(s); return `<tr>
         <td class="ck"><input type="checkbox" data-ck="${s.id}" ${sel.has(s.id) ? 'checked' : ''}></td>
         <td><a class="stu-link" href="student.html?id=${encodeURIComponent(s.id)}"><b>${esc(s.name)}</b> <span>상담·성적 ›</span></a></td>
         <td>${a ? `<span class="tag a-${a}">${esc(ACAD[a])}</span>` : '<span class="tag none">미지정</span>'}</td>
         <td>${g ? g + '학년' : '<span class="muted">—</span>'}</td>
         <td>${esc(s.className || '')}</td>
+        <td>${s.school ? esc(s.school) : '<span class="muted">—</span>'}</td>
         <td><span class="code">${esc(s.code)}</span></td>
         <td>${esc(fmtPhone(s.phone))}</td><td>${esc(fmtPhone(s.parentPhone))}</td>
         <td style="white-space:nowrap;text-align:right;">
@@ -297,6 +301,7 @@
     $('sGrade').value = s ? (gradeOf(s) || '') : (/^[123]$/.test($('fGrade').value) ? $('fGrade').value : '');
     $('sPhone').value = s ? (s.phone || '') : '';
     $('sParent').value = s ? (s.parentPhone || '') : '';
+    $('sSchool').value = s ? (s.school || '') : '';
     $('stuMsg').textContent = '';
     $('stuModal').classList.remove('hidden');
     setTimeout(() => $('sName').focus(), 50);
@@ -319,14 +324,14 @@
     if (!m || t.replace(/고|학년|\s/g, '').length > 1) throw new Error(`학년 "${t}"을(를) 알 수 없어요 (1 · 2 · 3)`);
     return Number(m[0]);
   }
-  function fields(name, academy, grade, cls, phone, parent){
+  function fields(name, academy, grade, cls, phone, parent, school){
     name = (name || '').trim(); cls = (cls || '').trim();
     if (!name || !cls) throw new Error('이름과 반은 꼭 입력하세요.');
-    return { name, className: cls, academy: academy || null, grade: grade || null,
+    return { name, className: cls, academy: academy || null, grade: grade || null, school: (school || '').trim().slice(0, 20) || null,
       phone: normalizePhone(phone) || (phone || '').trim() || null,
       parentPhone: normalizePhone(parent) || (parent || '').trim() || null };
   }
-  const codeDoc = (f, studentId) => ({ name: f.name, className: f.className, studentId, academy: f.academy, grade: f.grade });
+  const codeDoc = (f, studentId) => ({ name: f.name, className: f.className, studentId, academy: f.academy, grade: f.grade, school: f.school || null });
 
   async function uniqueCode(taken){
     for (let i = 0; i < 20; i++){
@@ -341,7 +346,7 @@
   $('stuSave').onclick = async () => {
     try {
       const f = fields($('sName').value, $('sAcad').value || null, $('sGrade').value ? Number($('sGrade').value) : null,
-        $('sClass').value, $('sPhone').value, $('sParent').value);
+        $('sClass').value, $('sPhone').value, $('sParent').value, $('sSchool').value);
       const batch = db.batch();
       if (editing){
         batch.update(db.collection('omrStudents').doc(editing.id), f);
@@ -364,7 +369,7 @@
     try {
       const rows = lines.map((l, i) => {
         const p = l.split(/\t|,/).map(x => x.trim());
-        try { return fields(p[0], parseAcad(p[1]), parseGrade(p[2]), p[3], p[4], p[5]); }
+        try { return fields(p[0], parseAcad(p[1]), parseGrade(p[2]), p[3], p[4], p[5], p[6]); }
         catch(e){ throw new Error(`${i + 1}번째 줄: ${e.message}`); }
       });
       $('bulkMsg').textContent = `${rows.length}명 등록 중…`;
@@ -385,8 +390,8 @@
 
   $('csvBtn').onclick = () => {
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const rows = [['이름','학원','학년','반','코드','학생 연락처','학부모 연락처']]
-      .concat(filtered().map(s => [s.name, ACAD[s.academy] || '', gradeOf(s) || '', s.className || '', s.code, fmtPhone(s.phone), fmtPhone(s.parentPhone)]));
+    const rows = [['이름','학원','학년','반','학교','코드','학생 연락처','학부모 연락처']]
+      .concat(filtered().map(s => [s.name, ACAD[s.academy] || '', gradeOf(s) || '', s.className || '', s.school || '', s.code, fmtPhone(s.phone), fmtPhone(s.parentPhone)]));
     const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(',')).join('\r\n')], { type:'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
     a.download = `학생명단_${OMR.todayStr()}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);

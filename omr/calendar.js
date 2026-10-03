@@ -26,7 +26,20 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function hm(min) { return min >= 60 ? Math.floor(min / 60) + 'h' + (min % 60 ? pad(min % 60) : '') : min + 'm'; }
   function inRange(e, d) { return d >= e.date && d <= (e.endDate || e.date); }
-  function forClass(e, cls) { var c = e.classNames || ['*']; return !cls || c.indexOf('*') >= 0 || c.indexOf(cls) >= 0; }
+  // 반 · 학교 대상인지. school: '*' 또는 없음 = 학교 구분 없이 모두, '' = 학교 미지정 학생(학교 지정 일정은 안 보임)
+  function forClass(e, cls, school) {
+    var c = e.classNames || ['*'];
+    if (cls && c.indexOf('*') < 0 && c.indexOf(cls) < 0) return false;
+    var sc = e.schools || [];
+    if (!sc.length || school === undefined || school === null || school === '*') return true;
+    return sc.indexOf(school) >= 0;
+  }
+  // 반의 정규 시간표 고르기: 내 학교 전용 시간표가 있으면 그것, 없으면 공통 시간표
+  function pickSchedules(all, cls, school) {
+    var mine = (all || []).filter(function (s) { return s.className === cls; });
+    var own = school ? mine.filter(function (s) { return s.school === school; }) : [];
+    return own.length ? own : mine.filter(function (s) { return !s.school; });
+  }
   function monthDays(ym) {
     var y = +ym.slice(0, 4), m = +ym.slice(5, 7) - 1, first = new Date(y, m, 1), out = [];
     var start = new Date(first); start.setDate(1 - first.getDay());
@@ -37,8 +50,8 @@
   function shiftMonth(ym, k) { var d = new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1 + k, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); }
 
   // 그날 수업 목록: 정규 수업(요일) − 휴강 + 직보·보강
-  function dayLessons(d, dow, schedules, events, cls) {
-    var evs = events.filter(function (e) { return inRange(e, d) && forClass(e, cls); });
+  function dayLessons(d, dow, schedules, events, cls, school) {
+    var evs = events.filter(function (e) { return inRange(e, d) && forClass(e, cls, school); });
     // 휴강 일정이나 선생님이 넣은 공휴일·방학이 있으면 그날 정규 수업은 휴강 (법정 공휴일은 수업하는 경우가 많아 따로 '휴강'을 넣어야 빠짐)
     var off = evs.some(function (e) { return e.kind === 'cancel' || e.kind === 'holiday'; });
     var reg = [];
@@ -48,9 +61,9 @@
 
   // 수업 시간표 달력
   function classHtml(ym, opt) {
-    var schedules = opt.schedules || [], events = opt.events || [], cls = opt.className, today = opt.today;
+    var schedules = opt.schedules || [], events = opt.events || [], cls = opt.className, today = opt.today, school = opt.school;
     var cells = monthDays(ym).map(function (c) {
-      var hol = HOLIDAYS[c.d], L = dayLessons(c.d, c.dow, schedules, events, cls);
+      var hol = HOLIDAYS[c.d], L = dayLessons(c.d, c.dow, schedules, events, cls, school);
       var marks = '';
       L.events.filter(function (e) { return e.kind === 'exam'; }).forEach(function (e) { marks += '<span class="cm exam">' + (e.date === c.d ? esc(e.title || '시험기간') : '시험') + '</span>'; });
       if (L.regular.length) marks += L.regular.map(function (r) { return '<span class="cm ' + (L.cancelled ? 'off' : 'cls') + '">' + (L.cancelled ? '휴강' : esc(r.start)) + '</span>'; }).join('');
@@ -65,14 +78,14 @@
   }
   // 이번 달 일정 목록 (휴강·직보·시험·공휴일)
   function listHtml(ym, opt) {
-    var events = (opt.events || []).filter(function (e) { return forClass(e, opt.className) && (e.date.slice(0, 7) === ym || (e.endDate || e.date).slice(0, 7) === ym); });
+    var events = (opt.events || []).filter(function (e) { return forClass(e, opt.className, opt.school) && (e.date.slice(0, 7) === ym || (e.endDate || e.date).slice(0, 7) === ym); });
     var hol = Object.keys(HOLIDAYS).filter(function (d) { return d.slice(0, 7) === ym; }).map(function (d) { return { date: d, kind: 'holiday', title: HOLIDAYS[d], builtin: true }; });
     var all = events.concat(hol).sort(function (a, b) { return a.date.localeCompare(b.date); });
     if (!all.length) return '<div class="cal-none">이번 달은 휴강·직보·시험 일정이 없어요.</div>';
     var md = function (d) { var t = new Date(d + 'T00:00:00'); return (t.getMonth() + 1) + '/' + t.getDate() + '(' + DOW[t.getDay()] + ')'; };
     return '<ul class="cal-l">' + all.map(function (e) { var K = KINDS[e.kind] || KINDS.event;
       return '<li><span class="k" style="color:' + K.color + ';background:' + K.bg + '">' + K.label + '</span><span class="d">' + md(e.date) + (e.endDate && e.endDate !== e.date ? ' ~ ' + md(e.endDate) : '') + '</span>'
-        + '<span class="t">' + esc(e.title || K.label) + (e.time ? ' · ' + esc(e.time) : '') + (e.note ? '<small>' + esc(e.note) + '</small>' : '') + '</span>'
+        + '<span class="t">' + (e.schools && e.schools.length ? '<em class="sch">' + esc(e.schools.join('·')) + '</em>' : '') + esc(e.title || K.label) + (e.time ? ' · ' + esc(e.time) : '') + (e.note ? '<small>' + esc(e.note) + '</small>' : '') + '</span>'
         + (opt.editable && !e.builtin ? '<span class="ops"><button type="button" data-ee="' + esc(e.id) + '">수정</button><button type="button" data-ed="' + esc(e.id) + '">삭제</button></span>' : '') + '</li>';
     }).join('') + '</ul>';
   }
@@ -109,11 +122,12 @@
     + '.cal-l li{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid rgba(17,17,20,.08);border-radius:10px;padding:8px 10px;font-size:13px;}'
     + '.cal-l .k{flex:0 0 auto;font-size:11px;font-weight:900;padding:2px 7px;border-radius:6px;} .cal-l .d{flex:0 0 auto;font-weight:800;font-variant-numeric:tabular-nums;font-size:12.5px;}'
     + '.cal-l .t{min-width:0;flex:1;font-weight:700;} .cal-l .t small{display:block;font-size:11.5px;color:#63636B;font-weight:600;}'
+    + '.cal-l .sch{font-style:normal;font-size:10.5px;font-weight:900;background:#111114;color:#fff;border-radius:5px;padding:1px 6px;margin-right:5px;vertical-align:1px;}'
     + '.cal-l .ops{display:flex;gap:4px;} .cal-l .ops button{border:0;background:#F1F0EC;border-radius:6px;padding:4px 8px;font-size:11.5px;font-weight:800;cursor:pointer;}'
     + '.cal-l .ops button[data-ed]{color:#D6301F;}'
     + '.cal-none{font-size:13px;color:#63636B;text-align:center;padding:12px 0 2px;}'
     + '@media (max-width:420px){ .cc{min-height:58px;padding:3px 2px 4px;border-radius:8px;} .cm{font-size:8.5px;padding:1px 2px;} .cc .hn{font-size:8.5px;} }';
   function injectCss() { if (typeof document === 'undefined' || document.getElementById('calCss')) return; var s = document.createElement('style'); s.id = 'calCss'; s.textContent = CSS; document.head.appendChild(s); }
 
-  global.CAL = { HOLIDAYS: HOLIDAYS, KINDS: KINDS, monthDays: monthDays, shiftMonth: shiftMonth, classHtml: classHtml, listHtml: listHtml, plannerHtml: plannerHtml, injectCss: injectCss, forClass: forClass, inRange: inRange };
+  global.CAL = { HOLIDAYS: HOLIDAYS, KINDS: KINDS, monthDays: monthDays, shiftMonth: shiftMonth, classHtml: classHtml, listHtml: listHtml, plannerHtml: plannerHtml, injectCss: injectCss, forClass: forClass, pickSchedules: pickSchedules, inRange: inRange };
 })(typeof window !== 'undefined' ? window : globalThis);

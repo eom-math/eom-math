@@ -556,7 +556,7 @@
     const s = await db.collection('omrCodes').doc(code).get();
     if (!s.exists) return null;
     const d = s.data();
-    return { code, name: d.name, className: d.className, studentId: d.studentId, academy: d.academy || null, grade: d.grade || null };
+    return { code, name: d.name, className: d.className, studentId: d.studentId, academy: d.academy || null, grade: d.grade || null, school: d.school || null };
   }
   /** 학생 페이지 공통: 저장된 코드로 학생을 불러오고, 없으면 포털로 보냄 */
   async function requireStudent() {

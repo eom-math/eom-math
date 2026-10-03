@@ -171,7 +171,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=27"></script>
+<script src="common.js?v=28"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, fmtPhone } = OMR;
@@ -229,7 +229,7 @@
     const g = [1,2,3].includes(Number(stu.grade)) ? stu.grade + '학년' : null;
     const lastC = counsel[0], lastS = sortedScores().slice(-1)[0];
     $('prof').innerHTML = `<div class="prof-top"><div class="av">${esc((stu.name || '?').slice(stu.name && stu.name.length >= 3 ? 1 : 0, (stu.name && stu.name.length >= 3 ? 2 : 1)))}</div>
-      <div><h1>${esc(stu.name)}</h1><div class="chips">${[stu.className, ACAD[stu.academy], g, '코드 ' + (stu.code || '')].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}</div></div>
+      <div><h1>${esc(stu.name)}</h1><div class="chips">${[stu.className, stu.school, ACAD[stu.academy], g, '코드 ' + (stu.code || '')].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join('')}</div></div>
       <div class="acts"><a href="planner.html?view=${encodeURIComponent(stu.code || '')}">플래너 보기</a><a href="students.html">학생 목록</a></div></div>
       <div class="kv">
         <div><span>학생 연락처</span><b>${stu.phone ? `<a href="tel:${esc(stu.phone)}">${esc(fmtPhone(stu.phone))}</a>` : '—'}</b></div>
