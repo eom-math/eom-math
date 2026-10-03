@@ -58,7 +58,6 @@
   .trend .chg.up{background:var(--ok-soft);color:var(--ok);} .trend .chg.down{background:var(--red-soft);color:var(--red);}
   .trend svg{width:100%;height:auto;display:block;}
   .trend .lg{display:flex;gap:12px;justify-content:flex-end;font-size:11px;color:var(--dim);margin-top:2px;}
-  .trend .more{margin-top:10px;font-size:12px;font-weight:800;color:var(--red);text-align:right;}
   .trend .lg i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:4px;}
   /* 개인 페이지 머리 카드 */
   .me{background:var(--ink);color:#fff;border-radius:22px;padding:18px 16px 14px;margin:0 0 24px;box-shadow:0 10px 30px rgba(17,17,20,.18);}
@@ -627,25 +626,31 @@
   }
 
   // 최근 5회 복습 테스트 (내 점수 막대 + 반 평균 점선, 백분율)
-  // 점수 추이 공통: 요약 칸 + 회차별 막대(반 평균 눈금). 시험 성적·복습 테스트가 같은 모양
-  function scoreRowsHtml(hist, opt = {}){
-    const pc = (v, m) => m ? v / m * 100 : v, r1 = v => Math.round(v * 10) / 10;
-    const last = hist[hist.length - 1], prev = hist[hist.length - 2];
-    const d = prev ? r1(pc(last.score, last.max) - pc(prev.score, prev.max)) : null, va = last.avg != null ? r1(last.score - last.avg) : null;
-    const cells = [['최근 점수', `${last.score}<small>/${last.max || 100}</small>`, '']]
-      .concat(opt.grade ? [['등급', last.grade ? last.grade + '<small>등급</small>' : '–', '']] : [['평균', `${r1(hist.reduce((t, h) => t + pc(h.score, h.max), 0) / hist.length)}<small>%</small>`, '']])
-      .concat([['지난번보다', d == null ? '–' : (d > 0 ? '▲' : d < 0 ? '▼' : '') + Math.abs(d) + '<small>%p</small>', d > 0 ? 'up' : d < 0 ? 'dn' : ''],
-               ['반 평균보다', va == null ? '–' : (va > 0 ? '+' : '') + va + '<small>점</small>', va > 0 ? 'up' : va < 0 ? 'dn' : '']]);
-    return `<div class="es">${cells.map(c => `<div><span>${c[0]}</span><b class="${c[2]}">${c[1]}</b></div>`).join('')}</div>
-      <div class="et">${hist.slice().reverse().map((h, i) => { const v = pc(h.score, h.max), a = h.avg != null ? pc(h.avg, h.max) : null;
-        return `<div class="er ${i === 0 ? 'now' : ''}"><span class="x">${esc(h.x)}</span><span class="b"><i style="width:${Math.max(2, Math.min(100, v))}%"></i>${a != null ? `<em style="left:${Math.min(100, a)}%" title="반 평균 ${h.avg}"></em>` : ''}</span>
-          <span class="s">${h.score}</span><span class="g">${opt.grade ? (h.grade ? h.grade + '등급' : '') : (h.max && h.max !== 100 ? '/' + h.max : '')}</span></div>`; }).join('')}</div>
-      <div class="el"><span><i></i>내 점수</span><span><em></em>반 평균</span></div>`;
-  }
   function trendCard(list, href = 'review.html'){
-    const md = d => { const t = new Date(d + 'T00:00:00'); return isNaN(t) ? '' : `${t.getMonth() + 1}/${t.getDate()}`; };
-    return `<a class="trend" href="${href}" style="display:block;text-decoration:none;color:inherit;">${scoreRowsHtml(list.slice(-6).map(x => ({ ...x, x: md(x.date) })))}
-      <div class="more">복습 분석 자세히 →</div></a>`;
+    const pct = x => x.max ? x.score / x.max * 100 : x.score;
+    const last = list[list.length - 1], prev = list[list.length - 2];
+    const diff = prev ? Math.round((pct(last) - pct(prev)) * 10) / 10 : null;
+    const W = 320, H = 132, pl = 4, pr = 4, pt = 20, pb = 22, n = list.length;
+    const bw = Math.min(52, (W - pl - pr) / n * 0.78);
+    const cx = i => pl + (i + 0.5) * (W - pl - pr) / n;
+    const y = v => pt + (1 - Math.max(0, Math.min(100, v)) / 100) * (H - pt - pb);
+    const avgPts = list.map((x, i) => x.avg != null ? `${cx(i).toFixed(1)},${y(x.max ? x.avg / x.max * 100 : x.avg).toFixed(1)}` : null).filter(Boolean);
+    const lab = d => { const t = new Date(d + 'T00:00:00'); return isNaN(t) ? '' : `${t.getMonth()+1}/${t.getDate()}`; };
+    const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 복습 테스트 점수">
+      <defs><linearGradient id="tgGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0805F"/><stop offset="1" stop-color="#D6301F"/></linearGradient></defs>
+      <line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" stroke="rgba(17,17,20,.12)"/>
+      ${list.map((x, i) => { const v = pct(x), on = i === n - 1;
+        return `<rect x="${(cx(i) - bw / 2).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0) - y(v)).toFixed(1)}" rx="7" fill="${on ? 'url(#tgGrad)' : '#E4E3DF'}"/>
+          <text x="${cx(i).toFixed(1)}" y="${(y(v) - 6).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="800" fill="${on ? '#D6301F' : '#111114'}">${x.score}</text>
+          <text x="${cx(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="10" fill="#63636B">${lab(x.date)}</text>`; }).join('')}
+      ${avgPts.length > 1 ? `<polyline points="${avgPts.join(' ')}" fill="none" stroke="#D6301F" stroke-width="1.5" stroke-dasharray="4 4" opacity=".75"/>` : ''}
+      ${avgPts.map(p => `<circle cx="${p.split(',')[0]}" cy="${p.split(',')[1]}" r="2.5" fill="#fff" stroke="#D6301F" stroke-width="1.5"/>`).join('')}
+    </svg>`;
+    return `<a class="trend" href="${href}" style="display:block;text-decoration:none;color:inherit;">
+      <div class="top"><b>${last.score}</b><small>/ ${last.max}점 · ${esc(OMR.fmtKDate(last.date))}</small>
+        ${diff != null && diff !== 0 ? `<span class="chg ${diff > 0 ? 'up' : 'down'}">${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)}%p</span>` : ''}</div>
+      ${svg}
+      <div class="lg"><span><i style="background:#E4E3DF;height:8px;width:10px;border-radius:2px;"></i>내 점수</span><span><i style="background:repeating-linear-gradient(90deg,#D6301F 0 3px,transparent 3px 6px);"></i>반 평균</span></div></a>`;
   }
 
   // ───────── 월간 달력 (수업 시간표 · 플래너 공부) ─────────
@@ -1017,7 +1022,21 @@
       ${pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.v)}" r="4" fill="#fff" stroke="#D6301F" stroke-width="2.2"/><text x="${x(i)}" y="${y(p.v) - 9}" text-anchor="middle" font-size="10" font-weight="800" fill="#D6301F">${p.lab}</text><text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="9.5" fill="#63636B">${esc(p.x)}</text>`).join('')}</svg>`;
   }
   function examAnaHtml(hist, weak){
-    return `<div class="xc"><div class="xc-h"><b>📊 시험 점수 · 등급 추이</b><span>최근 ${hist.length}회</span></div>${scoreRowsHtml(hist, { grade: true })}</div>
+    // 다른 블록(자주 틀리는 단원 등)과 같은 줄 형식: 날짜 · 점수 막대(반 평균 눈금) · 점수 · 등급
+    const pc = (v, m) => m ? v / m * 100 : v, r1 = v => Math.round(v * 10) / 10;
+    const last = hist[hist.length - 1], prev = hist[hist.length - 2];
+    const d = prev ? r1(pc(last.score, last.max) - pc(prev.score, prev.max)) : null, va = last.avg != null ? r1(last.score - last.avg) : null;
+    return `<div class="xc"><div class="xc-h"><b>📊 시험 점수 · 등급 추이</b><span>최근 ${hist.length}회</span></div>
+      <div class="es">
+        <div><span>최근 점수</span><b>${last.score}<small>/${last.max || 100}</small></b></div>
+        <div><span>등급</span><b>${last.grade ? last.grade + '<small>등급</small>' : '–'}</b></div>
+        <div><span>지난번보다</span><b class="${d > 0 ? 'up' : d < 0 ? 'dn' : ''}">${d == null ? '–' : (d > 0 ? '▲' : d < 0 ? '▼' : '') + Math.abs(d) + '<small>%p</small>'}</b></div>
+        <div><span>반 평균보다</span><b class="${va > 0 ? 'up' : va < 0 ? 'dn' : ''}">${va == null ? '–' : (va > 0 ? '+' : '') + va + '<small>점</small>'}</b></div>
+      </div>
+      <div class="et">${hist.slice().reverse().map((h, i) => { const v = pc(h.score, h.max), a = h.avg != null ? pc(h.avg, h.max) : null;
+        return `<div class="er ${i === 0 ? 'now' : ''}"><span class="x">${esc(h.x)}</span><span class="b"><i style="width:${Math.max(2, Math.min(100, v))}%"></i>${a != null ? `<em style="left:${Math.min(100, a)}%" title="반 평균 ${h.avg}"></em>` : ''}</span>
+          <span class="s">${h.score}</span><span class="g">${h.grade ? h.grade + '등급' : ''}</span></div>`; }).join('')}</div>
+      <div class="el"><span><i></i>내 점수</span><span><em></em>반 평균</span></div></div>
       <div class="xc"><div class="xc-h"><b>🎯 자주 틀리는 단원 TOP ${weak.length}</b><span>모든 시험 오답 누적</span></div><div class="weak">${weak.map((w, i) => `<div class="w"><span class="n">${i + 1}</span><span class="t">${esc(w.t)}<small>${esc(w.note || '')}</small></span><span class="b"><i style="width:${w.n / w.of * 100}%"></i></span><span class="c">${w.n}/${w.of}</span></div>`).join('')}</div></div>`;
   }
   function dailyAnaHtml(d){
