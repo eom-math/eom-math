@@ -1424,7 +1424,7 @@
 </script>
 <script src="omr/common.js?v=29"></script>
 <script src="notice.js?v=1"></script>
-<script src="omr/calendar.js?v=3"></script>
+<script src="omr/calendar.js?v=4"></script>
 <script src="board.js?v=2"></script>
 <script>try { BOARD.mount(document.getElementById('board')); } catch(e){ console.warn(e); }</script>
 <script>
@@ -1449,7 +1449,7 @@
     var cls = st.me ? st.me.className : null;
     var note = $('mcNote');
     if (st.tab === 'class'){
-      var opt = { schedules: st.schedules, events: st.events, className: cls, school: st.me ? (st.me.school || '') : '*', today: today };
+      var opt = { schedules: st.schedules, events: st.events, className: cls, school: st.me ? (st.me.school || '') : '*', grade: st.me ? (st.me.grade || null) : null, today: today };
       $('mcBox').innerHTML = CAL.classHtml(st.ym, opt);
       var DW = '일월화수목금토', reg = [];
       st.schedules.forEach(function(s){ (s.slots || []).forEach(function(t){ reg.push(t); }); });
@@ -1492,7 +1492,7 @@
     ]);
   }).then(function(r){
     st.schedules = r[0];
-    st.events = r[1].filter(function(e){ return st.me ? CAL.forClass(e, st.me.className, st.me.school || '') : (e.classNames || ['*']).indexOf('*') >= 0 && !(e.schools || []).length; });
+    st.events = st.me ? CAL.prepare(r[1], st.me.className, st.me.school || '', st.me.grade || null) : CAL.expand(r[1]).filter(function(e){ return (e.classNames || ['*']).indexOf('*') >= 0 && !(e.schools || []).length; });
     render();
   });
 })();

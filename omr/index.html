@@ -403,7 +403,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="common.js?v=29"></script>
 <script src="demo.js?v=3"></script>
-<script src="calendar.js?v=3"></script>
+<script src="calendar.js?v=4"></script>
 <script>
 (function(){
   const { db, FV, esc, fmtDateTime, toDate, toast } = OMR;
@@ -643,7 +643,7 @@
         db.collection('classSchedules').where('className', '==', me.className).get().then(q => q.docs.map(d => d.data())).catch(() => []),
         db.collection('classEvents').get().then(q => q.docs.map(d => ({ id: d.id, ...d.data() }))).catch(() => []),
       ]);
-      cal.schedules = CAL.pickSchedules(s, me.className, me.school || ''); cal.events = e.filter(x => CAL.forClass(x, me.className, me.school || ''));
+      cal.schedules = CAL.pickSchedules(s, me.className, me.school || ''); cal.events = CAL.prepare(e, me.className, me.school || '', me.grade || null);
     } catch(err){ console.warn(err); }
     renderCal();
   }
@@ -660,7 +660,7 @@
     $('calTabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === cal.tab));
     const today = OMR.todayStr();
     if (cal.tab === 'class'){
-      const opt = { schedules: cal.schedules, events: cal.events, className: me.className, school: me.school || '', today };
+      const opt = { schedules: cal.schedules, events: cal.events, className: me.className, school: me.school || '', grade: me.grade || null, today };
       $('calBox').innerHTML = CAL.classHtml(cal.ym, opt);
       const DW = '일월화수목금토';
       const reg = cal.schedules.flatMap(s => s.slots || []).sort((a, b) => a.dow - b.dow);
@@ -1112,7 +1112,7 @@
     const days = next7.map(d => {
       const it = [], dayEv = evs.filter(e => CAL.inRange(e, d)), off = dayEv.some(e => e.kind === 'cancel' || e.kind === 'holiday');
       scheds.forEach(sc => (sc.slots || []).forEach(t => { if (+t.dow === DWn(d)) it.push(off ? { ty: 'off', lab: '휴강', t: '정규 수업 휴강' } : { ty: 'cls', lab: '수업', t: '정규 수업' + (t.place ? ' · ' + t.place : ''), m: t.start }); }));
-      dayEv.forEach(e => { if (e.kind === 'makeup') it.push({ ty: 'mk', lab: '직보', t: e.title || '직보', m: e.time || '' }); else if (e.kind === 'exam') it.push({ ty: 'ex', lab: '시험', t: e.title || '시험기간' }); });
+      dayEv.forEach(e => { if (e.kind === 'makeup') it.push({ ty: 'mk', lab: '직보', t: e.title || '직보', m: e.time || '' }); else if (e.kind === 'exam') it.push({ ty: 'ex', lab: '시험', t: (e.title || '시험기간') + ' 기간' }); else if (e.kind === 'examday') it.push({ ty: 'ex', lab: '시험일', t: '📝 ' + e.title + (e.note ? ' · ' + e.note : ''), m: e.time || '' }); });
       (hwAll || []).forEach(x => { const dd = toDate(x.a.dueAt); if (dd && ymd(dd) === d) it.push({ ty: 'hw', lab: '마감', t: x.a.title, done: x.done, m: x.done ? '완료' : '', href: x.href }); });
       if (d === td) openEx.forEach(x => it.push({ ty: 'omr', lab: 'OMR', t: x.e.title, href: 'index.html?mode=omr' }));
       booked.filter(Boolean).filter(s2 => s2.date === d).forEach(s2 => it.push({ ty: 'cl', lab: '클리닉', t: s2.place || '클리닉', m: s2.start, href: 'book.html' }));
