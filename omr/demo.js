@@ -64,8 +64,8 @@
   // ───── 데일리 리포트 예시 (시험 OMR 결과가 자동으로 들어간 형태) ─────
   function dailyReport() {
     const ex = examReport();
-    const trend = [[-28, 72, 66], [-21, 78, 68], [-14, 76, 70], [-7, 85, 71]].map(([off, score, avg]) => ({ date: dayStr(off - 1), title: '', score, max: 100, avg }));
-    trend.push({ date: ex.examDate, title: '13회차', score: ex.score, max: ex.maxScore, avg: ex.avg });
+    const trend = [[-28, 72, 66, '함수의 극한'], [-21, 78, 68, '극한의 성질'], [-14, 76, 70, '미분계수'], [-7, 85, 71, '도함수']].map(([off, score, avg, unit]) => ({ date: dayStr(off - 1), title: '', unit, score, max: 100, avg }));
+    trend.push({ date: ex.examDate, title: '13회차', unit: '함수의 연속', score: ex.score, max: ex.maxScore, avg: ex.avg });
     const weak = [...new Set(ex.questions.filter(q => !q.ok && q.tag).map(q => q.note || q.tag))].slice(0, 3);
     return {
       demo: true, name: NAME, className: CLASS, date: ex.examDate, title: '13회차',
