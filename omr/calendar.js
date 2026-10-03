@@ -1,6 +1,6 @@
 // 엄형국 수학 — 월간 달력 (학생 개인 페이지 · 관리자 수업 달력에서 같이 씀)
 (function (global) {
-  // 공휴일 (대체공휴일 포함). 임시공휴일이 새로 정해지면 관리자 달력에서 '공휴일·방학'으로 추가하면 돼요.
+  // 공휴일 (대체공휴일 포함). 임시공휴일이 새로 정해지면 관리자 달력에서 '일정'이나 '방학'으로 추가하면 돼요.
   var HOLIDAYS = {
     '2026-01-01': '신정', '2026-02-16': '설날 연휴', '2026-02-17': '설날', '2026-02-18': '설날 연휴',
     '2026-03-01': '삼일절', '2026-03-02': '대체공휴일', '2026-05-05': '어린이날', '2026-05-24': '부처님오신날', '2026-05-25': '대체공휴일',
@@ -15,13 +15,18 @@
   };
   var KINDS = {
     cancel:  { label: '휴강',       color: '#9A9AA2', bg: '#F1F0EC' },
-    makeup:  { label: '직보·보강',  color: '#3B6FE0', bg: '#EEF3FF' },
+    makeup:  { label: '직보',       color: '#3B6FE0', bg: '#EEF3FF' },
+    bogang:  { label: '보강',       color: '#0E8A8A', bg: '#E6F6F5' },
     exam:    { label: '시험기간',   color: '#D6301F', bg: '#FFF1EC' },
     examday: { label: '시험일',     color: '#fff',    bg: '#D6301F' },
     change:  { label: '시간 변경',  color: '#7B3FD0', bg: '#F3ECFF' },
     event:   { label: '일정',       color: '#1F7A4D', bg: '#EAF6EF' },
-    holiday: { label: '공휴일·방학', color: '#D6301F', bg: '#FFF5F5' },
+    holiday: { label: '방학',       color: '#D6301F', bg: '#FFF5F5' },
+    trip:    { label: '수련회',     color: '#B86A00', bg: '#FFF4E0' },
+    pubhol:  { label: '공휴일',     color: '#D6301F', bg: '#FFF5F5' },
   };
+  // 이 일정이 있으면 그날 정규 수업은 쉬어요
+  var OFF = { cancel: 1, holiday: 1, trip: 1 };
   var DOW = '일월화수목금토';
   function pad(n) { return String(n).padStart(2, '0'); }
   function ds(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -74,11 +79,11 @@
   }
   function shiftMonth(ym, k) { var d = new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1 + k, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); }
 
-  // 그날 수업 목록: 정규 수업(요일) − 휴강 + 직보·보강
+  // 그날 수업 목록: 정규 수업(요일) − 휴강 + 직보·보강·시간 변경
   function dayLessons(d, dow, schedules, events, cls, school, grade) {
     var evs = events.filter(function (e) { return inRange(e, d) && forClass(e, cls, school, grade); });
-    // 휴강 일정이나 선생님이 넣은 공휴일·방학이 있으면 그날 정규 수업은 휴강 (법정 공휴일은 수업하는 경우가 많아 따로 '휴강'을 넣어야 빠짐)
-    var off = evs.some(function (e) { return e.kind === 'cancel' || e.kind === 'holiday'; });
+    // 휴강 일정이나 방학·수련회가 있으면 그날 정규 수업은 휴강 (법정 공휴일은 수업하는 경우가 많아 따로 '휴강'을 넣어야 빠짐)
+    var off = evs.some(function (e) { return OFF[e.kind]; });
     var reg = [];
     schedules.forEach(function (s) { (s.slots || []).forEach(function (t) { if (+t.dow === dow) reg.push({ cls: s.className, start: t.start, end: t.end, place: t.place || '' }); }); });
     // 그날만 정규 수업 시간 변경 (kind 'change', time '16:00~19:00')
@@ -102,8 +107,8 @@
       if (exs.length) marks += '<span class="cm exam">' + (exs.some(function (e) { return e.date === c.d; }) ? esc(exs.filter(function (e) { return e.date === c.d; })[0].title || '시험기간') : '시험기간') + '</span>';
       if (L.regular.length) marks += L.regular.map(function (r) { return '<span class="cm ' + (L.cancelled ? 'off' : r.changed ? 'chg' : 'cls') + '">' + (L.cancelled ? '휴강' : (r.changed ? '⇄' : '') + esc(r.start)) + '</span>'; }).join('');
       else L.events.filter(function (e) { return e.kind === 'cancel'; }).forEach(function () { marks += '<span class="cm off">휴강</span>'; });
-      L.events.filter(function (e) { return e.kind === 'makeup'; }).forEach(function (e) { marks += '<span class="cm mk">' + esc(e.title || '직보') + (e.time ? ' ' + esc(e.time) : '') + '</span>'; });
-      L.events.filter(function (e) { return e.kind === 'event' || e.kind === 'holiday'; }).forEach(function (e) { marks += '<span class="cm ' + (e.kind === 'holiday' ? 'hol' : 'ev') + '">' + esc(e.title || KINDS[e.kind].label) + '</span>'; });
+      L.events.filter(function (e) { return e.kind === 'makeup' || e.kind === 'bogang'; }).forEach(function (e) { marks += '<span class="cm ' + (e.kind === 'bogang' ? 'bg' : 'mk') + '">' + esc(e.title || KINDS[e.kind].label) + (e.time ? ' ' + esc(e.time) : '') + '</span>'; });
+      L.events.filter(function (e) { return e.kind === 'event' || e.kind === 'holiday' || e.kind === 'trip'; }).forEach(function (e) { marks += '<span class="cm ' + (e.kind === 'holiday' ? 'hol' : e.kind === 'trip' ? 'trp' : 'ev') + '">' + esc(e.title || KINDS[e.kind].label) + '</span>'; });
       var red = c.dow === 0 || hol || L.events.some(function (e) { return e.kind === 'holiday'; });
       return '<div class="cc ' + (c.cur ? '' : 'out ') + (c.d === today ? 'today ' : '') + (red ? 'red ' : c.dow === 6 ? 'blue ' : '') + (L.events.some(function (e) { return e.kind === 'exam' || e.kind === 'examday'; }) ? 'examday' : '') + '" data-d="' + c.d + '">'
         + '<span class="dn">' + c.n + '</span>' + (hol ? '<span class="hn">' + esc(hol) + '</span>' : '') + '<div class="ms">' + marks + '</div></div>';
@@ -113,7 +118,7 @@
   // 이번 달 일정 목록 (휴강·직보·시험·공휴일)
   function listHtml(ym, opt) {
     var events = expand(opt.events).filter(function (e) { return forClass(e, opt.className, opt.school, opt.grade) && (e.date.slice(0, 7) <= ym && (e.endDate || e.date).slice(0, 7) >= ym); });
-    var hol = Object.keys(HOLIDAYS).filter(function (d) { return d.slice(0, 7) === ym; }).map(function (d) { return { date: d, kind: 'holiday', title: HOLIDAYS[d], builtin: true }; });
+    var hol = Object.keys(HOLIDAYS).filter(function (d) { return d.slice(0, 7) === ym; }).map(function (d) { return { date: d, kind: 'pubhol', title: HOLIDAYS[d], builtin: true }; });
     var all = events.concat(hol).sort(function (a, b) { return a.date.localeCompare(b.date); });
     if (!all.length) return '<div class="cal-none">이번 달은 휴강·직보·시험 일정이 없어요.</div>';
     var md = function (d) { var t = new Date(d + 'T00:00:00'); return (t.getMonth() + 1) + '/' + t.getDate() + '(' + DOW[t.getDay()] + ')'; };
@@ -146,7 +151,7 @@
     + '.cc .hn{font-size:9.5px;font-weight:800;color:#D6301F;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
     + '.cc .ms{display:flex;flex-direction:column;gap:2px;}'
     + '.cm{display:block;font-size:9.5px;font-weight:800;line-height:1.25;padding:1px 4px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
-    + '.cm.cls{background:#111114;color:#fff;} .cm.off{background:#F1F0EC;color:#9A9AA2;text-decoration:line-through;} .cm.mk{background:#3B6FE0;color:#fff;} .cm.chg{background:#7B3FD0;color:#fff;}'
+    + '.cm.cls{background:#111114;color:#fff;} .cm.off{background:#F1F0EC;color:#9A9AA2;text-decoration:line-through;} .cm.mk{background:#3B6FE0;color:#fff;} .cm.chg{background:#7B3FD0;color:#fff;} .cm.bg{background:#0E8A8A;color:#fff;} .cm.trp{background:#FFF4E0;color:#B86A00;}'
     + '.cm.exam{background:#FFE3DA;color:#B4261A;} .cm.exd{background:#D6301F;color:#fff;} .cm.ev{background:#EAF6EF;color:#1F7A4D;} .cm.hol{background:#FFF5F5;color:#D6301F;}'
     + '.cc.pl{align-items:center;justify-content:flex-start;gap:1px;} .cc.pl .dn{align-self:flex-start;}'
     + '.cc.pl.lv1{background:#FFF1EC;} .cc.pl.lv2{background:#FFD9CC;} .cc.pl.lv3{background:#FFB39C;} .cc.pl.lv4{background:#FF8466;}'
@@ -163,5 +168,5 @@
     + '@media (max-width:420px){ .cc{min-height:58px;padding:3px 2px 4px;border-radius:8px;} .cm{font-size:8.5px;padding:1px 2px;} .cc .hn{font-size:8.5px;} }';
   function injectCss() { if (typeof document === 'undefined' || document.getElementById('calCss')) return; var s = document.createElement('style'); s.id = 'calCss'; s.textContent = CSS; document.head.appendChild(s); }
 
-  global.CAL = { HOLIDAYS: HOLIDAYS, KINDS: KINDS, monthDays: monthDays, shiftMonth: shiftMonth, classHtml: classHtml, listHtml: listHtml, plannerHtml: plannerHtml, injectCss: injectCss, forClass: forClass, dayLessons: dayLessons, expand: expand, prepare: prepare, pickSchedules: pickSchedules, inRange: inRange };
+  global.CAL = { HOLIDAYS: HOLIDAYS, KINDS: KINDS, monthDays: monthDays, shiftMonth: shiftMonth, classHtml: classHtml, listHtml: listHtml, plannerHtml: plannerHtml, injectCss: injectCss, forClass: forClass, dayLessons: dayLessons, expand: expand, prepare: prepare, pickSchedules: pickSchedules, inRange: inRange, OFF: OFF };
 })(typeof window !== 'undefined' ? window : globalThis);
