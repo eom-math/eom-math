@@ -245,11 +245,12 @@
   @keyframes fly{to{transform:translate(var(--x),var(--y)) rotate(var(--r));opacity:0;}}
   @media (prefers-reduced-motion: reduce){ .confetti{display:none;} .stamp.show,.todo.pop .chk{animation:none;} }
 </style>
+<script src="../back.js?v=1" defer></script>
 </head>
-<body>
+<body data-back="index.html">
 <div class="wrap">
   <div class="topbar">
-    <a class="brand" href="../#quick">← 엄형국 <span>수학</span></a>
+    <a class="brand" href="../index.html">엄형국 <span>수학</span></a>
     <span class="save" id="saveState"></span>
   </div>
 
