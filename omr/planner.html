@@ -188,6 +188,11 @@
   .closedbar .ic{font-size:24px;}
   .closedbar b{font-size:14.5px;} .closedbar span{display:block;font-size:12px;color:var(--dim);}
   .closedbar button{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 10px;font-size:12.5px;font-weight:800;}
+  .sv-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#111114;color:#fff;border-radius:14px;padding:11px 14px;margin:0 0 14px;font-size:13px;}
+  .sv-bar .sv-k{font-size:11px;font-weight:900;background:#E8432F;padding:3px 8px;border-radius:6px;letter-spacing:.04em;}
+  .sv-bar b{font-size:15px;} .sv-bar span{color:rgba(255,255,255,.7);}
+  .sv-bar a{margin-left:auto;color:#fff;font-weight:800;text-decoration:none;font-size:12.5px;}
+  body.staff-view .dday{pointer-events:none;} body.staff-view #pledge{background:transparent;}
   body.locked .add, body.locked .more, body.locked .star:not(.on), body.locked #tsgCard, body.locked .paint, body.locked .tt-state{display:none !important;}
   body.locked .chk, body.locked .stks button{pointer-events:none;}
   body.locked .stks button:not(.on){opacity:.35;}
@@ -346,7 +351,18 @@
 (async function(){
   const { db, FV, esc, toast } = OMR;
   const $ = id => document.getElementById(id);
-  const me = await OMR.requireStudent(); if (!me) return;
+  // 선생님·조교 보기: planner.html?view=학생코드&d=날짜 → 그 학생 플래너를 읽기 전용으로
+  const QS = new URLSearchParams(location.search);
+  const VIEW = (QS.get('view') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (VIEW) document.body.dataset.back = 'study.html';
+  const me = VIEW ? await OMR.studentByCode(VIEW).catch(() => null) : await OMR.requireStudent();
+  if (VIEW && !me){ document.querySelector('.wrap').insertAdjacentHTML('beforeend', '<div class="empty">학생을 찾을 수 없어요.</div>'); return; }
+  if (!me) return;
+  if (VIEW){
+    document.body.classList.add('staff-view');
+    document.title = `${me.name} 플래너 — 선생님 보기`;
+    document.querySelector('.hd').insertAdjacentHTML('beforebegin', `<div class="sv-bar"><span class="sv-k">선생님 보기</span><b>${esc(me.name)}</b><span>${esc(me.className)} · 읽기 전용</span><a href="study.html#board">플래너 관리 →</a></div>`);
+  }
   const SUBJ = [
     { k:'1', name:'수학', c:'var(--s1)', s:'var(--s1s)', hex:'#FF7B63' },
     { k:'2', name:'국어', c:'var(--s2)', s:'var(--s2s)', hex:'#F2B92B' },
@@ -389,6 +405,7 @@
   // ───── 저장 (0.6초 모아서) ─────
   const timers = {};
   function save(d){
+    if (VIEW) return;                                   // 선생님 보기에서는 저장하지 않음
     const doc = docs[d];
     const sm = OMR.plannerTodos(doc); doc.done = sm.done; doc.total = sm.total;
     doc.tdone = (doc.tdone || []).filter(id => (doc.ttodos || []).some(t => t.id === id));
@@ -446,7 +463,7 @@
 
   // ───── 하루 화면 ─────
   const hasContent = x => !!(x && ((x.todos || []).length || (x.ttodos || []).length || x.studyMin || x.pledge || x.feedback || x.sticker));
-  const isLocked = d => d < today || !!(docs[d] && docs[d].closed);
+  const isLocked = d => !!VIEW || d < today || !!(docs[d] && docs[d].closed);
   async function go(d){
     cur = d;
     await load(d);
@@ -463,11 +480,14 @@
     $('pledge').readOnly = locked; $('fb').readOnly = locked;
     if (locked && paintSubj){ paintSubj = null; renderPaint(); }
     const cb = $('closedBar');
-    if (locked && (x.closed || hasContent(x))){
+    if (VIEW && !x.closed && hasContent(x) && cur >= today){
       cb.hidden = false;
-      cb.innerHTML = `<span class="ic">${x.closedAuto || !x.closed ? '🌙' : '✅'}</span><div><b>${x.closedAuto || !x.closed ? '자정에 자동으로 완료된 하루예요' : '완료한 하루예요'}</b><span>${x.done}/${x.total} 완료 · ${fmtShort(x.studyMin || 0)} 공부${x.sticker ? ' · ' + x.sticker : ''}</span></div>${cur === today ? '<button id="reopen">다시 열기</button>' : ''}`;
+      cb.innerHTML = `<span class="ic">✏️</span><div><b>${cur === today ? '오늘 작성 중인 플래너예요' : '미리 적어 둔 플래너예요'}</b><span>${x.done}/${x.total} 완료 · ${fmtShort(x.studyMin || 0)} 공부${x.sticker ? ' · ' + x.sticker : ''}</span></div>`;
+    } else if (locked && (x.closed || hasContent(x))){
+      cb.hidden = false;
+      cb.innerHTML = `<span class="ic">${x.closedAuto || !x.closed ? '🌙' : '✅'}</span><div><b>${x.closedAuto || !x.closed ? '자정에 자동으로 완료된 하루예요' : '완료한 하루예요'}</b><span>${x.done}/${x.total} 완료 · ${fmtShort(x.studyMin || 0)} 공부${x.sticker ? ' · ' + x.sticker : ''}</span></div>${cur === today && !VIEW ? '<button id="reopen">다시 열기</button>' : ''}`;
       const ro = $('reopen'); if (ro) ro.onclick = () => { docs[cur].closed = false; docs[cur].closedAuto = false; save(cur); renderDay(); renderWeek(); toast('다시 쓸 수 있어요'); };
-    } else if (locked){ cb.hidden = false; cb.innerHTML = '<span class="ic">📭</span><div><b>기록이 없는 날이에요</b><span>지난 날짜는 볼 수만 있어요</span></div>'; }
+    } else if (locked){ cb.hidden = false; cb.innerHTML = `<span class="ic">📭</span><div><b>기록이 없는 날이에요</b><span>${VIEW ? '아직 이 날 플래너를 쓰지 않았어요' : '지난 날짜는 볼 수만 있어요'}</span></div>`; }
     else cb.hidden = true;
     $('finishBtn').hidden = !(cur === today && !locked);
     $('pledge').value = x.pledge || '';
@@ -768,12 +788,12 @@
   }
   function renderDday(){
     const b = $('ddayBtn'), dd = meta.dday;
-    if (!dd || !dd.date){ b.className = 'dday empty'; b.innerHTML = '<div class="k">D-DAY</div><div class="v">목표 정하기</div>'; return; }
+    if (!dd || !dd.date){ b.className = 'dday empty'; b.innerHTML = `<div class="k">D-DAY</div><div class="v">${VIEW ? '정한 목표 없음' : '목표 정하기'}</div>`; return; }
     const n = Math.round((parse(dd.date) - parse(today)) / 864e5);
     b.className = 'dday';
     b.innerHTML = `<div class="k">${esc(dd.title || '목표')}</div><div class="v">${n > 0 ? 'D-' + n : n === 0 ? 'D-DAY' : 'D+' + (-n)}</div>`;
   }
-  $('ddayBtn').onclick = () => { $('ddTitle').value = (meta.dday && meta.dday.title) || ''; $('ddDate').value = (meta.dday && meta.dday.date) || ''; $('ddayModal').classList.remove('hidden'); };
+  $('ddayBtn').onclick = () => { if (VIEW) return; $('ddTitle').value = (meta.dday && meta.dday.title) || ''; $('ddDate').value = (meta.dday && meta.dday.date) || ''; $('ddayModal').classList.remove('hidden'); };
   $('ddayModal').addEventListener('click', e => { if (e.target.id === 'ddayModal') $('ddayModal').classList.add('hidden'); });
   async function saveMeta(){
     try { localStorage.setItem('plannerMeta_' + me.code, JSON.stringify({ dday: meta.dday })); } catch(e){}
@@ -789,7 +809,7 @@
   $('goToday').onclick = () => go(today);
 
   loadMeta();
-  await go(today);
+  await go(VIEW && /^\d{4}-\d{2}-\d{2}$/.test(QS.get('d') || '') ? QS.get('d') : today);
   renderStats();
   renderStreak();
 })();

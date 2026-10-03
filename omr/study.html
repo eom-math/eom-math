@@ -42,7 +42,7 @@
   .board{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
   .pc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;position:relative;}
   .pc.sel{box-shadow:0 0 0 2px var(--ink);}
-  .pc .h{display:flex;align-items:center;gap:8px;}
+  .pc .h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .pc .h input{width:18px;height:18px;accent-color:var(--ink);}
   .pc .h b{font-size:15px;} .pc .h .m{margin-left:auto;font-size:12px;color:var(--dim);font-weight:700;font-variant-numeric:tabular-nums;}
   .pc .pl{font-family:'Gaegu',cursive;font-size:18px;line-height:1.2;color:var(--ink);}
@@ -85,6 +85,11 @@
   .rk .n{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;}
   .rk .n small{display:block;font-size:10.5px;color:var(--dim);font-weight:700;}
   @media (max-width:600px){ .rk{grid-template-columns:34px minmax(0,1fr) 72px;} .rk .bar,.rk .bh,.rk .c4,.rk .c5{display:none;} }
+  a.pv{text-decoration:none;color:inherit;white-space:nowrap;}
+  a.pv:hover b{color:var(--red);text-decoration:underline;}
+  a.pv .go{font-size:11px;font-weight:800;color:var(--red);}
+  .pv-btn{font-size:12px;font-weight:800;color:var(--red);text-decoration:none;white-space:nowrap;border:1px solid var(--red-soft);background:var(--red-soft);padding:3px 8px;border-radius:99px;}
+  .pv-btn:hover{background:var(--red);color:#fff;}
 </style>
 </head>
 <body>
@@ -282,7 +287,7 @@
         <div class="stat"><div class="k">평균 순공(타이머)</div><div class="v">${hmK(wkRows.reduce((a, r) => a + r.focus, 0) / n)}</div></div>
         <div class="stat"><div class="k">${wroteToday != null ? '오늘 작성' : '플래너 쓴 학생'}</div><div class="v">${wroteToday != null ? wroteToday : wkRows.filter(r => r.daysOn).length}<small>/${wkRows.length}명</small></div></div>`;
       $('wkTbl').innerHTML = `<tr><th>이름</th>${days.map((d, i) => `<th style="text-align:center;">${DOWK[i]}<br><span class="muted" style="font-weight:600;">${+d.slice(8)}</span></th>`).join('')}<th class="num">달성</th><th class="num">플래너</th><th class="num">순공</th></tr>`
-        + wkRows.sort((a, b) => b.min - a.min || b.dn - a.dn).map(r => `<tr><td><b>${esc(r.s.name)}</b><br><span class="muted" style="font-size:11.5px;">${esc(r.s.className)}</span></td>
+        + wkRows.sort((a, b) => b.min - a.min || b.dn - a.dn).map(r => `<tr><td><a class="pv" href="planner.html?view=${encodeURIComponent(r.s.code)}&d=${days.includes(today) ? today : days[0]}" title="${esc(r.s.name)} 플래너 열기"><b>${esc(r.s.name)}</b> <span class="go">플래너 ›</span></a><br><span class="muted" style="font-size:11.5px;">${esc(r.s.className)}</span></td>
           ${r.cells.map((c, i) => { const pc = c && c.total ? c.done / c.total : 0;
             const cls = !c || (!c.total && !c.min) ? 'c0' : pc >= 1 ? 'c3' : pc >= .5 ? 'c2' : 'c1';
             return `<td class="day"><button class="cell ${cls} ${days[i] === today ? 'today' : ''}" data-code="${esc(r.s.code)}" data-d="${days[i]}" title="${c ? `${c.done}/${c.total} 완료 · ${c.min}분${c.p.closed ? ' · 하루 완료' : ''}` : '기록 없음'}">${c && c.total ? `${c.p.closed && !c.p.closedAuto ? '✓' : ''}${c.done}/${c.total}` : '–'}<small>${c && c.min ? hm(c.min) : ''}</small></button></td>`; }).join('')}
@@ -324,6 +329,7 @@
     const pc = sm.total ? sm.done / sm.total : 0;
     return `<div class="pc" data-i="${i}" data-code="${esc(r.s.code)}">
       <div class="h"><input type="checkbox" class="pick-one" aria-label="${esc(r.s.name)} 선택"><b>${esc(r.s.name)}</b><span class="muted" style="font-size:12px;">${esc(r.s.className)}</span>
+        <a class="pv-btn" href="planner.html?view=${encodeURIComponent(r.s.code)}&d=${$('bdDate').value || today}">플래너 열기 ›</a>
         <span class="m">${p ? `${p.closed ? (p.closedAuto ? '🌙 ' : '✅ ') : ''}${sm.done}/${sm.total} · ${hm(p.studyMin || 0)}` : '미작성'}</span></div>
       ${p && p.sticker ? `<span class="stk">${p.sticker}</span>` : ''}
       ${p ? `${p.pledge ? `<div class="pl">“${esc(p.pledge)}”</div>` : ''}
@@ -481,7 +487,7 @@
       $('rkList').innerHTML = `<div class="rk h"><span class="no">순위</span><span>이름</span><span class="bh">순공 시간</span><span class="n">순공</span><span class="n c4">세션</span><span class="n c5">집중률</span></div>`
         + rkRows.map((r, i) => { const rank = r.n ? active.indexOf(r) + 1 : null;
           return `<div class="rk ${rank && rank <= 3 ? 'top' : ''}"><span class="no">${rank ? (['🥇','🥈','🥉'][rank - 1] || rank) : '–'}</span>
-            <span class="nm"><b>${esc(r.s.name)}</b><small>${esc(r.s.className)}</small></span>
+            <span class="nm"><a class="pv" href="planner.html?view=${encodeURIComponent(r.s.code)}&d=${today}"><b>${esc(r.s.name)}</b></a><small>${esc(r.s.className)}</small></span>
             <span class="bar"><i style="width:${r.n ? Math.max(2, r.focus / top * 100) : 0}%"></i></span>
             <span class="n">${r.n ? hmK(r.focus) : '<span class="muted">기록 없음</span>'}</span>
             <span class="n c4">${r.n}<small>완주 ${r.done}</small></span>
