@@ -352,13 +352,13 @@
       mine.innerHTML = myIdx >= 0
         ? `<div class="mine"><div><span>${label} 내 순위</span><br><b>${myIdx + 1}위</b> <span>/ ${rows.length}명</span></div><div class="r"><span>순공 시간</span><br><b style="font-size:18px;">${fmtHM(rows[myIdx].focusSec)}</b></div></div>`
         : `<div class="mine"><div><span>${label} 내 순위</span><br><b style="font-size:16px;">아직 기록이 없어요</b></div><div class="r"><span>타이머를 끝까지 하면<br>랭킹에 올라가요</span></div></div>`;
-      const show = rows.slice(0, 10);
-      if (myIdx >= 10) show.push(rows[myIdx]);
+      const show = rows.slice(0, 10);                  // 학생에게는 1~10위만 (내 순위는 위 카드에서)
       list.innerHTML = show.length ? show.map(r => { const i = rows.indexOf(r);
         return `<li class="${r.sid === me.studentId ? 'me' : ''} ${i === 0 ? 'top1' : ''}"><span class="no ${i < 3 ? 'm' : ''}">${['🥇','🥈','🥉'][i] || i + 1}</span>
           <span class="nm">${r.sid === me.studentId ? '나' : OMR.esc(r.nick)}${rkScope === 'all' ? `<small>${OMR.esc(r.className)}</small>` : ''}</span>
           <span class="tm">${fmtHM(r.focusSec)}</span><span class="bar"><i style="width:${Math.max(3, r.focusSec / top * 100)}%"></i></span></li>`; }).join('')
         : '<li class="muted">아직 아무도 기록하지 않았어요. 첫 번째가 되어 보세요!</li>';
+      if (rows.length > 10) list.insertAdjacentHTML('beforeend', `<li class="muted" style="justify-content:center;font-size:12px;">TOP 10까지만 보여요${myIdx >= 10 ? ' · 조금만 더 하면 TOP 10! 💪' : ''}</li>`);
     } catch(e){ console.warn(e); list.innerHTML = '<li class="muted">랭킹을 불러오지 못했어요.</li>'; mine.innerHTML = ''; }
   }
   loadRank();
