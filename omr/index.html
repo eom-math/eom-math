@@ -96,6 +96,14 @@
   .me-foot{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 18px;margin:30px 0 0;padding-top:18px;border-top:1px solid var(--line);font-size:13px;}
   .me-foot a{color:var(--dim);font-weight:700;text-decoration:none;}
   .sec-h{scroll-margin-top:14px;}
+  /* 개념 퀴즈 게임 배너 */
+  .gm{display:flex;align-items:center;gap:14px;padding:18px;margin-top:8px;background:var(--ink);color:#fff;text-decoration:none;border-radius:12px;transition:transform .2s;}
+  .gm:hover{transform:translateY(-2px);}
+  .gm .gb{flex:0 0 auto;background:var(--red);color:#fff;font-size:11px;font-weight:800;padding:5px 9px;letter-spacing:.04em;border-radius:4px;}
+  .gm b{display:block;font-size:17px;font-weight:800;margin-bottom:2px;}
+  .gm small{display:block;font-size:12.5px;color:rgba(255,255,255,.7);}
+  .gm-monster{background:#2E5C38;} .gm-monster .gb{background:#c98a3b;}
+  .gm-penguin{background:#1B6FA8;}
   /* 방문자 예시 */
   .demo-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1.5px solid var(--red);border-radius:14px;padding:11px 12px 11px 14px;margin:0 0 14px;}
   .demo-bar.hidden{display:none !important;}
@@ -240,6 +248,16 @@
       <button class="btn red block" id="submitBtn">최종 제출</button>
     </div>
   </section>
+</div>
+
+<div class="modal-bg hidden" id="gameModal">
+  <div class="modal">
+    <div class="row between" style="margin-bottom:4px;"><h2 style="margin:0;">개념 퀴즈 게임</h2><button class="btn sm ghost" id="gameClose" aria-label="닫기">✕</button></div>
+    <p class="muted" style="margin-bottom:14px;">시간 안에 답하는 문장형 개념 퀴즈로 복습해요.</p>
+    <a class="gm" href="../tower.html?mode=tower"><span class="gb">NEW</span><span><b>개념의 탑</b><small>15초 개념 퀴즈 →</small></span></a>
+    <a class="gm gm-monster" href="../tower.html?mode=monster"><span class="gb">⚔</span><span><b>수학몬스터</b><small>10초 안에 몬스터와 대결하는 개념 퀴즈 →</small></span></a>
+    <a class="gm gm-penguin" href="../tower.html?mode=penguin"><span class="gb">🐧</span><span><b>수학 펭귄</b><small>8초 안에 장애물을 피하는 개념 퀴즈 →</small></span></a>
+  </div>
 </div>
 
 <div class="modal-bg hidden" id="lockModal">
@@ -772,6 +790,10 @@
     $('lockModal').classList.remove('hidden');
   }
   $('lockClose').onclick = () => $('lockModal').classList.add('hidden');
+  // 개념 퀴즈: 메인으로 가지 않고 게임 배너만 띄움
+  document.querySelector('.quick a[data-k="game"]').addEventListener('click', e => { e.preventDefault(); $('gameModal').classList.remove('hidden'); });
+  $('gameClose').onclick = () => $('gameModal').classList.add('hidden');
+  $('gameModal').addEventListener('click', e => { if (e.target.id === 'gameModal') $('gameModal').classList.add('hidden'); });
   $('lockLogin').onclick = $('demoLogin').onclick = () => { $('lockModal').classList.add('hidden'); show('vLogin'); setTimeout(() => $('codeInput').focus(), 50); };
   const LOCKED = { planner: '스터디 플래너', timer: '집중 타이머', book: '클리닉 예약', ask: '질문하기', lec: '영상 강의' };
   $('vList').addEventListener('click', e => {
