@@ -25,9 +25,9 @@
   .exam-item:hover{border-color:var(--ink);}
   .exam-item .t{font-weight:800;font-size:15.5px;}
   .exam-item .m{font-size:12.5px;color:var(--dim);}
-  .sec-h{font-size:16px;font-weight:900;color:var(--ink);letter-spacing:-.02em;margin:28px 0 10px;}
+  .sec-h{font-size:16px;font-weight:900;color:var(--ink);letter-spacing:-.02em;margin:32px 2px 12px;}
   .exam-item .go{margin-left:auto;font-weight:800;color:var(--dim);}
-  .pcard{display:block;background:#fff;border-radius:22px;padding:18px 18px 16px;margin:12px 0;box-shadow:0 2px 14px rgba(17,17,20,.05);text-decoration:none;color:inherit;}
+  .pcard{display:block;background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin:0 0 12px;text-decoration:none;color:inherit;}
   .pcard .ph{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px;}
   .pcard .ph h3{font-size:17px;font-weight:900;margin:0;letter-spacing:-.02em;}
   .pcard .ph span{font-size:12.5px;font-weight:800;color:var(--faint);}
@@ -60,7 +60,7 @@
   .trend .lg{display:flex;gap:12px;justify-content:flex-end;font-size:11px;color:var(--dim);margin-top:2px;}
   .trend .lg i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:4px;}
   /* 개인 페이지 머리 카드 */
-  .me{background:var(--ink);color:#fff;border-radius:22px;padding:18px 16px 14px;margin:0 0 16px;box-shadow:0 10px 30px rgba(17,17,20,.18);}
+  .me{background:var(--ink);color:#fff;border-radius:22px;padding:18px 16px 14px;margin:0 0 24px;box-shadow:0 10px 30px rgba(17,17,20,.18);}
   .me-top{display:flex;align-items:center;gap:12px;}
   .me-av{flex:0 0 auto;width:50px;height:50px;border-radius:16px;display:grid;place-items:center;font-size:21px;font-weight:900;
     background:linear-gradient(135deg,#F2553F,#D6301F);box-shadow:0 6px 16px rgba(214,48,31,.35);}
@@ -78,7 +78,7 @@
   .me-stats b small{font-size:12px;color:rgba(255,255,255,.55);font-weight:700;letter-spacing:0;}
   .me-stats a > small{display:block;font-size:11px;color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .me-stats .up{color:#7be0a8;} .me-stats .down{color:#ff8a7a;}
-  .feat{display:grid;gap:10px;margin-bottom:6px;}
+  .feat{display:grid;gap:12px;margin-bottom:24px;}
   @media (min-width:640px){ .feat{grid-template-columns:repeat(3,minmax(0,1fr));} .feat .quick{grid-template-columns:repeat(2,minmax(0,1fr));} }
   .fg-h{font-size:12px;font-weight:800;color:var(--dim);letter-spacing:.04em;margin:0 2px 6px;}
   .quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;}
@@ -105,7 +105,7 @@
   .gm-monster{background:#2E5C38;} .gm-monster .gb{background:#c98a3b;}
   .gm-penguin{background:#1B6FA8;}
   /* 플래너 코멘트 알림 */
-  .note-al{background:#fff;border:1.5px solid var(--red);border-radius:18px;padding:12px 14px;margin:0 0 12px;box-shadow:0 6px 18px rgba(214,48,31,.12);}
+  .note-al{background:#fff;border:1.5px solid var(--red);border-radius:18px;padding:12px 14px;margin:0;box-shadow:0 6px 18px rgba(214,48,31,.12);}
   .note-al .h{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
   .note-al .bell{font-size:18px;display:inline-block;transform-origin:50% 10%;animation:ring 1.6s ease 2;}
   @keyframes ring{0%,100%{transform:rotate(0);}10%{transform:rotate(16deg);}20%{transform:rotate(-14deg);}30%{transform:rotate(10deg);}40%{transform:rotate(-6deg);}50%{transform:rotate(0);}}
@@ -132,7 +132,13 @@
 
   /* ── 자세히 보기 섹션 (개인 페이지 전용) ── */
   .xsec[hidden]{display:none !important;}
-  .xc{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin:0 0 10px;}
+  .xc{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin:0 0 12px;}
+  /* 페이지 큰 덩어리 사이 간격을 똑같이 */
+  #growBox, #noteBox:not(:empty), #weekBox:not(:empty){margin-bottom:24px;}
+  #growBox .xc, #weekBox .xc, #weekBox .pcard{margin-bottom:0;}
+  #vList:not(.report-only) .rp-only{display:none !important;}
+  .exam-item{border-radius:14px;padding:14px 16px;}
+  .empty-c{border-radius:14px;}
   .xc-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px;}
   .xc-h b{font-size:15px;font-weight:900;letter-spacing:-.02em;} .xc-h span{font-size:12px;color:var(--faint);font-weight:700;}
   .gr4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;}
@@ -149,6 +155,9 @@
   .tl7 .dl b{display:block;font-size:16px;font-weight:900;font-variant-numeric:tabular-nums;} .tl7 .dl span{font-size:11px;font-weight:800;color:var(--dim);}
   .tl7 .dy.today .dl{background:var(--ink);color:#fff;} .tl7 .dy.today .dl span{color:rgba(255,255,255,.7);}
   .tl7 .dy.past{opacity:.55;}
+  .tl7 .dy.noit{align-items:center;}
+  .tl7 .dy.noit .dl{display:flex;align-items:baseline;justify-content:center;gap:3px;padding:5px 0;}
+  .tl7 .dy.noit .dl b{display:inline;font-size:13px;} .tl7 .dy.noit .its{min-height:0;}
   .tl7 .its{display:flex;flex-direction:column;gap:4px;min-height:44px;justify-content:center;min-width:0;}
   .tl7 .it{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;background:var(--bg);border-radius:9px;padding:7px 9px;text-decoration:none;color:inherit;}
   .tl7 .it .ty{flex:0 0 auto;font-size:10.5px;font-weight:900;padding:2px 6px;border-radius:5px;color:#fff;}
@@ -297,7 +306,7 @@
         <button class="me-out" id="logoutBtn">코드 변경</button>
       </div>
       <div class="me-stats" id="meStats">
-        <a href="#reportSec"><span>최근 시험</span><b>–</b><small>불러오는 중</small></a>
+        <a href="#examSec"><span>최근 시험</span><b>–</b><small>불러오는 중</small></a>
         <a href="#dailySec"><span>복습 테스트</span><b>–</b><small>&nbsp;</small></a>
         <a href="#hwSec"><span>남은 과제</span><b>–</b><small>&nbsp;</small></a>
         <a href="planner.html"><span>오늘 공부</span><b>–</b><small>&nbsp;</small></a>
@@ -309,12 +318,12 @@
     <div id="weekBox"></div>
     <h2 class="sec-h" id="examSec">시험 OMR</h2>
     <div id="examList" class="oo-keep"><div class="empty">불러오는 중…</div></div>
+    <div id="examAna" class="xsec rp-keep" hidden></div>
+    <h2 class="sec-h rp-only" id="reportSec">시험 성적표</h2>
+    <div id="reportList" class="rp-keep rp-only"><div class="empty">불러오는 중…</div></div>
     <h2 class="sec-h" id="hwSec">과제</h2>
     <div id="hwStat" class="xsec hw-keep" hidden></div>
     <div id="todoList" class="hw-keep"><div class="empty">불러오는 중…</div></div>
-    <h2 class="sec-h" id="reportSec">시험 성적표</h2>
-    <div id="examAna" class="xsec rp-keep" hidden></div>
-    <div id="reportList" class="rp-keep"><div class="empty">불러오는 중…</div></div>
     <h2 class="sec-h" id="dailySec">데일리 리포트</h2>
     <div id="dailyCardBox" class="dd-keep"></div>
     <div id="trendBox" class="dd-keep"></div>
@@ -500,7 +509,7 @@
       el.innerHTML = `
         <div>
           <div class="t">${esc(e.title)}</div>
-          <div class="m">${esc(e.subject)} · ${e.questionCount}문항 · ${esc(OMR.layoutText(e))}${e.examDate ? ' · ' + esc(e.examDate) : ''}</div>
+          <div class="m">${examMeta(e, sub)}</div>
         </div>
         <span class="pill ${pillCls}" style="margin-left:auto;">${pill}</span>`;
       box.appendChild(el);
@@ -518,6 +527,14 @@
         else openExam(e, sub);
       } else toast('이 시험은 지금 볼 수 없어요', 2600);
     }
+  }
+  // 시험 목록 한 줄: 결과가 공개됐으면 점수·등수·평균, 아니면 시험 구성
+  function examMeta(e, sub){
+    const st = e.stats || {}, dt = e.examDate ? `${+e.examDate.slice(5, 7)}/${+e.examDate.slice(8, 10)} · ` : '';
+    if (e.status === 'published' && sub && sub.score != null)
+      return `${dt}<b style="color:var(--ink);">${sub.score}</b>/${st.maxScore || 100}점${sub.rank ? ` · ${sub.rank}/${st.n || '?'}등` : ''}${st.avg != null ? ` · 평균 ${st.avg}` : ''}`;
+    if (sub && sub.status === 'submitted') return `${dt}${esc(e.subject || '')} · 제출 완료 · 결과 공개 전`;
+    return `${dt}${esc(e.subject || '')} · ${e.questionCount}문항 · ${esc(OMR.layoutText(e))}`;
   }
   let autoOpened = false;
   let examCache = [], examsReadyFn = null;
@@ -964,9 +981,10 @@
   }
   function weekHtml(days){
     const td = OMR.todayStr(), DW = '일월화수목금토';
-    return `<div class="xc"><div class="xc-h"><b>🗓 이번 주 한눈에</b><span>수업 · 마감 · 클리닉 · 플래너</span></div><div class="tl7">${days.map(x => {
+    const tm = (() => { const d = new Date(td + 'T00:00:00'); d.setDate(d.getDate() + 1); return OMR.todayStr(d); })();
+    return `<div class="xc"><div class="xc-h"><b>🗓 오늘부터 7일</b><span>수업 · 마감 · 클리닉 · 플래너</span></div><div class="tl7">${days.map(x => {
       const dt = new Date(x.d + 'T00:00:00');
-      return `<div class="dy ${x.d === td ? 'today' : x.d < td ? 'past' : ''}"><div class="dl"><b>${dt.getDate()}</b><span>${DW[dt.getDay()]}${x.d === td ? ' · 오늘' : ''}</span></div>
+      return `<div class="dy ${x.d === td ? 'today' : ''} ${x.items.length ? '' : 'noit'}"><div class="dl"><b>${dt.getDate()}</b><span>${x.d === td ? '오늘' : x.d === tm ? '내일' : DW[dt.getDay()]}</span></div>
         <div class="its">${x.items.length ? x.items.map(i => `<a class="it ${i.done ? 'done' : ''}" href="${esc(i.href || '#')}"><span class="ty ${i.ty}">${esc(i.lab)}</span><span class="t">${esc(i.t)}</span>${i.m ? `<span class="m">${esc(i.m)}</span>` : ''}</a>`).join('') : '<div class="none">일정 없음</div>'}</div></div>`; }).join('')}</div></div>`;
   }
   function lineSvg(pts, opt){
@@ -1013,14 +1031,15 @@
     show2('growBox', growHtml({ month: (new Date().getMonth() + 1) + '월', items: [
       { k: '출석률', v: 96, prev: 90, unit: '%', dunit: '%p', bar: 96 }, { k: '과제 완료율', v: 88, prev: 75, unit: '%', dunit: '%p', bar: 88 },
       { k: '순공 시간', v: 32, prev: 27, unit: '시간' }, { k: '시험 평균', v: 81, prev: 74, unit: '점' }] }));
+    const tday = i => { const d = new Date(td + 'T00:00:00'); d.setDate(d.getDate() + i); return OMR.todayStr(d); };
     $('weekBox').innerHTML = weekHtml([
-      { d: day(0), items: [{ ty: 'pl', lab: '플래너', t: '함수의 연속 개념 정리', done: 1 }] },
-      { d: day(1), items: [{ ty: 'cls', lab: '수업', t: '정규 수업', m: '18:00' }, { ty: 'hw', lab: '마감', t: '기출오마주 212~240번', href: 'hw.html?demo=1' }] },
-      { d: day(2), items: [{ ty: 'pl', lab: '플래너', t: '오답노트 3문항' }] },
-      { d: day(3), items: [{ ty: 'cls', lab: '수업', t: '정규 수업', m: '18:00' }, { ty: 'omr', lab: 'OMR', t: '모의평가 대비 OMR' }] },
-      { d: day(4), items: [] },
-      { d: day(5), items: [{ ty: 'cl', lab: '클리닉', t: '오답 클리닉', m: '14:00' }, { ty: 'mk', lab: '직보', t: '직보 1회차', m: '17:00' }] },
-      { d: day(6), items: [{ ty: 'pl', lab: '플래너', t: '주간 복습' }] }]);
+      { d: tday(0), items: [{ ty: 'pl', lab: '플래너', t: '함수의 연속 개념 정리', done: 1 }] },
+      { d: tday(1), items: [{ ty: 'cls', lab: '수업', t: '정규 수업', m: '18:00' }, { ty: 'hw', lab: '마감', t: '기출오마주 212~240번', href: 'hw.html?demo=1' }] },
+      { d: tday(2), items: [{ ty: 'pl', lab: '플래너', t: '오답노트 3문항' }] },
+      { d: tday(3), items: [{ ty: 'cls', lab: '수업', t: '정규 수업', m: '18:00' }, { ty: 'omr', lab: 'OMR', t: '모의평가 대비 OMR' }] },
+      { d: tday(4), items: [] },
+      { d: tday(5), items: [{ ty: 'cl', lab: '클리닉', t: '오답 클리닉', m: '14:00' }, { ty: 'mk', lab: '직보', t: '직보 1회차', m: '17:00' }] },
+      { d: tday(6), items: [{ ty: 'pl', lab: '플래너', t: '주간 복습' }] }]);
     show2('examAna', examAnaHtml([
       { x: '8월', score: 68, max: 100, avg: 61, grade: 4 }, { x: '9월①', score: 74, max: 100, avg: 63, grade: 3 }, { x: '9월②', score: 72, max: 100, avg: 64, grade: 3 },
       { x: '9월③', score: 81, max: 100, avg: 66, grade: 2 }, { x: '10월', score: 76.5, max: 100, avg: 62.7, grade: 2 }],
@@ -1048,6 +1067,7 @@
     const ymd = d => OMR.todayStr(d);
     const mon = new Date(td + 'T00:00:00'); mon.setDate(mon.getDate() - (mon.getDay() + 6) % 7);
     const week = [...Array(7)].map((_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return ymd(d); });
+    const next7 = [...Array(7)].map((_, i) => { const d = new Date(td + 'T00:00:00'); d.setDate(d.getDate() + i); return ymd(d); });
     const ym = td.slice(0, 7), pym = (() => { const d = new Date(now.getFullYear(), now.getMonth() - 1, 1); return ymd(d).slice(0, 7); })();
     const [links, rlinks, exQ, hwAll, slots, qlk, pdocs, myBoard, boardW] = await Promise.all([
       safe(db.collection('dailyReportLinks').doc(me.code).get().then(x => x.exists ? (x.data().items || []) : [])),
@@ -1056,7 +1076,7 @@
       safe(OMR.studentAssignments(me)),
       safe(db.collection('clinicSlots').get().then(q => q.docs.map(d => ({ id: d.id, ...d.data() })))),
       safe(db.collection('questionLinks').doc(me.code).get().then(x => x.exists ? (x.data().items || []) : [])),
-      Promise.all([...Array(21)].map((_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + 6 - i); const k = ymd(d);
+      Promise.all([...Array(28)].map((_, i) => { const d = new Date(td + 'T00:00:00'); d.setDate(d.getDate() + 6 - i); const k = ymd(d);
         return db.collection('planners').doc(`${me.code}_${k}`).get().then(x => [k, x.exists ? x.data() : null]).catch(() => [k, null]); })),
       safe(Promise.all(['m' + ym, 'm' + pym].map(k => db.collection('studyBoard').doc(`${k}_${me.studentId}`).get().then(x => x.exists ? x.data().focusSec || 0 : 0).catch(() => 0)))),
       safe(db.collection('studyBoard').where('key', '==', 'w' + week[0]).get().then(q => q.docs.map(d => d.data()))),
@@ -1085,11 +1105,11 @@
     // 2) 이번 주 한눈에
     const DWn = d => new Date(d + 'T00:00:00').getDay();
     const evs = cal.events || [], scheds = cal.schedules || [];
-    const booked = slots ? await Promise.all(slots.filter(s2 => week.includes(s2.date) && OMR.slotForClass(s2, me.className))
+    const booked = slots ? await Promise.all(slots.filter(s2 => next7.includes(s2.date) && OMR.slotForClass(s2, me.className))
       .map(s2 => db.collection('clinicBookings').doc(`${s2.id}_${me.code}`).get().then(x => x.exists ? s2 : null).catch(() => null))) : [];
     await Promise.race([examsReady, new Promise(r => setTimeout(r, 4000))]);
     const openEx = (examCache || []).filter(x => x.e.status === 'open' && !(x.sub && x.sub.status === 'submitted'));
-    const days = week.map(d => {
+    const days = next7.map(d => {
       const it = [], dayEv = evs.filter(e => CAL.inRange(e, d)), off = dayEv.some(e => e.kind === 'cancel' || e.kind === 'holiday');
       scheds.forEach(sc => (sc.slots || []).forEach(t => { if (+t.dow === DWn(d)) it.push(off ? { ty: 'off', lab: '휴강', t: '정규 수업 휴강' } : { ty: 'cls', lab: '수업', t: '정규 수업' + (t.place ? ' · ' + t.place : ''), m: t.start }); }));
       dayEv.forEach(e => { if (e.kind === 'makeup') it.push({ ty: 'mk', lab: '직보', t: e.title || '직보', m: e.time || '' }); else if (e.kind === 'exam') it.push({ ty: 'ex', lab: '시험', t: e.title || '시험기간' }); });
@@ -1232,7 +1252,8 @@
     const b1 = document.createElement('button'); b1.className = 'exam-item'; b1.onclick = () => openExam(exam, null);
     b1.innerHTML = `<div><div class="t">${esc(exam.title)}</div><div class="m">${esc(exam.subject)} · 22문항 · ${esc(OMR.layoutText(exam))}</div></div><span class="pill open" style="margin-left:auto;">응시 가능</span>`;
     eb.appendChild(b1);
-    eb.appendChild(item('report.html?demo=1', ex.examTitle, `${esc(ex.subject)} · 22문항 · 채점 완료`, '성적표 보기', 'published'));
+    eb.appendChild(item('report.html?demo=1', ex.examTitle, `${+ex.examDate.slice(5, 7)}/${+ex.examDate.slice(8, 10)} · <b style="color:var(--ink);">${ex.score}</b>/${ex.maxScore}점 · ${ex.rank}/${ex.n}등 · 평균 ${ex.avg}`, `${ex.grade}등급`, 'published'));
+    ex.history.slice(0, -1).reverse().slice(0, 2).forEach(h => eb.appendChild(item('report.html?demo=1', h.title, `${+h.date.slice(5, 7)}/${+h.date.slice(8, 10)} · <b style="color:var(--ink);">${h.score}</b>/${h.max}점 · ${h.rank}/${h.n}등 · 평균 ${h.avg}`, `${h.grade}등급`, 'draft')));
     if (MODE_OMR && !autoOpened){ autoOpened = true; openExam(exam, null); return; }
     // 과제
     const tb = document.createElement('div');
