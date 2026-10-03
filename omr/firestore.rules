@@ -246,6 +246,10 @@
       allow get: if omrAdmin() || (request.auth != null && request.auth.uid == uid);
       allow list, write: if omrAdmin();
     }
+    // 조교 비밀번호 (선생님 확인용) — 선생님만
+    match /staffSecrets/{uid} {
+      allow read, write: if omrAdmin();
+    }
     // 수업(반·날짜) 기록
     match /dailyLessons/{id} {
       allow read, write: if omrStaffOrAdmin();
@@ -337,7 +341,11 @@
     // 문서 ID는 무작위라 링크(ID)를 아는 학생만 읽음. 답변은 선생님·조교만
     match /questions/{qid} {
       allow get: if true;
-      allow list, update, delete: if omrStaffOrAdmin();
+      // 질문 목록은 선생님만. 조교는 선생님이 맡긴(assignee) 질문만 보고 답변(status·answer)만 바꿀 수 있어요
+      allow list: if omrAdmin() || (omrStaffOrAdmin() && resource.data.assignee == request.auth.uid);
+      allow update: if omrAdmin() || (omrStaffOrAdmin() && resource.data.assignee == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'answer']));
+      allow delete: if omrAdmin();
       allow create: if stuOk(request.resource.data)
         && request.resource.data.keys().hasOnly(['code', 'name', 'className', 'subject', 'text', 'files', 'status', 'createdAt'])
         && request.resource.data.text is string && request.resource.data.text.size() <= 3000

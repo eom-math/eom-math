@@ -142,7 +142,8 @@
       <b>Firebase 규칙을 새로 게시해야 저장할 수 있어요.</b>
       <p class="muted" style="margin-top:6px;line-height:1.6;">Firebase 콘솔 → Firestore → 규칙에서 OMR 부분을 GitHub의 <b>omr/firestore.rules</b> 전체로 바꾸고, ADMIN_EMAIL을 선생님 로그인 이메일로 고친 뒤 게시하세요. Storage 규칙도 <b>omr/storage.rules</b>로 바꿔 게시하세요.</p>
     </div>
-    <div class="tabs" id="tabs">
+    <!-- 위쪽 메뉴(관리자 메뉴)와 겹쳐서 숨김. 탭 전환은 메뉴 주소(#qna 등)로 해요 -->
+    <div class="tabs" id="tabs" hidden style="display:none;">
       <button class="on" data-tab="clinic">클리닉 예약</button>
       <button data-tab="lecture">영상 강의</button>
       <button data-tab="qna">질문 답변 <span class="pill red hidden" id="qnaBadge"></span></button>
@@ -292,7 +293,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=31"></script>
+<script src="common.js?v=32"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, round } = OMR;
@@ -332,8 +333,8 @@
 
   async function loadRoster(){
     try {
-      roster = (await db.collection('omrCodes').get()).docs.map(d => ({ code:d.id, ...d.data() }))
-        .filter(s => s.name && s.className).sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+      roster = OMR.scopeRoster((await db.collection('omrCodes').get()).docs.map(d => ({ code:d.id, ...d.data() }))
+        .filter(s => s.name && s.className).sort((a,b) => a.name.localeCompare(b.name, 'ko')), me);
     } catch(e){ roster = []; handleErr(e); }
     classes = [...new Set(roster.map(s => s.className))].sort((a,b) => a.localeCompare(b, 'ko'));
     renderSlotClasses();
@@ -707,8 +708,21 @@
   let qnaState = 'open';
   $('qnaTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return;
     [...$('qnaTabs').children].forEach(x => x.classList.toggle('on', x === b)); qnaState = b.dataset.s; loadQna(); };
+  const isTA = () => me && me.role === 'ta';
+  // 조교는 선생님이 토스한 질문만 (다른 조교에게 간 질문·답변은 안 보여요)
+  async function fetchQna(){
+    if (isTA()) return (await db.collection('questions').where('assignee', '==', me.uid).get()).docs.map(d => ({ id:d.id, ...d.data() }));
+    return (await db.collection('questions').where('status', '==', qnaState).get()).docs.map(d => ({ id:d.id, ...d.data() }));
+  }
+  let staffList = null;
+  async function loadStaffList(){
+    if (staffList || isTA()) return staffList || [];
+    try { staffList = (await db.collection('omrStaff').get()).docs.map(d => ({ uid:d.id, ...d.data() })).sort((a,b) => (a.name||'').localeCompare(b.name||'', 'ko')); }
+    catch(e){ staffList = []; }
+    return staffList;
+  }
   async function refreshQnaBadge(){
-    try { const n = (await db.collection('questions').where('status','==','open').get()).size;
+    try { const n = isTA() ? (await fetchQna()).filter(q => q.status === 'open').length : (await db.collection('questions').where('status','==','open').get()).size;
       $('qnaBadge').textContent = n; $('qnaBadge').classList.toggle('hidden', !n); } catch(e){}
     OMR.fillNavBadges();
   }
@@ -716,10 +730,12 @@
     const box = $('qnaList');
     box.innerHTML = '<div class="empty">불러오는 중…</div>';
     try {
-      const qs = (await db.collection('questions').where('status','==',qnaState).get()).docs.map(d => ({ id:d.id, ...d.data() }))
+      await loadStaffList();
+      const qs = (await fetchQna()).filter(q => q.status === qnaState)
         .sort((a,b) => qnaState === 'open' ? (toDate(a.createdAt)||0) - (toDate(b.createdAt)||0) : (toDate(b.answer && b.answer.at)||0) - (toDate(a.answer && a.answer.at)||0))
         .slice(0, 80);
-      if (!qs.length){ box.innerHTML = `<div class="empty">${qnaState === 'open' ? '답변을 기다리는 질문이 없습니다. 👏' : '답변한 질문이 없습니다.'}</div>`; return; }
+      if (!qs.length){ box.innerHTML = `<div class="empty">${isTA() && qnaState === 'open' ? '선생님이 맡긴 질문이 없어요.' : qnaState === 'open' ? '답변을 기다리는 질문이 없습니다. 👏' : '답변한 질문이 없습니다.'}</div>`; return; }
+      if (isTA()) box.insertAdjacentHTML('beforeend', '<p class="muted" style="font-size:12.5px;margin-bottom:8px;">선생님이 맡긴 질문이에요. 답변은 질문한 학생에게만 보여요.</p>');
       box.innerHTML = '';
       qs.forEach(q => box.appendChild(qCard(q)));
     } catch(e){ box.innerHTML = '<div class="empty">불러오지 못했습니다.</div>'; handleErr(e); }
@@ -731,6 +747,10 @@
     el.innerHTML = `
       <div class="h"><b>${esc(q.name)}</b><span>${esc(q.className)}</span>${q.subject ? `<span class="pill">${esc(q.subject)}</span>` : ''}<span style="margin-left:auto;">${OMR.fmtDateTime(q.createdAt)}</span></div>
       <div class="txt">${esc(q.text)}</div>${thumbs(q.files)}
+      ${!isTA() ? `<div class="row toss" style="margin-top:8px;gap:6px;align-items:center;">
+        ${q.assignee ? `<span class="pill" style="background:#EEF1FF;color:#3B4CCA;">🙋 ${esc(q.assigneeName || '조교')}에게 맡김</span><button class="btn sm ghost" data-untoss>맡기기 취소</button>`
+          : (staffList && staffList.length ? `<select class="input" data-ta style="width:auto;padding:6px 10px;font-size:13px;"><option value="">조교에게 맡기기…</option>${staffList.map(t => `<option value="${esc(t.uid)}">${esc(t.name)}</option>`).join('')}</select><button class="btn sm" data-toss>맡기기</button>` : '')}
+      </div>` : ''}
       ${q.answer ? `<div class="ans"><div class="by">${esc(q.answer.by)} · ${OMR.fmtDateTime(q.answer.at)}</div><div class="txt">${esc(q.answer.text)}</div>${thumbs(q.answer.files)}</div>` : ''}
       <div class="stack" style="margin-top:10px;">
         <textarea class="input" data-a placeholder="답변을 입력하세요" style="min-height:90px;">${q.answer ? esc(q.answer.text) : ''}</textarea>
@@ -738,6 +758,17 @@
           <button class="btn primary sm" data-send style="margin-left:auto;">${q.answer ? '답변 수정' : '답변 등록'}</button></div>
       </div>`;
     let files = [];
+    const tb = el.querySelector('[data-toss]'), ub = el.querySelector('[data-untoss]');
+    if (tb) tb.onclick = async () => {
+      const uid = el.querySelector('[data-ta]').value; if (!uid) return toast('맡길 조교를 고르세요');
+      const t = staffList.find(x => x.uid === uid);
+      try { await db.collection('questions').doc(q.id).update({ assignee: uid, assigneeName: t ? t.name : '조교', tossedAt: FV.serverTimestamp() });
+        toast(`${t ? t.name : '조교'}에게 맡겼어요`); loadQna(); } catch(e){ handleErr(e); }
+    };
+    if (ub) ub.onclick = async () => {
+      if (!confirm('맡기기를 취소할까요? 조교 화면에서 이 질문이 사라져요.')) return;
+      try { await db.collection('questions').doc(q.id).update({ assignee: FV.delete(), assigneeName: FV.delete(), tossedAt: FV.delete() }); toast('취소했어요'); loadQna(); } catch(e){ handleErr(e); }
+    };
     el.querySelector('[data-f]').onchange = e => { files = [...e.target.files].slice(0, 4); el.querySelector('[data-fn]').textContent = files.length ? `${files.length}장 선택` : ''; };
     el.querySelector('[data-send]').onclick = async () => {
       const text = el.querySelector('[data-a]').value.trim();

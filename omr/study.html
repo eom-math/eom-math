@@ -228,7 +228,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=31"></script>
+<script src="common.js?v=32"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText } = OMR;
@@ -260,8 +260,8 @@
     $('whoBadge').className = 'who-badge' + (me.role === 'admin' ? ' admin' : '');
     show('vMain');
     try {
-      roster = (await db.collection('omrCodes').get()).docs.map(d => ({ code: d.id, ...d.data() }))
-        .filter(s => s.name && s.className).sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+      roster = OMR.scopeRoster((await db.collection('omrCodes').get()).docs.map(d => ({ code: d.id, ...d.data() }))
+        .filter(s => s.name && s.className).sort((a,b) => a.name.localeCompare(b.name, 'ko')), me);
     } catch(e){ roster = []; handleErr(e); }
     classes = [...new Set(roster.map(s => s.className))].sort((a,b) => a.localeCompare(b, 'ko'));
     ['wkClass','bdClass','rkClass','studyClass'].forEach(id => $(id).innerHTML = classOpts('*', '전체 반'));

@@ -414,7 +414,7 @@
   // ───────── 관리자 메뉴 (종류별로 묶음) ─────────
   // [주소, 이름, 조교도 쓰는지, 배지 종류]
   const NAV_GROUPS = [
-    ['학생', [['students.html', '학생 관리'], ['ops.html#att', '등원', 1], ['ops.html#notes', '학생 기록', 1]]],
+    ['학생', [['students.html', '학생 관리'], ['ops.html#att', '등원', 1], ['ops.html#notes', '학생 기록', 1], ['staff.html', '조교 관리']]],
     ['수업·시험', [['admin.html', '시험·OMR'], ['daily.html', '데일리 리포트', 1], ['assign.html', '과제'], ['clinic.html', '오답 클리닉'], ['classcal.html', '수업 달력']]],
     ['소통·예약', [['ops.html#qna', '질문 답변', 1, 'qna'], ['board.html', '게시판', 1, 'board'], ['notice.html', '칭찬 공지'], ['ops.html#clinic', '클리닉 예약', 1], ['ops.html#lecture', '영상 강의', 1]]],
     ['공부 관리', [['study.html#week', '플래너', 1], ['study.html#rank', '순공·타이머', 1]]],
@@ -447,7 +447,9 @@
       .anav .g{display:none;} .anav .g.open{display:flex;padding:8px 4px 4px;border-top:1px solid var(--line2);margin-top:6px;}
       .anav .gl{display:none;} .anav .gi{flex-wrap:wrap;} .anav a{padding:8px 11px;}
     }`;
+  let navRole = 'admin';
   function navHtml(current, role) {
+    navRole = role;
     if (typeof document !== 'undefined' && !document.getElementById('anavCss')) {
       const st = document.createElement('style'); st.id = 'anavCss'; st.textContent = NAV_CSS; document.head.appendChild(st);
     }
@@ -494,7 +496,12 @@
     const put = (key, n, tip) => (cnt[key] = n, document.querySelectorAll(`.anav [data-badge="${key}"]`).forEach(b => {
       b.textContent = n > 99 ? '99+' : n; b.hidden = !n; b.parentNode.title = n ? tip : ''; }));
     if (document.querySelector('.anav [data-badge="qna"]')) {
-      try { const n = (await db.collection('questions').where('status', '==', 'open').get()).size; put('qna', n, `답변 기다리는 질문 ${n}개`); }
+      try {
+        // 조교는 선생님이 토스한 질문만 셀 수 있어요
+        const u = firebase.auth().currentUser;
+        const n = navRole === 'ta' && u ? (await db.collection('questions').where('assignee', '==', u.uid).get()).docs.filter(d => d.data().status === 'open').length
+          : (await db.collection('questions').where('status', '==', 'open').get()).size;
+        put('qna', n, `답변 기다리는 질문 ${n}개`); }
       catch (e) { /* 권한 없으면 표시 안 함 */ }
     }
     if (document.querySelector('.anav [data-badge="board"]')) {
@@ -529,7 +536,7 @@
   async function detectStaff(user) {
     try {
       const s = await db.collection('omrStaff').doc(user.uid).get();
-      if (s.exists) return { uid: user.uid, name: s.data().name || '조교', role: 'ta' };
+      if (s.exists) return { uid: user.uid, name: s.data().name || '조교', role: 'ta', classes: s.data().classes || [] };
     } catch (e) { /* 무시 */ }
     try { await db.collection('omrStaff').limit(1).get(); return { uid: user.uid, name: '엄형국 선생님', role: 'admin' }; }
     catch (e) { /* 새 규칙이 아직 게시되지 않았을 수 있음 */ }
@@ -537,6 +544,9 @@
     try { await db.collection('omrStudents').limit(1).get(); return { uid: user.uid, name: '엄형국 선생님', role: 'admin', rulesMissing: true }; }
     catch (e) { return null; }
   }
+  /** 조교에게 맡긴 반이 정해져 있으면 그 반 학생만 (선생님·반 미지정 조교는 전체) */
+  function staffClasses(me) { return me && me.role === 'ta' && me.classes && me.classes.length ? me.classes : null; }
+  function scopeRoster(list, me) { const c = staffClasses(me); return c ? list.filter(s => c.includes(s.className)) : list; }
   function staffNav(current, role) { return navHtml(current, role === 'admin' ? 'admin' : 'ta'); }
   /** loginEmail/loginPw/loginBtn/loginMsg/logoutBtn/adminEmail 요소를 연결. onChange(me|null, user) */
   function mountStaffLogin(onChange) {
@@ -861,7 +871,7 @@
     QTYPES, examTypes, examSegments, layoutText, shortEq,
     reportUrl, downloadCsv, analyzeWeakness, pickClinicItems, gradeClinic, retestSummary,
     adminNav, fillNavBadges, mountAdminLogin, commitOps, shuffle, UNTAGGED,
-    ACADEMIES, lectureForStudent, EXT_LINKS, slotForClass, slotClassLabel, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, plannerNotes, markPlannerSeen, plannerSeen, noteSig, PLAN_STAMP, studentDashboard, detectStaff, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
+    ACADEMIES, lectureForStudent, EXT_LINKS, slotForClass, slotClassLabel, studentAssignments, HW_LABEL, examForStudent, examsForStudent, audienceText, rankKeys, maskName, plannerTodos, plannerNotes, markPlannerSeen, plannerSeen, noteSig, PLAN_STAMP, studentDashboard, detectStaff, staffClasses, scopeRoster, staffNav, mountStaffLogin, savedCode, saveCode, studentByCode, requireStudent, shrinkImage, hhmm, STUDENT_KEY,
     DAILY_MESSAGE_TEMPLATE, renderDailyMessage, dailyReportUrl, staffEmail, staffIdFromEmail, STAFF_DOMAIN, todayStr, fmtKDate,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

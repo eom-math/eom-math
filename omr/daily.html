@@ -143,7 +143,7 @@
     </div>
     <div class="tabs" id="mainTabs">
       <button class="on" data-tab="lessons">수업 기록</button>
-      <button data-tab="staff" class="admin-only hidden">조교 계정</button>
+      <a href="staff.html" class="admin-only hidden" style="padding:10px 14px;font-weight:800;font-size:14px;color:var(--dim);text-decoration:none;">조교 관리 →</a>
     </div>
 
     <div id="tabLessons">
@@ -275,7 +275,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="common.js?v=31"></script>
+<script src="common.js?v=32"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, copyText, toDate, genToken, round } = OMR;
@@ -340,9 +340,9 @@
   async function loadRoster(){
     try {
       const qs = await db.collection('omrCodes').get();
-      roster = qs.docs.map(d => ({ code:d.id, name:d.data().name, className:d.data().className }))
+      roster = OMR.scopeRoster(qs.docs.map(d => ({ code:d.id, name:d.data().name, className:d.data().className }))
         .filter(s => s.name && s.className)
-        .sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+        .sort((a,b) => a.name.localeCompare(b.name, 'ko')), me);
     } catch(e){ roster = []; handleErr(e); }
     classes = [...new Set(roster.map(s => s.className))].sort((a,b) => a.localeCompare(b, 'ko'));
     const opts = classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
@@ -370,7 +370,8 @@
       const cf = $('classFilter').value;
       if (cf) q = q.where('className', '==', cf);
       const qs = await q.get();
-      const list = qs.docs.map(d => ({ id:d.id, ...d.data() }))
+      const myCls = OMR.staffClasses(me);   // 조교에게 맡긴 반만
+      const list = qs.docs.map(d => ({ id:d.id, ...d.data() })).filter(l => !myCls || myCls.includes(l.className))
         .sort((a,b) => (b.date || '').localeCompare(a.date || '') || (toDate(b.createdAt)||0) - (toDate(a.createdAt)||0))
         .slice(0, 120);
       if (!list.length){ box.innerHTML = '<div class="empty">아직 수업 기록이 없습니다.<br>‘새 수업 기록’으로 시작하세요.</div>'; return; }

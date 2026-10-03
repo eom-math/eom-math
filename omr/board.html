@@ -81,7 +81,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="common.js?v=31"></script>
+<script src="common.js?v=32"></script>
 <script>
 (function(){
   const { db, FV, esc, toast, toDate } = OMR;
@@ -120,7 +120,9 @@
         posts = map(ps); authors = {}; if (as) as.docs.forEach(d => { authors[d.id] = d.data(); });
       } else {
         // 조교: 공개·익명·조교 선생님께 글만 (공지는 공개라 같이 보여요)
-        posts = (await Promise.all(['public', 'anon', 'staff'].map(v => db.collection('boardPosts').where('visibility', '==', v).get().then(map)))).flat();
+        const myCls = OMR.staffClasses(me);   // 맡은 반이 정해진 조교는 그 반 학생 글만 (익명·공지는 모두)
+        posts = (await Promise.all(['public', 'anon', 'staff'].map(v => db.collection('boardPosts').where('visibility', '==', v).get().then(map)))).flat()
+          .filter(p => !myCls || p.kind === 'notice' || p.visibility === 'anon' || myCls.includes(p.className));
         authors = {};
       }
       posts.sort((a, b) => (toDate(b.createdAt) || 0) - (toDate(a.createdAt) || 0));

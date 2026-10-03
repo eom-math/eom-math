@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#FAFAF8">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="../icons/favicon-64.png">
+<script src="../pwa.js" defer></script>
+<title>조교 관리 — 엄형국 수학</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="omr.css?v=6">
+<style>
+  .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+  @media (max-width:640px){ .grid3{grid-template-columns:1fr;} }
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chips button{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:6px 11px;font-size:12.5px;font-weight:800;}
+  .chips button.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .ta{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:grid;gap:10px;}
+  .ta .h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .ta .h b{font-size:17px;font-weight:900;}
+  .ta .id{font-size:13px;color:var(--dim);font-weight:700;}
+  .ta .st{margin-left:auto;font-size:12px;color:var(--dim);font-weight:700;}
+  .kv{display:grid;grid-template-columns:72px minmax(0,1fr);gap:8px;align-items:center;font-size:13.5px;}
+  .kv > span{font-size:12px;font-weight:800;color:var(--dim);}
+  .pw{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .pw code{font-size:15px;font-weight:800;background:var(--bg2);padding:4px 10px;border-radius:8px;letter-spacing:.03em;}
+  .pw .input{width:auto;max-width:180px;padding:6px 10px;font-size:13px;}
+  .tl{display:grid;gap:10px;}
+  .warnbox{font-size:12px;color:var(--dim);background:var(--bg2);border-radius:10px;padding:10px 12px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="../index.html">엄형국 <span>수학</span> · 관리</a>
+    <div class="row"><span class="sub" id="adminEmail"></span><button class="btn sm hidden" id="logoutBtn">로그아웃</button></div>
+  </div>
+  <nav class="row" id="adminNav" style="gap:4px;margin:-8px 0 16px;"></nav>
+
+  <section id="vLogin" class="hidden" style="max-width:380px;margin:40px auto;">
+    <h1>관리자 로그인</h1>
+    <div class="card stack">
+      <input class="input" type="email" id="loginEmail" placeholder="이메일" autocomplete="username">
+      <input class="input" type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
+      <button class="btn primary block" id="loginBtn">로그인</button>
+      <p class="muted" id="loginMsg"></p>
+    </div>
+  </section>
+
+  <section id="vMain" class="hidden">
+    <div class="kicker">STAFF</div>
+    <h1>조교 관리</h1>
+    <p class="muted" style="margin-bottom:14px;">조교 계정을 만들고, 비밀번호를 확인하고, <b>맡은 반</b>을 정해요. 맡은 반을 정하면 그 조교는 그 반 학생 정보(등원·데일리 리포트·플래너·순공·학생 기록·게시판 글)만 봐요. 질문은 선생님이 <b>질문 답변</b>에서 조교에게 맡긴 것만 보여요.</p>
+    <div id="permWarn" class="note hidden" style="margin-bottom:14px;border:1px solid var(--red);"><b>Firestore 권한 오류</b> — <code>staffSecrets</code> 규칙을 게시했는지 확인하세요.</div>
+    <div class="card">
+      <h2>조교 계정 만들기</h2>
+      <div class="grid3">
+        <div><label class="f">이름</label><input class="input" id="taName" placeholder="김조교" maxlength="12"></div>
+        <div><label class="f">아이디 (영문·숫자)</label><input class="input" id="taId" placeholder="ta01" autocapitalize="none"></div>
+        <div><label class="f">비밀번호 (6자 이상)</label><input class="input" id="taPw" placeholder="••••••"></div>
+      </div>
+      <div style="margin-top:10px;"><label class="f">맡은 반 <span class="muted" style="font-weight:600;">(안 고르면 전체 반)</span></label><div class="chips" id="taCls"></div></div>
+      <div class="row" style="margin-top:12px;"><button class="btn primary" id="taCreateBtn">계정 만들기</button><span class="muted" id="taMsg"></span></div>
+    </div>
+    <div class="row between" style="margin:22px 0 10px;"><h2 style="margin:0;">조교 목록</h2><span class="muted" id="taCount"></span></div>
+    <div class="tl" id="taList"><div class="muted">불러오는 중…</div></div>
+    <p class="warnbox" style="margin-top:14px;">🔐 비밀번호는 선생님 계정만 볼 수 있는 곳에 저장돼요. 이 기능이 생기기 전에 만든 조교는 비밀번호가 저장돼 있지 않아요. 알고 있는 비밀번호를 <b>기록하기</b>로 적어 두면 그다음부터 보이고 바꿀 수도 있어요.</p>
+  </section>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="common.js?v=32"></script>
+<script>
+(function(){
+  const { db, FV, esc, toast, copyText } = OMR;
+  const $ = id => document.getElementById(id);
+  let classes = [], list = [], secrets = {}, qStat = {}, newCls = new Set(), showPw = {};
+  $('adminNav').innerHTML = OMR.adminNav('staff.html');
+  function handleErr(e){ console.error(e); if (e && e.code === 'permission-denied') $('permWarn').classList.remove('hidden'); toast('오류: ' + (e.message || e), 3500); }
+  OMR.mountAdminLogin(async user => {
+    ['vLogin','vMain'].forEach(x => $(x).classList.toggle('hidden', x !== (user ? 'vMain' : 'vLogin')));
+    if (!user) return;
+    try { classes = [...new Set((await db.collection('omrCodes').get()).docs.map(d => d.data().className).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')); } catch(e){ classes = []; }
+    drawNewCls(); load();
+  });
+  const chips = (sel, attr) => classes.length ? classes.map(c => `<button type="button" ${attr}="${esc(c)}" class="${sel.has(c) ? 'on' : ''}">${esc(c)}</button>`).join('') : '<span class="muted" style="font-size:12px;">반이 없어요</span>';
+  function drawNewCls(){ $('taCls').innerHTML = chips(newCls, 'data-c'); }
+  $('taCls').onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; const c = b.dataset.c; newCls.has(c) ? newCls.delete(c) : newCls.add(c); drawNewCls(); };
+  const secondary = () => firebase.apps.find(a => a.name === 'staffCreator') || firebase.initializeApp(firebase.app().options, 'staffCreator');
+  async function load(){
+    try {
+      list = (await db.collection('omrStaff').get()).docs.map(d => ({ uid: d.id, ...d.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+      secrets = {}; try { (await db.collection('staffSecrets').get()).docs.forEach(d => { secrets[d.id] = d.data(); }); } catch(e){ handleErr(e); }
+      qStat = {}; try { (await db.collection('questions').get()).docs.forEach(d => { const q = d.data(); if (!q.assignee) return;
+        const x = qStat[q.assignee] = qStat[q.assignee] || { open: 0, done: 0 }; q.status === 'open' ? x.open++ : x.done++; }); } catch(e){}
+      render();
+    } catch(e){ handleErr(e); $('taList').innerHTML = '<div class="muted">불러오지 못했어요.</div>'; }
+  }
+  function render(){
+    $('taCount').textContent = `${list.length}명`;
+    $('taList').innerHTML = list.length ? list.map(t => {
+      const id = t.loginId || OMR.staffIdFromEmail(t.email), sec = secrets[t.uid], q = qStat[t.uid] || { open: 0, done: 0 }, cls = new Set(t.classes || []);
+      return `<div class="ta" data-uid="${esc(t.uid)}">
+        <div class="h"><b>${esc(t.name || '조교')}</b><span class="id">아이디 ${esc(id)}</span>
+          <span class="st">맡긴 질문 · 대기 ${q.open} · 답변 ${q.done}</span></div>
+        <div class="kv"><span>비밀번호</span><div class="pw">${sec && sec.pw
+          ? `<code>${showPw[t.uid] ? esc(sec.pw) : '••••••'}</code><button class="btn sm" data-a="eye">${showPw[t.uid] ? '숨기기' : '👁 보기'}</button>
+             <button class="btn sm" data-a="copy">로그인 정보 복사</button><input class="input" data-np placeholder="새 비밀번호"><button class="btn sm" data-a="chpw">바꾸기</button>`
+          : `<span class="muted" style="font-size:12.5px;">저장 안 됨</span><input class="input" data-kp placeholder="지금 비밀번호"><button class="btn sm" data-a="keep">기록하기</button>`}</div></div>
+        <div class="kv"><span>맡은 반</span><div><div class="chips" data-cls>${chips(cls, 'data-tc')}</div>
+          <div class="muted" style="font-size:12px;margin-top:4px;">${cls.size ? `${[...cls].join(', ')} 학생만 봐요` : '전체 반을 봐요'} · 누르면 바로 저장돼요</div></div></div>
+        <div class="row" style="justify-content:flex-end;"><button class="btn sm ghost" data-a="del" style="color:var(--red);">권한 해제</button></div>
+      </div>`; }).join('') : '<div class="muted">아직 조교 계정이 없어요.</div>';
+  }
+  const loginText = (id, pw) => `[엄형국 수학 조교 로그인]\n주소: ${new URL('ops.html', location.href).href}\n아이디: ${id}\n비밀번호: ${pw}`;
+  $('taList').onclick = async e => {
+    const card = e.target.closest('.ta'); if (!card) return;
+    const t = list.find(x => x.uid === card.dataset.uid), id = t.loginId || OMR.staffIdFromEmail(t.email), sec = secrets[t.uid];
+    const tc = e.target.closest('[data-tc]');
+    if (tc) {
+      const cls = new Set(t.classes || []), c = tc.dataset.tc; cls.has(c) ? cls.delete(c) : cls.add(c);
+      try { await db.collection('omrStaff').doc(t.uid).update({ classes: [...cls] }); t.classes = [...cls]; render(); toast(cls.size ? `${t.name}: ${[...cls].join(', ')}` : `${t.name}: 전체 반`); } catch(err){ handleErr(err); }
+      return;
+    }
+    const a = (e.target.closest('[data-a]') || {}).dataset?.a; if (!a) return;
+    try {
+      if (a === 'eye') { showPw[t.uid] = !showPw[t.uid]; render(); }
+      else if (a === 'copy') { copyText(loginText(id, sec.pw)); toast('로그인 정보를 복사했어요'); }
+      else if (a === 'keep') {
+        const pw = card.querySelector('[data-kp]').value; if (pw.length < 6) return toast('비밀번호는 6자 이상이에요');
+        // 맞는 비밀번호인지 보조 로그인으로 확인
+        const sec2 = secondary();
+        try { await sec2.auth().signInWithEmailAndPassword(OMR.staffEmail(id), pw); await sec2.auth().signOut(); }
+        catch(err){ return toast('비밀번호가 맞지 않아요'); }
+        await db.collection('staffSecrets').doc(t.uid).set({ pw, loginId: id, updatedAt: FV.serverTimestamp() });
+        toast('비밀번호를 기록했어요'); load();
+      } else if (a === 'chpw') {
+        const np = card.querySelector('[data-np]').value; if (np.length < 6) return toast('새 비밀번호는 6자 이상이에요');
+        if (!confirm(`${t.name}의 비밀번호를 바꿀까요? 조교가 지금 로그인돼 있으면 다시 로그인해야 해요.`)) return;
+        const sec2 = secondary();
+        const cred = await sec2.auth().signInWithEmailAndPassword(OMR.staffEmail(id), sec.pw);
+        await cred.user.updatePassword(np); await sec2.auth().signOut();
+        await db.collection('staffSecrets').doc(t.uid).set({ pw: np, loginId: id, updatedAt: FV.serverTimestamp() });
+        copyText(loginText(id, np)); toast('비밀번호를 바꾸고 로그인 정보를 복사했어요', 3000); showPw[t.uid] = true; load();
+      } else if (a === 'del') {
+        if (!confirm(`${t.name}의 조교 권한을 해제할까요? 그 아이디로 로그인해도 관리 화면을 볼 수 없어요.`)) return;
+        await db.collection('omrStaff').doc(t.uid).delete(); toast('해제했어요'); load();
+      }
+    } catch(err){ handleErr(err); }
+  };
+  $('taCreateBtn').onclick = async () => {
+    const name = $('taName').value.trim(), id = $('taId').value.trim().toLowerCase(), pw = $('taPw').value;
+    if (!name || !/^[a-z0-9._-]{3,20}$/.test(id)) { $('taMsg').textContent = '이름과 아이디(영문·숫자 3~20자)를 입력하세요.'; return; }
+    if (pw.length < 6) { $('taMsg').textContent = '비밀번호는 6자 이상이어야 해요.'; return; }
+    $('taCreateBtn').disabled = true; $('taMsg').textContent = '만드는 중…';
+    const sec = secondary();   // 선생님 로그인을 유지한 채 계정 만들기
+    try {
+      const cred = await sec.auth().createUserWithEmailAndPassword(OMR.staffEmail(id), pw);
+      await db.collection('omrStaff').doc(cred.user.uid).set({ name, loginId: id, email: OMR.staffEmail(id), role: 'ta', classes: [...newCls], createdAt: FV.serverTimestamp() });
+      await db.collection('staffSecrets').doc(cred.user.uid).set({ pw, loginId: id, updatedAt: FV.serverTimestamp() });
+      await sec.auth().signOut();
+      $('taMsg').textContent = ''; $('taName').value = $('taId').value = $('taPw').value = ''; newCls = new Set(); drawNewCls();
+      copyText(loginText(id, pw)); toast('계정을 만들고 로그인 정보를 복사했어요', 3200); load();
+    } catch(e){
+      $('taMsg').textContent = e.code === 'auth/email-already-in-use' ? '이미 쓰는 아이디예요.' : '실패: ' + (e.message || e.code); console.error(e);
+    }
+    $('taCreateBtn').disabled = false;
+  };
+})();
+</script>
+</body>
+</html>
